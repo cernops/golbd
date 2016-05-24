@@ -11,6 +11,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"github.com/reguero/golbd/lbcluster"
 	"io"
 	"strconv"
 	"strings"
@@ -38,16 +39,7 @@ type Config struct {
 	SnmpPassword    string
 	DnsManager      string
 	Clusters        map[string][]string
-	Parameters      map[string]Params
-}
-
-type Params struct {
-	Behaviour        string
-	Best_hosts       int
-	External         bool
-	Metric           string
-	Polling_interval int
-	Statistics       string
+	Parameters      map[string]lbcluster.Params
 }
 
 func logInfo(log *syslog.Writer, s string) error {
@@ -90,12 +82,12 @@ func readLines(path string) (lines []string, err error) {
 
 func loadConfig(configFile string) (Config, error) {
 	var config Config
-	var p Params
+	var p lbcluster.Params
 	var jsonStream string = "{"
 	var mc map[string][]string
 	mc = make(map[string][]string)
-	var mp map[string]Params
-	mp = make(map[string]Params)
+	var mp map[string]lbcluster.Params
+	mp = make(map[string]lbcluster.Params)
 
 	lines, err := readLines(configFile)
 	if err != nil {
@@ -158,6 +150,8 @@ func loadConfig(configFile string) (Config, error) {
 			}
 		}
 	}
+	config.Parameters = mp
+	config.Clusters = mc
 	return config, nil
 
 }
@@ -186,9 +180,15 @@ func main() {
 		os.Exit(1)
 	} else {
 		fmt.Println(config)
-		os.Exit(0)
 	}
 
+	for k, v := range config.Parameters {
+		fmt.Println("params ", k, v)
+	}
+	for k, v := range config.Clusters {
+		fmt.Println("clusters ", k, v)
+	}
+	os.Exit(0)
 	var wg sync.WaitGroup
 	done := make(chan struct{})
 	wq := make(chan interface{})
