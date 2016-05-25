@@ -27,7 +27,6 @@ var configFileFlag = flag.String("config", "./load-balancing.conf", "specify con
 var logFileFlag = flag.String("log", "./lbd.log", "specify log file path")
 
 const itCSgroupDNSserver string = "cfmgr.cern.ch"
-const worstValue int = 99999
 
 type Config struct {
 	Master          string
@@ -78,6 +77,34 @@ func readLines(path string) (lines []string, err error) {
 		err = nil
 	}
 	return
+}
+
+func loadClusters(config Config) []lbcluster.LBCluster {
+	var hm map[string]int
+	hm = make(map[string]int)
+	var lbc lbcluster.LBCluster
+	var lbcs []lbcluster.LBCluster
+
+	for k, v := range config.Clusters {
+		if len(v) == 0 {
+			fmt.Println("cluster " + k + " is ignored as it has no members defined in the configuration file " + *configFileFlag)
+			continue
+		}
+		if par, ok := config.Parameters[k]; ok {
+			lbc = lbcluster.LBCluster{Cluster_name: k, Loadbalancing_username: "loadbalancing", Loadbalancing_password: config.SnmpPassword, Parameters: par, Statistics_filename: "/var/log/lb/lbstatistics." + k, Per_cluster_filename: "/var/log/lb/cluster/" + k + ".log"}
+			for _, h := range v {
+				hm[h] = lbcluster.WorstValue
+			}
+			lbc.Host_metric_table = hm
+			lbcs = append(lbcs, lbc)
+			fmt.Println("(re-)loaded cluster " + k)
+
+		} else {
+			fmt.Println("missing parameters for cluster " + k + "; ignoring the cluster, please check the configuration file " + *configFileFlag)
+		}
+	}
+	return lbcs
+
 }
 
 func loadConfig(configFile string) (Config, error) {
@@ -187,6 +214,13 @@ func main() {
 	}
 	for k, v := range config.Clusters {
 		fmt.Println("clusters ", k, v)
+	}
+	lbclusters := loadClusters(config)
+	for _, c := range lbclusters {
+		fmt.Println("lbcluster ", c)
+		if c.Time_to_refresh() {
+			c.Evaluate_hosts()
+		}
 	}
 	os.Exit(0)
 	var wg sync.WaitGroup
