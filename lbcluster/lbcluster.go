@@ -3,6 +3,8 @@ package lbcluster
 import (
 	"encoding/json"
 	"fmt"
+	//"github.com/tiebingzhang/wapsnmp"
+	"github.com/k-sone/snmpgo"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -11,6 +13,7 @@ import (
 )
 
 const WorstValue int = 99999
+const OID string = ".1.3.6.1.4.1.96.255.1"
 
 type LBCluster struct {
 	Cluster_name            string
@@ -111,5 +114,56 @@ func (self LBCluster) snmp_req(host string) (int, string, string) {
 		}
 		metric = WorstValue - 1
 	}
+	//wapsnmp.DoGetTestV3(host, OID, self.Loadbalancing_username, "MD5", self.Loadbalancing_password, "NOPRIV", self.Loadbalancing_password)
+	snmp, err := snmpgo.NewSNMP(snmpgo.SNMPArguments{
+		Version:       snmpgo.V3,
+		Address:       host + ":161",
+		Retries:       1,
+		UserName:      self.Loadbalancing_username,
+		SecurityLevel: snmpgo.AuthNoPriv,
+		AuthProtocol:  snmpgo.Md5,
+		AuthPassword:  self.Loadbalancing_password,
+	})
+	if err != nil {
+		// Failed to create snmpgo.SNMP object
+		fmt.Println(err)
+		return metric, host, fmt.Sprintf("%v\n", err)
+	}
+
+	oids, err := snmpgo.NewOids([]string{
+		OID,
+	})
+	if err != nil {
+		// Failed to parse Oids
+		fmt.Println(err)
+		return metric, host, fmt.Sprintf("%v\n", err)
+	}
+
+	if err = snmp.Open(); err != nil {
+		// Failed to open connection
+		fmt.Println(err)
+		return metric, host, fmt.Sprintf("%v\n", err)
+	}
+	defer snmp.Close()
+
+	pdu, err := snmp.GetRequest(oids)
+	if err != nil {
+		// Failed to request
+		fmt.Println(err)
+		return metric, host, fmt.Sprintf("%v\n", err)
+	}
+	if pdu.ErrorStatus() != snmpgo.NoError {
+		// Received an error from the agent
+		fmt.Println(pdu.ErrorStatus(), pdu.ErrorIndex())
+	}
+
+	// get VarBind list
+	fmt.Println(pdu.VarBinds())
+
+	// select a VarBind
+	Varbind := pdu.VarBinds().MatchOid(oids[0])
+	fmt.Println(Varbind.Variable)
+	fmt.Println(pdu.VarBinds().MatchOid(oids[0]))
+
 	return metric, host, logmessage
 }
