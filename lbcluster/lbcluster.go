@@ -9,6 +9,8 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -142,7 +144,7 @@ func (self LBCluster) snmp_req(host string) (int, string, string) {
 	if err = snmp.Open(); err != nil {
 		// Failed to open connection
 		fmt.Println(err)
-		return metric, host, fmt.Sprintf("%v\n", err)
+		return metric, host, fmt.Sprintf("snmp open failed with %v\n", err)
 	}
 	defer snmp.Close()
 
@@ -150,7 +152,7 @@ func (self LBCluster) snmp_req(host string) (int, string, string) {
 	if err != nil {
 		// Failed to request
 		fmt.Println(err)
-		return metric, host, fmt.Sprintf("%v\n", err)
+		return metric, host, fmt.Sprintf("snmp get failed with %v\n", err)
 	}
 	if pdu.ErrorStatus() != snmpgo.NoError {
 		// Received an error from the agent
@@ -164,6 +166,25 @@ func (self LBCluster) snmp_req(host string) (int, string, string) {
 	Varbind := pdu.VarBinds().MatchOid(oids[0])
 	fmt.Println(Varbind.Variable)
 	fmt.Println(pdu.VarBinds().MatchOid(oids[0]))
+	if pdu.VarBinds().MatchOid(oids[0]).Variable.Type() == "Integer" {
+		metricstr := pdu.VarBinds().MatchOid(oids[0]).Variable.String()
+		if metric, err = strconv.Atoi(metricstr); err != nil {
+			fmt.Println(err)
+			return metric, host, fmt.Sprintf("%v\n", err)
+		}
+	} else if pdu.VarBinds().MatchOid(oids[0]).Variable.Type() == "OctetString" {
+		cskvpair := pdu.VarBinds().MatchOid(oids[0]).Variable.String()
+		kvpair := strings.Split(cskvpair, ",")
+		for _, kv := range kvpair {
+			cm := strings.Split(kv, "=")
+			if cm[0] == self.Cluster_name {
+				if metric, err = strconv.Atoi(cm[1]); err != nil {
+					fmt.Println(err)
+					return metric, host, fmt.Sprintf("%v\n", err)
+				}
+			}
+		}
+	}
 
 	return metric, host, logmessage
 }
