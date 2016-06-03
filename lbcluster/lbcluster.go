@@ -6,7 +6,7 @@ import (
 	//"github.com/tiebingzhang/wapsnmp"
 	"github.com/k-sone/snmpgo"
 	"io/ioutil"
-	"math/rand"
+	//"math/rand"
 	"net"
 	"net/http"
 	"os"
@@ -74,6 +74,7 @@ func (self LBCluster) Evaluate_hosts() {
 		time.Sleep(1 * time.Millisecond)
 		select {
 		case metrichostlog := <-result:
+			self.Host_metric_table[metrichostlog.Host] = metrichostlog.Metric
 			fmt.Printf("%v\n%v %v\n", metrichostlog.Log, metrichostlog.Host, metrichostlog.Metric)
 		}
 	}
@@ -102,7 +103,7 @@ func NewTimeoutClient(connectTimeout time.Duration, readWriteTimeout time.Durati
 
 func (self LBCluster) snmp_req(host string, wg *sync.WaitGroup, result chan<- RetSnmp) {
 	defer wg.Done()
-	time.Sleep(time.Duration(rand.Int31n(5000)) * time.Millisecond)
+	//time.Sleep(time.Duration(rand.Int31n(1000)) * time.Millisecond)
 	metric := -100
 	logmessage := ""
 	if self.Parameters.Metric == "cmsweb" {
@@ -145,7 +146,7 @@ func (self LBCluster) snmp_req(host string, wg *sync.WaitGroup, result chan<- Re
 	snmp, err := snmpgo.NewSNMP(snmpgo.SNMPArguments{
 		Version:       snmpgo.V3,
 		Address:       host + ":161",
-		Retries:       2,
+		Retries:       0,
 		UserName:      self.Loadbalancing_username,
 		SecurityLevel: snmpgo.AuthNoPriv,
 		AuthProtocol:  snmpgo.Md5,
@@ -168,49 +169,66 @@ func (self LBCluster) snmp_req(host string, wg *sync.WaitGroup, result chan<- Re
 		result <- RetSnmp{metric, host, fmt.Sprintf("%v\n", err)}
 		return
 	}
-	if err = snmp.Open(); err != nil {
-		// Failed to open connection
-		fmt.Println(err)
-		result <- RetSnmp{metric, host, fmt.Sprintf("snmp open failed with %v\n", err)}
-		return
-	}
-	defer snmp.Close()
-
-	pdu, err := snmp.GetRequest(oids)
-	if err != nil {
-		// Failed to request
-		fmt.Println(err)
-		result <- RetSnmp{metric, host, fmt.Sprintf("%v: snmp get failed with %v\n", host, err)}
-		return
-	}
-	if pdu.ErrorStatus() != snmpgo.NoError {
-		// Received an error from the agent
-		fmt.Println(pdu.ErrorStatus(), pdu.ErrorIndex())
-	}
-
-	// select a VarBind
-	Varbind := pdu.VarBinds().MatchOid(oids[0])
-	if Varbind.Variable.Type() == "Integer" {
-		metricstr := Varbind.Variable.String()
-		if metric, err = strconv.Atoi(metricstr); err != nil {
+	// retry MessageId mismatch
+	// although problem should not happen wiht retries: 0 in SNMPArguments
+	for i := 0; i <= 1; i++ {
+		if err = snmp.Open(); err != nil {
+			// Failed to open connection
 			fmt.Println(err)
-			result <- RetSnmp{metric, host, fmt.Sprintf("%v\n", err)}
-			return
+			if _, ok := err.(*snmpgo.MessageError); ok {
+				snmp.Close()
+				fmt.Printf("retrying: %v\n", i)
+				continue
+			} else {
+				result <- RetSnmp{metric, host, fmt.Sprintf("snmp open failed with %v\n", err)}
+				return
+			}
 		}
-	} else if Varbind.Variable.Type() == "OctetString" {
-		cskvpair := Varbind.Variable.String()
-		kvpair := strings.Split(cskvpair, ",")
-		for _, kv := range kvpair {
-			cm := strings.Split(kv, "=")
-			if cm[0] == self.Cluster_name {
-				if metric, err = strconv.Atoi(cm[1]); err != nil {
-					fmt.Println(err)
-					result <- RetSnmp{metric, host, fmt.Sprintf("%v\n", err)}
-					return
+
+		pdu, err := snmp.GetRequest(oids)
+		if err != nil {
+			// Failed to request
+			fmt.Println(err)
+			if _, ok := err.(*snmpgo.MessageError); ok {
+				snmp.Close()
+				fmt.Printf("retrying: %v\n", i)
+				continue
+			} else {
+				result <- RetSnmp{metric, host, fmt.Sprintf("snmp get failed with %v\n", err)}
+				return
+			}
+		}
+		if pdu.ErrorStatus() != snmpgo.NoError {
+			// Received an error from the agent
+			fmt.Println(pdu.ErrorStatus(), pdu.ErrorIndex())
+		}
+
+		// select a VarBind
+		Varbind := pdu.VarBinds().MatchOid(oids[0])
+		if Varbind.Variable.Type() == "Integer" {
+			metricstr := Varbind.Variable.String()
+			if metric, err = strconv.Atoi(metricstr); err != nil {
+				fmt.Println(err)
+				result <- RetSnmp{metric, host, fmt.Sprintf("%v\n", err)}
+				return
+			}
+		} else if Varbind.Variable.Type() == "OctetString" {
+			cskvpair := Varbind.Variable.String()
+			kvpair := strings.Split(cskvpair, ",")
+			for _, kv := range kvpair {
+				cm := strings.Split(kv, "=")
+				if cm[0] == self.Cluster_name {
+					if metric, err = strconv.Atoi(cm[1]); err != nil {
+						fmt.Println(err)
+						result <- RetSnmp{metric, host, fmt.Sprintf("%v\n", err)}
+						return
+					}
 				}
 			}
 		}
+		break
 	}
+	defer snmp.Close()
 
 	result <- RetSnmp{metric, host, logmessage}
 	return
