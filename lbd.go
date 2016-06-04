@@ -41,13 +41,13 @@ type Config struct {
 	Parameters      map[string]lbcluster.Params
 }
 
-func logInfo(log *syslog.Writer, s string) error {
-	//err := log.Info(s)
-	b := []byte(s)
-	_, err := log.Write(b)
-	fmt.Println(s)
-	return err
-}
+//func logInfo(log *syslog.Writer, s string) error {
+//	//err := log.Info(s)
+//	b := []byte(s)
+//	_, err := log.Write(b)
+//	fmt.Println(s)
+//	return err
+//}
 
 // Read a whole file into the memory and store it as array of lines
 func readLines(path string) (lines []string, err error) {
@@ -91,7 +91,7 @@ func loadClusters(config Config) []lbcluster.LBCluster {
 			continue
 		}
 		if par, ok := config.Parameters[k]; ok {
-			lbc = lbcluster.LBCluster{Cluster_name: k, Loadbalancing_username: "loadbalancing", Loadbalancing_password: config.SnmpPassword, Parameters: par, Statistics_filename: "/var/log/lb/lbstatistics." + k, Per_cluster_filename: "/var/log/lb/cluster/" + k + ".log"}
+			lbc = lbcluster.LBCluster{Cluster_name: k, Loadbalancing_username: "loadbalancing", Loadbalancing_password: config.SnmpPassword, Parameters: par, Statistics_filename: "/var/log/lb/lbstatistics." + k, Per_cluster_filename: "./" + k + ".log"}
 			for _, h := range v {
 				hm[h] = lbcluster.WorstValue
 			}
@@ -192,32 +192,41 @@ func main() {
 	}
 
 	log, e := syslog.New(syslog.LOG_NOTICE, "lbd")
+	lg := lbcluster.Log{*log, *debugFlag}
 	if e == nil {
-		logInfo(log, "Starting lbd")
+		lg.Info("Starting lbd")
 	}
 
 	hostname, e := os.Hostname()
 	if e == nil {
-		logInfo(log, "Hostname: "+hostname)
+		lg.Info("Hostname: " + hostname)
 	}
 
 	config, e := loadConfig(*configFileFlag)
 	if e != nil {
-		fmt.Println("loadConfig Error: ", e)
+		lg.Warning("loadConfig Error: ")
+		lg.Warning(e.Error())
 		os.Exit(1)
 	} else {
-		fmt.Println(config)
+		if *debugFlag {
+			fmt.Println(config)
+		}
 	}
 
-	for k, v := range config.Parameters {
-		fmt.Println("params ", k, v)
-	}
-	for k, v := range config.Clusters {
-		fmt.Println("clusters ", k, v)
+	if *debugFlag {
+		for k, v := range config.Parameters {
+			fmt.Println("params ", k, v)
+		}
+		for k, v := range config.Clusters {
+			fmt.Println("clusters ", k, v)
+		}
 	}
 	lbclusters := loadClusters(config)
 	for _, c := range lbclusters {
-		fmt.Println("lbcluster ", c)
+		c.Slog = lg
+		if *debugFlag {
+			fmt.Println("lbcluster ", c)
+		}
 		if c.Time_to_refresh() {
 			c.Evaluate_hosts()
 		}
@@ -238,7 +247,7 @@ func main() {
 		wq <- i
 	}
 
-	finish(done, &wg, log)
+	finish(done, &wg, lg)
 }
 
 func doit(workerId int, wq <-chan interface{}, done <-chan struct{}, wg *sync.WaitGroup) {
@@ -258,10 +267,10 @@ func doit(workerId int, wq <-chan interface{}, done <-chan struct{}, wg *sync.Wa
 
 //type finishFunc func(chan struct{}, *sync.WaitGroup, *syslog.Writer)
 
-func finish(done chan struct{}, wg *sync.WaitGroup, log *syslog.Writer) {
+func finish(done chan struct{}, wg *sync.WaitGroup, lg lbcluster.Log) {
 	close(done)
 	wg.Wait()
-	logInfo(log, "all done!")
+	lg.Info("all done!")
 	return
 }
 

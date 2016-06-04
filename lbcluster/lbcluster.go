@@ -6,6 +6,7 @@ import (
 	//"github.com/tiebingzhang/wapsnmp"
 	"github.com/k-sone/snmpgo"
 	"io/ioutil"
+	"log/syslog"
 	//"math/rand"
 	"net"
 	"net/http"
@@ -32,6 +33,7 @@ type LBCluster struct {
 	Statistics_filename     string
 	Per_cluster_filename    string
 	Current_index           int
+	Slog                    Log
 }
 
 type Params struct {
@@ -49,12 +51,59 @@ type RetSnmp struct {
 	Log    string
 }
 
+type Log struct {
+	Writer syslog.Writer
+	Debug  bool
+}
+
+type Logger interface {
+	Info(s string) error
+	Warning(s string) error
+}
+
+func (l Log) Info(s string) error {
+	err := l.Writer.Info(s)
+	if l.Debug {
+		fmt.Println(s)
+	}
+	return err
+
+}
+
+func (l Log) Warning(s string) error {
+	err := l.Writer.Warning(s)
+	if l.Debug {
+		fmt.Println(s)
+	}
+	return err
+
+}
+
 func (self LBCluster) Time_to_refresh() bool {
 	if self.Time_of_last_evaluation.IsZero() {
 		return true
 	} else {
 		return self.Time_of_last_evaluation.Add(time.Duration(self.Parameters.Polling_interval) * time.Second).After(time.Now())
 	}
+}
+
+func (self LBCluster) write_to_log(msg string) error {
+	self.Slog.Info(msg)
+	f, err := os.OpenFile(self.Per_cluster_filename, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0640)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	tag := "lbd"
+	nl := ""
+	if !strings.HasSuffix(msg, "\n") {
+		nl = "\n"
+	}
+	timestamp := time.Now().Format(time.Stamp)
+	_, err = fmt.Fprintf(f, "%s %s[%d]: %s%s",
+		timestamp,
+		tag, os.Getpid(), msg, nl)
+	return err
 }
 
 func (self LBCluster) find_best_hosts() {
@@ -66,7 +115,7 @@ func (self LBCluster) Evaluate_hosts() {
 	var wg sync.WaitGroup
 	result := make(chan RetSnmp, 200)
 	for h := range self.Host_metric_table {
-		fmt.Println("contacting cluster: " + self.Cluster_name + " node: " + h)
+		self.write_to_log("contacting cluster: " + self.Cluster_name + " node: " + h)
 		wg.Add(1)
 		go self.snmp_req(h, &wg, result)
 	}
@@ -75,7 +124,7 @@ func (self LBCluster) Evaluate_hosts() {
 		select {
 		case metrichostlog := <-result:
 			self.Host_metric_table[metrichostlog.Host] = metrichostlog.Metric
-			fmt.Printf("%v\n%v %v\n", metrichostlog.Log, metrichostlog.Host, metrichostlog.Metric)
+			self.write_to_log(metrichostlog.Log)
 		}
 	}
 	wg.Wait()
@@ -112,31 +161,28 @@ func (self LBCluster) snmp_req(host string, wg *sync.WaitGroup, result chan<- Re
 		httpClient := NewTimeoutClient(connectTimeout, readWriteTimeout)
 		response, err := httpClient.Get("http://woger-direct.cern.ch:9098/roger/v1/state/" + host)
 		if err != nil {
-			fmt.Printf("%s", err)
-			os.Exit(1)
+			logmessage = logmessage + fmt.Sprintf("%s", err)
 		} else {
 			defer response.Body.Close()
 			contents, err := ioutil.ReadAll(response.Body)
 			if err != nil {
-				fmt.Printf("%s", err)
-				os.Exit(1)
+				logmessage = logmessage + fmt.Sprintf("%s", err)
 			}
 			var dat map[string]interface{}
 			if err := json.Unmarshal([]byte(contents), &dat); err != nil {
-				fmt.Println(host)
-				fmt.Println(response.Body)
-				fmt.Println(contents)
-				panic(err)
+				logmessage = logmessage + " - " + fmt.Sprintf("%s", host)
+				logmessage = logmessage + " - " + fmt.Sprintf("%v", response.Body)
+				logmessage = logmessage + " - " + fmt.Sprintf("%v", err)
 			}
 			if str, ok := dat["appstate"].(string); ok {
 				if str != "production" {
 					metric = -99
-					logmessage = fmt.Sprintf("cluster: %s node: %s - %s - setting reply %v", self.Cluster_name, host, str, metric)
+					logmessage = logmessage + fmt.Sprintf("cluster: %s node: %s - %s - setting reply %v", self.Cluster_name, host, str, metric)
 					result <- RetSnmp{metric, host, logmessage}
 					return
 				}
 			} else {
-				fmt.Printf("dat[\"appstate\"] not a string for node %s", host)
+				logmessage = logmessage + fmt.Sprintf("dat[\"appstate\"] not a string for node %s", host)
 			}
 
 		}
@@ -156,7 +202,8 @@ func (self LBCluster) snmp_req(host string, wg *sync.WaitGroup, result chan<- Re
 	if err != nil {
 		// Failed to create snmpgo.SNMP object
 		fmt.Println(err)
-		result <- RetSnmp{metric, host, fmt.Sprintf("%v\n", err)}
+		logmessage = logmessage + " - " + fmt.Sprintf("%v", err)
+		result <- RetSnmp{metric, host, logmessage}
 		return
 	}
 
@@ -165,8 +212,8 @@ func (self LBCluster) snmp_req(host string, wg *sync.WaitGroup, result chan<- Re
 	})
 	if err != nil {
 		// Failed to parse Oids
-		fmt.Println(err)
-		result <- RetSnmp{metric, host, fmt.Sprintf("%v\n", err)}
+		logmessage = logmessage + " - " + fmt.Sprintf("%v", err)
+		result <- RetSnmp{metric, host, logmessage}
 		return
 	}
 	// retry MessageId mismatch
@@ -174,33 +221,34 @@ func (self LBCluster) snmp_req(host string, wg *sync.WaitGroup, result chan<- Re
 	for i := 0; i <= 1; i++ {
 		if err = snmp.Open(); err != nil {
 			// Failed to open connection
-			fmt.Println(err)
 			if _, ok := err.(*snmpgo.MessageError); ok {
 				snmp.Close()
-				fmt.Printf("retrying: %v\n", i)
+				logmessage = logmessage + " - " + fmt.Sprintf("retrying: %v", i)
 				continue
 			} else {
-				result <- RetSnmp{metric, host, fmt.Sprintf("snmp open failed with %v\n", err)}
+				logmessage = logmessage + fmt.Sprintf("snmp open failed with %v", err)
+				logmessage = fmt.Sprintf("contacted  cluster: %v node: %v - %v - setting reply %v", self.Cluster_name, host, logmessage, metric)
+				result <- RetSnmp{metric, host, logmessage}
 				return
 			}
 		}
 
 		pdu, err := snmp.GetRequest(oids)
 		if err != nil {
-			// Failed to request
-			fmt.Println(err)
 			if _, ok := err.(*snmpgo.MessageError); ok {
 				snmp.Close()
-				fmt.Printf("retrying: %v\n", i)
+				logmessage = logmessage + fmt.Sprintf("retrying: %v", i)
 				continue
 			} else {
-				result <- RetSnmp{metric, host, fmt.Sprintf("snmp get failed with %v\n", err)}
+				logmessage = logmessage + fmt.Sprintf("snmp get failed with %v", err)
+				logmessage = fmt.Sprintf("contacted  cluster: %v node: %v - %v - setting reply %v", self.Cluster_name, host, logmessage, metric)
+				result <- RetSnmp{metric, host, logmessage}
 				return
 			}
 		}
 		if pdu.ErrorStatus() != snmpgo.NoError {
 			// Received an error from the agent
-			fmt.Println(pdu.ErrorStatus(), pdu.ErrorIndex())
+			logmessage = logmessage + " - " + fmt.Sprintf("%v %v", pdu.ErrorStatus(), pdu.ErrorIndex())
 		}
 
 		// select a VarBind
@@ -208,8 +256,8 @@ func (self LBCluster) snmp_req(host string, wg *sync.WaitGroup, result chan<- Re
 		if Varbind.Variable.Type() == "Integer" {
 			metricstr := Varbind.Variable.String()
 			if metric, err = strconv.Atoi(metricstr); err != nil {
-				fmt.Println(err)
-				result <- RetSnmp{metric, host, fmt.Sprintf("%v\n", err)}
+				logmessage = logmessage + " - " + fmt.Sprintf("%v", err)
+				result <- RetSnmp{metric, host, logmessage}
 				return
 			}
 		} else if Varbind.Variable.Type() == "OctetString" {
@@ -219,8 +267,8 @@ func (self LBCluster) snmp_req(host string, wg *sync.WaitGroup, result chan<- Re
 				cm := strings.Split(kv, "=")
 				if cm[0] == self.Cluster_name {
 					if metric, err = strconv.Atoi(cm[1]); err != nil {
-						fmt.Println(err)
-						result <- RetSnmp{metric, host, fmt.Sprintf("%v\n", err)}
+						logmessage = logmessage + " - " + fmt.Sprintf("%v", err)
+						result <- RetSnmp{metric, host, logmessage}
 						return
 					}
 				}
@@ -230,6 +278,7 @@ func (self LBCluster) snmp_req(host string, wg *sync.WaitGroup, result chan<- Re
 	}
 	defer snmp.Close()
 
+	logmessage = logmessage + "\n" + fmt.Sprintf("contacted  cluster: %v node: %v - reply was %v", self.Cluster_name, host, metric)
 	result <- RetSnmp{metric, host, logmessage}
 	return
 }
