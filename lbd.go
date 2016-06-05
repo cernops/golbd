@@ -81,7 +81,6 @@ func readLines(path string) (lines []string, err error) {
 
 func loadClusters(config Config) []lbcluster.LBCluster {
 	var hm map[string]int
-	hm = make(map[string]int)
 	var lbc lbcluster.LBCluster
 	var lbcs []lbcluster.LBCluster
 
@@ -92,6 +91,7 @@ func loadClusters(config Config) []lbcluster.LBCluster {
 		}
 		if par, ok := config.Parameters[k]; ok {
 			lbc = lbcluster.LBCluster{Cluster_name: k, Loadbalancing_username: "loadbalancing", Loadbalancing_password: config.SnmpPassword, Parameters: par, Statistics_filename: "/var/log/lb/lbstatistics." + k, Per_cluster_filename: "./" + k + ".log"}
+			hm = make(map[string]int)
 			for _, h := range v {
 				hm[h] = lbcluster.WorstValue
 			}
@@ -174,6 +174,8 @@ func loadConfig(configFile string) (Config, error) {
 
 			} else if words[0] == "clusters" {
 				mc[words[1]] = words[3:]
+				fmt.Println(words[1])
+				fmt.Println(words[3:])
 			}
 		}
 	}

@@ -7,11 +7,12 @@ import (
 	"github.com/k-sone/snmpgo"
 	"io/ioutil"
 	"log/syslog"
-	//"math/rand"
+	"math/rand"
 	"net"
 	"net/http"
 	"os"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -80,24 +81,100 @@ func (l Log) Warning(s string) error {
 
 }
 
+func fisher_yates_shuffle(array []string) []string {
+	var jval, ival string
+	var i, j int32
+	for i = int32(len(array) - 1); i > 0; i-- {
+		j = rand.Int31n(i + 1)
+		if i == j {
+			continue
+		}
+		jval = array[j]
+		ival = array[i]
+		array[j] = ival
+		array[i] = jval
+	}
+	return array
+}
+
 type MetricPolicyApplier interface {
 	Apply_metric_minino()
 	Apply_metric_minimum()
 	Apply_metric_cmsweb()
 }
 
+type Pair struct {
+	Key   string
+	Value int
+}
+
+type PairList []Pair
+
+func (p PairList) Len() int           { return len(p) }
+func (p PairList) Less(i, j int) bool { return p[i].Value < p[j].Value }
+func (p PairList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
 func (self LBCluster) Apply_metric_minino() {
 	self.write_to_log("Got metric minino = " + self.Parameters.Metric)
+	pl := make(PairList, len(self.Host_metric_table))
+	i := 0
+	for k, v := range self.Host_metric_table {
+		pl[i] = Pair{k, v}
+		i++
+	}
+	sort.Sort(pl)
+	fmt.Println(pl)
+	var sorted_host_list []string
+	var useful_host_list []string
+	for _, v := range pl {
+		if (v.Value > 0) && (v.Value < WorstValue) {
+			useful_host_list = append(useful_host_list, v.Key)
+		}
+		sorted_host_list = append(sorted_host_list, v.Key)
+	}
+	fmt.Println(useful_host_list)
+	useful_hosts := len(useful_host_list)
+	list_length := len(pl)
+	max := self.Parameters.Best_hosts
+	if max == -1 {
+		max = list_length
+	}
+	if max > list_length {
+		self.write_to_log(fmt.Sprintf("WARNING: impossible to return %v hosts from the list of %v hosts (%v). Check the configuration of cluster %v. Returning %v hosts.", max, list_length, sorted_host_list, self.Cluster_name, list_length))
+		max = list_length
+	}
+	if list_length == 0 {
+		self.write_to_log(fmt.Sprintf("ERROR: cluster %v has no hosts defined ! Check the configuration.", self.Cluster_name))
+		self.Current_best_hosts = []string{"unknown"}
+	} else if useful_hosts == 0 {
+		if self.Parameters.Metric == "minimum" {
+			self.write_to_log(fmt.Sprintf("WARNING: no usable hosts found for cluster %v ! Returning random %v hosts.", self.Cluster_name, max))
+			sorted_host_list = fisher_yates_shuffle(sorted_host_list)
+			self.Current_best_hosts = sorted_host_list[:max]
+		} else if self.Parameters.Metric == "minino" {
+			self.write_to_log(fmt.Sprintf("WARNING: no usable hosts found for cluster %v ! Returning no hosts.", self.Cluster_name))
+			self.Current_best_hosts = useful_host_list
+		}
+	} else {
+		if useful_hosts < max {
+			self.write_to_log(fmt.Sprintf("WARNING: only %v useable hosts found in cluster %v", useful_hosts, self.Cluster_name))
+			max = useful_hosts
+		}
+		self.Current_best_hosts = useful_host_list[:max]
+		fmt.Println(self.Current_best_hosts)
+	}
 	return
 }
 
 func (self LBCluster) Apply_metric_minimum() {
 	self.write_to_log("Got metric minimum = " + self.Parameters.Metric)
+	self.Apply_metric_minino()
 	return
 }
 
 func (self LBCluster) Apply_metric_cmsweb() {
 	self.write_to_log("Got metric cmsweb = " + self.Parameters.Metric)
+	self.Apply_metric_minino()
 	return
 }
 
