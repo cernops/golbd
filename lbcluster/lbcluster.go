@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -79,6 +80,27 @@ func (l Log) Warning(s string) error {
 
 }
 
+type MetricPolicyApplier interface {
+	Apply_metric_minino()
+	Apply_metric_minimum()
+	Apply_metric_cmsweb()
+}
+
+func (self LBCluster) Apply_metric_minino() {
+	self.write_to_log("Got metric minino = " + self.Parameters.Metric)
+	return
+}
+
+func (self LBCluster) Apply_metric_minimum() {
+	self.write_to_log("Got metric minimum = " + self.Parameters.Metric)
+	return
+}
+
+func (self LBCluster) Apply_metric_cmsweb() {
+	self.write_to_log("Got metric cmsweb = " + self.Parameters.Metric)
+	return
+}
+
 func (self LBCluster) Time_to_refresh() bool {
 	if self.Time_of_last_evaluation.IsZero() {
 		return true
@@ -106,12 +128,22 @@ func (self LBCluster) write_to_log(msg string) error {
 	return err
 }
 
-func (self LBCluster) find_best_hosts() {
+func (self LBCluster) Find_best_hosts() {
 	self.Previous_best_hosts = self.Current_best_hosts
-	self.Evaluate_hosts()
+	self.evaluate_hosts()
+	methodName := "Apply_metric_" + self.Parameters.Metric
+	var a MetricPolicyApplier
+	a = self
+	_, ok := reflect.TypeOf(a).MethodByName(methodName)
+	if !ok {
+		self.write_to_log("ERROR: wrong parameter(metric) in definition of cluster " + self.Parameters.Metric)
+	}
+	// invoke m
+	self.write_to_log(self.Cluster_name + " invoking " + self.Parameters.Metric)
+	reflect.ValueOf(a).MethodByName(methodName).Call([]reflect.Value{})
 }
 
-func (self LBCluster) Evaluate_hosts() {
+func (self LBCluster) evaluate_hosts() {
 	var wg sync.WaitGroup
 	result := make(chan RetSnmp, 200)
 	for h := range self.Host_metric_table {

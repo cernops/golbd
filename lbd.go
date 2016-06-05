@@ -110,7 +110,6 @@ func loadClusters(config Config) []lbcluster.LBCluster {
 func loadConfig(configFile string) (Config, error) {
 	var config Config
 	var p lbcluster.Params
-	var jsonStream string = "{"
 	var mc map[string][]string
 	mc = make(map[string][]string)
 	var mp map[string]lbcluster.Params
@@ -145,6 +144,7 @@ func loadConfig(configFile string) (Config, error) {
 				config.DnsManager = words[2]
 			}
 		} else if words[2] == "=" {
+			jsonStream := "{"
 			if words[0] == "parameters" {
 				for i, param := range words[3:] {
 					keyval := strings.Split(param, "#")
@@ -228,7 +228,7 @@ func main() {
 			fmt.Println("lbcluster ", c)
 		}
 		if c.Time_to_refresh() {
-			c.Evaluate_hosts()
+			c.Find_best_hosts()
 		}
 	}
 	os.Exit(0)
