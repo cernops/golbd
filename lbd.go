@@ -13,6 +13,8 @@ import (
 	"encoding/json"
 	"github.com/reguero/golbd/lbcluster"
 	"io"
+	"io/ioutil"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -185,6 +187,49 @@ func loadConfig(configFile string) (Config, error) {
 
 }
 
+func should_update_dns(config Config, hostname string, lg lbcluster.Log) bool {
+	if hostname == config.Master {
+		return true
+	}
+	master_heartbeat := "I am sick"
+	connectTimeout := (10 * time.Second)
+	readWriteTimeout := (20 * time.Second)
+	httpClient := lbcluster.NewTimeoutClient(connectTimeout, readWriteTimeout)
+	response, err := httpClient.Get("http://" + config.Master + "/load-balancing/" + config.HeartbeatFile)
+	if err != nil {
+		lg.Warning(fmt.Sprintf("problem fetching heartbeat file from the primary master %v: %v", config.Master, err))
+		return true
+	} else {
+		defer response.Body.Close()
+		contents, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			fmt.Printf("%s", err)
+		}
+		fmt.Printf("%s", contents)
+		master_heartbeat = strings.TrimSpace(string(contents))
+		lg.Info("primary master heartbeat: " + master_heartbeat)
+		r, _ := regexp.Compile(config.Master + ` : (\d+) : I am alive`)
+		if r.MatchString(master_heartbeat) {
+			matches := r.FindStringSubmatch(master_heartbeat)
+			fmt.Println(matches[1])
+			if mastersecs, err := strconv.ParseInt(matches[1], 10, 64); err == nil {
+				now := time.Now()
+				localsecs := now.Unix()
+				diff := localsecs - mastersecs
+				lg.Info(fmt.Sprintf("primary master heartbeat time difference: %v seconds", diff))
+				if diff > 600 {
+					return true
+				}
+			}
+		} else {
+			// Upload - heartbeat has unexpected values
+			return true
+		}
+		// Do not upload, heartbeat was OK
+		return false
+	}
+}
+
 func main() {
 	flag.Parse()
 
@@ -232,6 +277,11 @@ func main() {
 		}
 		if pc.Time_to_refresh() {
 			pc.Find_best_hosts()
+			if should_update_dns(config, hostname, lg) {
+				fmt.Println("should_update_dns true")
+			} else {
+				fmt.Println("should_update_dns false")
+			}
 		}
 	}
 	os.Exit(0)
