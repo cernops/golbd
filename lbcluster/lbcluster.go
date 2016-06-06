@@ -151,7 +151,7 @@ func (self LBCluster) Apply_metric_minino() {
 			self.write_to_log(fmt.Sprintf("WARNING: no usable hosts found for cluster %v ! Returning random %v hosts.", self.Cluster_name, max))
 			sorted_host_list = fisher_yates_shuffle(sorted_host_list)
 			self.Current_best_hosts = sorted_host_list[:max]
-		} else if self.Parameters.Metric == "minino" {
+		} else if (self.Parameters.Metric == "minino") || (self.Parameters.Metric == "cmsweb") {
 			self.write_to_log(fmt.Sprintf("WARNING: no usable hosts found for cluster %v ! Returning no hosts.", self.Cluster_name))
 			self.Current_best_hosts = useful_host_list
 		}
@@ -217,7 +217,14 @@ func (self LBCluster) Find_best_hosts() {
 	}
 	// invoke m
 	self.write_to_log(self.Cluster_name + " invoking " + self.Parameters.Metric)
-	reflect.ValueOf(a).MethodByName(methodName).Call([]reflect.Value{})
+	//reflect.ValueOf(a).MethodByName(methodName).Call([]reflect.Value{})
+	self.Apply_metric_minino()
+	self.Time_of_last_evaluation = time.Now()
+	none := ""
+	if len(self.Current_best_hosts) == 0 {
+		none = "NONE"
+	}
+	self.write_to_log(fmt.Sprintf("best hosts for %v are: %v %v\n", self.Cluster_name, self.Current_best_hosts, none))
 }
 
 func (self LBCluster) evaluate_hosts() {
