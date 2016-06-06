@@ -114,7 +114,7 @@ func (p PairList) Len() int           { return len(p) }
 func (p PairList) Less(i, j int) bool { return p[i].Value < p[j].Value }
 func (p PairList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
-func (self LBCluster) Apply_metric_minino() {
+func (self *LBCluster) Apply_metric_minino() {
 	self.write_to_log("Got metric minino = " + self.Parameters.Metric)
 	pl := make(PairList, len(self.Host_metric_table))
 	i := 0
@@ -166,19 +166,19 @@ func (self LBCluster) Apply_metric_minino() {
 	return
 }
 
-func (self LBCluster) Apply_metric_minimum() {
+func (self *LBCluster) Apply_metric_minimum() {
 	self.write_to_log("Got metric minimum = " + self.Parameters.Metric)
 	self.Apply_metric_minino()
 	return
 }
 
-func (self LBCluster) Apply_metric_cmsweb() {
+func (self *LBCluster) Apply_metric_cmsweb() {
 	self.write_to_log("Got metric cmsweb = " + self.Parameters.Metric)
 	self.Apply_metric_minino()
 	return
 }
 
-func (self LBCluster) Time_to_refresh() bool {
+func (self *LBCluster) Time_to_refresh() bool {
 	if self.Time_of_last_evaluation.IsZero() {
 		return true
 	} else {
@@ -186,7 +186,7 @@ func (self LBCluster) Time_to_refresh() bool {
 	}
 }
 
-func (self LBCluster) write_to_log(msg string) error {
+func (self *LBCluster) write_to_log(msg string) error {
 	self.Slog.Info(msg)
 	f, err := os.OpenFile(self.Per_cluster_filename, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0640)
 	if err != nil {
@@ -205,7 +205,7 @@ func (self LBCluster) write_to_log(msg string) error {
 	return err
 }
 
-func (self LBCluster) Find_best_hosts() {
+func (self *LBCluster) Find_best_hosts() {
 	self.Previous_best_hosts = self.Current_best_hosts
 	self.evaluate_hosts()
 	methodName := "Apply_metric_" + self.Parameters.Metric
@@ -217,17 +217,17 @@ func (self LBCluster) Find_best_hosts() {
 	}
 	// invoke m
 	self.write_to_log(self.Cluster_name + " invoking " + self.Parameters.Metric)
-	//reflect.ValueOf(a).MethodByName(methodName).Call([]reflect.Value{})
-	self.Apply_metric_minino()
+	//self.Apply_metric_minino()
+	reflect.ValueOf(a).MethodByName(methodName).Call([]reflect.Value{})
 	self.Time_of_last_evaluation = time.Now()
 	none := ""
 	if len(self.Current_best_hosts) == 0 {
 		none = "NONE"
 	}
-	self.write_to_log(fmt.Sprintf("best hosts for %v are: %v %v\n", self.Cluster_name, self.Current_best_hosts, none))
+	self.write_to_log(fmt.Sprintf("best hosts for %v are: %v%v\n", self.Cluster_name, strings.Join(self.Current_best_hosts, " "), none))
 }
 
-func (self LBCluster) evaluate_hosts() {
+func (self *LBCluster) evaluate_hosts() {
 	var wg sync.WaitGroup
 	result := make(chan RetSnmp, 200)
 	for h := range self.Host_metric_table {
@@ -266,7 +266,7 @@ func NewTimeoutClient(connectTimeout time.Duration, readWriteTimeout time.Durati
 	}
 }
 
-func (self LBCluster) snmp_req(host string, wg *sync.WaitGroup, result chan<- RetSnmp) {
+func (self *LBCluster) snmp_req(host string, wg *sync.WaitGroup, result chan<- RetSnmp) {
 	defer wg.Done()
 	//time.Sleep(time.Duration(rand.Int31n(1000)) * time.Millisecond)
 	metric := -100

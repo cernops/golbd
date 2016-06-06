@@ -225,12 +225,13 @@ func main() {
 	}
 	lbclusters := loadClusters(config)
 	for _, c := range lbclusters {
-		c.Slog = lg
+		pc := &c
+		pc.Slog = lg
 		if *debugFlag {
 			fmt.Println("lbcluster ", c)
 		}
-		if c.Time_to_refresh() {
-			c.Find_best_hosts()
+		if pc.Time_to_refresh() {
+			pc.Find_best_hosts()
 		}
 	}
 	os.Exit(0)
