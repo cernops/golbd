@@ -230,6 +230,32 @@ func should_update_dns(config Config, hostname string, lg lbcluster.Log) bool {
 	}
 }
 
+func update_heartbeat(config Config, hostname string, lg lbcluster.Log) error {
+	if hostname != config.Master {
+		return nil
+	}
+	heartbeat_file := config.HeartbeatPath + "/" + config.HeartbeatFile + "temp"
+	heartbeat_file_real := config.HeartbeatPath + "/" + config.HeartbeatFile
+	f, err := os.OpenFile(heartbeat_file, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0640)
+	if err != nil {
+		lg.Info(fmt.Sprintf("can not open %v for writing: %v", heartbeat_file, err))
+		return err
+	}
+	now := time.Now()
+	secs := now.Unix()
+	_, err = fmt.Fprintf(f, "%v : %v : I am alive\n", hostname, secs)
+	lg.Info("updating: heartbeat file " + heartbeat_file)
+	if err != nil {
+		lg.Info(fmt.Sprintf("can not write to %v: %v", heartbeat_file, err))
+	}
+	f.Close()
+	if err = os.Rename(heartbeat_file, heartbeat_file_real); err != nil {
+		lg.Info(fmt.Sprintf("can not rename %v to %v: %v", heartbeat_file, heartbeat_file_real, err))
+		return err
+	}
+	return nil
+}
+
 func main() {
 	flag.Parse()
 
@@ -279,6 +305,7 @@ func main() {
 			pc.Find_best_hosts()
 			if should_update_dns(config, hostname, lg) {
 				fmt.Println("should_update_dns true")
+				update_heartbeat(config, hostname, lg)
 			} else {
 				fmt.Println("should_update_dns false")
 			}
