@@ -305,6 +305,11 @@ func main() {
 			pc.Find_best_hosts()
 			if should_update_dns(config, hostname, lg) {
 				fmt.Println("should_update_dns true")
+				e = pc.Get_state_dns(config.DnsManager)
+				if e != nil {
+					lg.Warning("Get_state_dns Error: ")
+					lg.Warning(e.Error())
+				}
 				update_heartbeat(config, hostname, lg)
 			} else {
 				fmt.Println("should_update_dns false")

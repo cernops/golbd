@@ -5,6 +5,7 @@ import (
 	"fmt"
 	//"github.com/tiebingzhang/wapsnmp"
 	"github.com/k-sone/snmpgo"
+	"github.com/miekg/dns"
 	"io/ioutil"
 	"log/syslog"
 	"math/rand"
@@ -32,6 +33,7 @@ type LBCluster struct {
 	Time_of_last_evaluation time.Time
 	Current_best_hosts      []string
 	Previous_best_hosts     []string
+	Previous_best_hosts_dns []string
 	Statistics_filename     string
 	Per_cluster_filename    string
 	Current_index           int
@@ -397,4 +399,89 @@ func (self *LBCluster) snmp_req(host string, wg *sync.WaitGroup, result chan<- R
 	logmessage = logmessage + "\n" + fmt.Sprintf("contacted  cluster: %v node: %v - reply was %v", self.Cluster_name, host, metric)
 	result <- RetSnmp{metric, host, logmessage}
 	return
+}
+
+func RemoveDuplicates(xs *[]string) {
+	found := make(map[string]bool)
+	j := 0
+	for i, x := range *xs {
+		if !found[x] {
+			found[x] = true
+			(*xs)[j] = (*xs)[i]
+			j++
+		}
+	}
+	*xs = (*xs)[:j]
+}
+
+func (self *LBCluster) Get_state_dns(dnsManager string) error {
+	cluster_name := self.Cluster_name
+	if !strings.HasSuffix(cluster_name, ".cern.ch") {
+		cluster_name = cluster_name + ".cern.ch"
+	}
+	m := new(dns.Msg)
+	m.SetQuestion(cluster_name+".", dns.TypeANY)
+	in, err := dns.Exchange(m, dnsManager+":53")
+	if err != nil {
+		self.write_to_log(fmt.Sprintf("%v", err))
+		return err
+	}
+
+	var ips []net.IP
+	for _, a := range in.Answer {
+		if t, ok := a.(*dns.A); ok {
+			fmt.Println(t)
+			fmt.Println(t.A)
+			ips = append(ips, t.A)
+		}
+		if t, ok := a.(*dns.AAAA); ok {
+			fmt.Println(t)
+			fmt.Println(t.AAAA)
+			ips = append(ips, t.AAAA)
+		}
+	}
+	//addrs, err := net.LookupHost(cluster_name)
+	//ips, err := net.LookupIP(cluster_name)
+	//if err != nil {
+	//	fmt.Println(err)
+	//}
+	//fmt.Println(ips)
+	var name string
+	var host_list []string
+	for _, ip := range ips {
+		names, err := net.LookupAddr(ip.String())
+		if err != nil {
+			self.write_to_log(fmt.Sprintf("%v", err))
+			return err
+		}
+		if len(names) > 0 {
+			if len(names) == 1 {
+				name = strings.TrimRight(names[0], ".")
+			} else {
+				name, err = net.LookupCNAME(names[0])
+				if err != nil {
+					self.write_to_log(fmt.Sprintf("%v", err))
+					return err
+				}
+				name = strings.TrimRight(name, ".")
+			}
+			host_list = append(host_list, name)
+		}
+	}
+	RemoveDuplicates(&host_list)
+	self.Previous_best_hosts_dns = host_list
+	prevBesthostsDns := make([]string, len(self.Previous_best_hosts_dns))
+	prevBesthosts := make([]string, len(self.Previous_best_hosts))
+	copy(prevBesthostsDns, self.Previous_best_hosts_dns)
+	copy(prevBesthosts, self.Previous_best_hosts)
+	sort.Strings(prevBesthostsDns)
+	sort.Strings(prevBesthosts)
+	pbhDns := strings.Join(prevBesthostsDns, " ")
+	pbh := strings.Join(prevBesthosts, " ")
+	if pbh != "unknown" {
+		if pbh != pbhDns {
+			self.write_to_log("WARNING: Prev DNS state " + pbhDns + " - Prev local state  " + pbh + " differ")
+		}
+	}
+	return err
 }
