@@ -414,6 +414,51 @@ func RemoveDuplicates(xs *[]string) {
 	*xs = (*xs)[:j]
 }
 
+func (self *LBCluster) Update_dns(keyName, tsigKey, dnsManager string) error {
+	pbhDns := strings.Join(self.Previous_best_hosts_dns, " ")
+	cbh := strings.Join(self.Current_best_hosts, " ")
+	if pbhDns == cbh {
+		return nil
+	}
+	cluster_name := self.Cluster_name
+	if !strings.HasSuffix(cluster_name, ".cern.ch") {
+		cluster_name = cluster_name + ".cern.ch"
+	}
+	//best_hosts_len := len(self.Current_best_hosts)
+	m := new(dns.Msg)
+	m.SetUpdate(cluster_name + ".")
+	m.Id = 1234
+	rr_removeA, _ := dns.NewRR(cluster_name + ". 60 IN A 127.0.0.1")
+	rr_removeAAAA, _ := dns.NewRR(cluster_name + ". 60 IN AAAA ::1")
+	m.RemoveRRset([]dns.RR{rr_removeA})
+	m.RemoveRRset([]dns.RR{rr_removeAAAA})
+
+	for _, hostname := range self.Current_best_hosts {
+		ips, err := net.LookupIP(hostname)
+		if err != nil {
+			self.write_to_log(fmt.Sprintf("LookupIP: %v has incorrect or missing IP address (%v)", hostname, err))
+			continue
+		}
+		for _, ip := range ips {
+			var rr_insert dns.RR
+			if ip.To4() != nil {
+				rr_insert, _ = dns.NewRR(cluster_name + ". 60 IN A " + ip.String())
+			} else if ip.To16() != nil {
+				rr_insert, _ = dns.NewRR(cluster_name + ". 60 IN AAAA " + ip.String())
+			}
+			m.Insert([]dns.RR{rr_insert})
+		}
+	}
+	c := new(dns.Client)
+	m.SetTsig(keyName, dns.HmacMD5, 300, time.Now().Unix())
+	c.TsigSecret = map[string]string{keyName: tsigKey}
+	_, _, err := c.Exchange(m, dnsManager+":53")
+	if err != nil {
+		self.write_to_log(fmt.Sprintf("DNS update for %v failed with (%v)", cluster_name, err))
+	}
+	return err
+}
+
 func (self *LBCluster) Get_state_dns(dnsManager string) error {
 	cluster_name := self.Cluster_name
 	if !strings.HasSuffix(cluster_name, ".cern.ch") {

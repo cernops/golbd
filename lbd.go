@@ -310,6 +310,11 @@ func main() {
 					lg.Warning("Get_state_dns Error: ")
 					lg.Warning(e.Error())
 				}
+				e = pc.Update_dns(config.TsigKeyPrefix+"internal.", config.TsigInternalKey, config.DnsManager)
+				if e != nil {
+					lg.Warning("Update_dns Error: ")
+					lg.Warning(e.Error())
+				}
 				update_heartbeat(config, hostname, lg)
 			} else {
 				fmt.Println("should_update_dns false")
