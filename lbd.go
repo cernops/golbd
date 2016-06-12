@@ -6,7 +6,6 @@ import (
 	"log/syslog"
 	"os"
 	//"os/signal"
-	"sync"
 	//"syscall"
 	"bufio"
 	"bytes"
@@ -17,6 +16,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -34,6 +34,7 @@ type Config struct {
 	Master          string
 	HeartbeatFile   string
 	HeartbeatPath   string
+	HeartbeatMu     sync.Mutex
 	TsigKeyPrefix   string
 	TsigInternalKey string
 	TsigExternalKey string
@@ -236,6 +237,10 @@ func update_heartbeat(config Config, hostname string, lg lbcluster.Log) error {
 	}
 	heartbeat_file := config.HeartbeatPath + "/" + config.HeartbeatFile + "temp"
 	heartbeat_file_real := config.HeartbeatPath + "/" + config.HeartbeatFile
+
+	config.HeartbeatMu.Lock()
+	defer config.HeartbeatMu.Unlock()
+
 	f, err := os.OpenFile(heartbeat_file, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0640)
 	if err != nil {
 		lg.Info(fmt.Sprintf("can not open %v for writing: %v", heartbeat_file, err))
