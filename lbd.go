@@ -317,8 +317,15 @@ func main() {
 				}
 				e = pc.Update_dns(config.TsigKeyPrefix+"internal.", config.TsigInternalKey, config.DnsManager)
 				if e != nil {
-					lg.Warning("Update_dns Error: ")
+					lg.Warning("Internal Update_dns Error: ")
 					lg.Warning(e.Error())
+				}
+				if pc.Externally_visible() {
+					e = pc.Update_dns(config.TsigKeyPrefix+"external.", config.TsigExternalKey, config.DnsManager)
+					if e != nil {
+						lg.Warning("External Update_dns Error: ")
+						lg.Warning(e.Error())
+					}
 				}
 				update_heartbeat(config, hostname, lg)
 			} else {

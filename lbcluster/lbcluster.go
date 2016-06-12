@@ -180,6 +180,10 @@ func (self *LBCluster) Apply_metric_cmsweb() {
 	return
 }
 
+func (self *LBCluster) Externally_visible() bool {
+	return self.Parameters.External
+}
+
 func (self *LBCluster) Time_to_refresh() bool {
 	if self.Time_of_last_evaluation.IsZero() {
 		return true
