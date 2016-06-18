@@ -422,6 +422,7 @@ func (self *LBCluster) Update_dns(keyName, tsigKey, dnsManager string) error {
 	pbhDns := strings.Join(self.Previous_best_hosts_dns, " ")
 	cbh := strings.Join(self.Current_best_hosts, " ")
 	if pbhDns == cbh {
+		self.write_to_log(fmt.Sprintf("DNS not update for %v with  keyName %v cbh == pbhDns == %v", self.Cluster_name, keyName, cbh))
 		return nil
 	}
 	cluster_name := self.Cluster_name
@@ -460,6 +461,7 @@ func (self *LBCluster) Update_dns(keyName, tsigKey, dnsManager string) error {
 	if err != nil {
 		self.write_to_log(fmt.Sprintf("DNS update for %v failed with (%v)", cluster_name, err))
 	}
+	self.write_to_log(fmt.Sprintf("DNS update for %v with  keyName %v", cluster_name, keyName))
 	return err
 }
 
