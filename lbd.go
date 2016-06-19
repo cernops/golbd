@@ -341,45 +341,6 @@ func main() {
 	wg.Wait()
 	lg.Info("all done!")
 	os.Exit(0)
-	done := make(chan struct{})
-	wq := make(chan interface{})
-	workerCount := 20
-	//installSignalHandler(finish, done, &wg, log)
-
-	for i := 0; i < workerCount; i++ {
-		wg.Add(1)
-		go doit(i, wq, done, &wg)
-	}
-
-	for i := 0; i < workerCount; i++ {
-		wq <- i
-	}
-
-	finish(done, &wg, lg)
-}
-
-func doit(workerId int, wq <-chan interface{}, done <-chan struct{}, wg *sync.WaitGroup) {
-	fmt.Printf("[%v] is running\n", workerId)
-	defer wg.Done()
-	for {
-		time.Sleep(3 * time.Second)
-		select {
-		case m := <-wq:
-			fmt.Printf("[%v] m => %v\n", workerId, m)
-		case <-done:
-			fmt.Printf("[%v] is done\n", workerId)
-			return
-		}
-	}
-}
-
-//type finishFunc func(chan struct{}, *sync.WaitGroup, *syslog.Writer)
-
-func finish(done chan struct{}, wg *sync.WaitGroup, lg lbcluster.Log) {
-	close(done)
-	wg.Wait()
-	lg.Info("all done!")
-	return
 }
 
 //func installSignalHandler(f finishFunc, done chan struct{}, wg *sync.WaitGroup, log *syslog.Writer) {
