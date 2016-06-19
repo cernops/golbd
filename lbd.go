@@ -300,41 +300,47 @@ func main() {
 		}
 	}
 	lbclusters := loadClusters(config)
-	for _, c := range lbclusters {
-		pc := &c
+	var wg sync.WaitGroup
+	for i := range lbclusters {
+		pc := &lbclusters[i]
 		pc.Slog = lg
 		if *debugFlag {
-			fmt.Println("lbcluster ", c)
+			fmt.Println("lbcluster ", *pc)
 		}
 		if pc.Time_to_refresh() {
-			pc.Find_best_hosts()
-			if should_update_dns(config, hostname, lg) {
-				fmt.Println("should_update_dns true")
-				e = pc.Get_state_dns(config.DnsManager)
-				if e != nil {
-					lg.Warning("Get_state_dns Error: ")
-					lg.Warning(e.Error())
-				}
-				e = pc.Update_dns(config.TsigKeyPrefix+"internal.", config.TsigInternalKey, config.DnsManager)
-				if e != nil {
-					lg.Warning("Internal Update_dns Error: ")
-					lg.Warning(e.Error())
-				}
-				if pc.Externally_visible() {
-					e = pc.Update_dns(config.TsigKeyPrefix+"external.", config.TsigExternalKey, config.DnsManager)
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				pc.Find_best_hosts()
+				if should_update_dns(config, hostname, lg) {
+					fmt.Println("should_update_dns true")
+					e = pc.Get_state_dns(config.DnsManager)
 					if e != nil {
-						lg.Warning("External Update_dns Error: ")
+						lg.Warning("Get_state_dns Error: ")
 						lg.Warning(e.Error())
 					}
+					e = pc.Update_dns(config.TsigKeyPrefix+"internal.", config.TsigInternalKey, config.DnsManager)
+					if e != nil {
+						lg.Warning("Internal Update_dns Error: ")
+						lg.Warning(e.Error())
+					}
+					if pc.Externally_visible() {
+						e = pc.Update_dns(config.TsigKeyPrefix+"external.", config.TsigExternalKey, config.DnsManager)
+						if e != nil {
+							lg.Warning("External Update_dns Error: ")
+							lg.Warning(e.Error())
+						}
+					}
+					update_heartbeat(config, hostname, lg)
+				} else {
+					fmt.Println("should_update_dns false")
 				}
-				update_heartbeat(config, hostname, lg)
-			} else {
-				fmt.Println("should_update_dns false")
-			}
+			}()
 		}
 	}
+	wg.Wait()
+	lg.Info("all done!")
 	os.Exit(0)
-	var wg sync.WaitGroup
 	done := make(chan struct{})
 	wq := make(chan interface{})
 	workerCount := 20

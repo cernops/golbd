@@ -237,9 +237,10 @@ func (self *LBCluster) evaluate_hosts() {
 	var wg sync.WaitGroup
 	result := make(chan RetSnmp, 200)
 	for h := range self.Host_metric_table {
-		self.write_to_log("contacting cluster: " + self.Cluster_name + " node: " + h)
+		currenthost := h
+		self.write_to_log("contacting cluster: " + self.Cluster_name + " node: " + currenthost)
 		wg.Add(1)
-		go self.snmp_req(h, &wg, result)
+		go self.snmp_req(currenthost, &wg, result)
 	}
 	for range self.Host_metric_table {
 		time.Sleep(1 * time.Millisecond)
