@@ -21,7 +21,7 @@ import (
 )
 
 const WorstValue int = 99999
-const TIMEOUT int = 5
+const TIMEOUT int = 10
 const OID string = ".1.3.6.1.4.1.96.255.1"
 
 type LBCluster struct {
