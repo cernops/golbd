@@ -185,11 +185,8 @@ func (self *LBCluster) Externally_visible() bool {
 }
 
 func (self *LBCluster) Time_to_refresh() bool {
-	if self.Time_of_last_evaluation.IsZero() {
-		return true
-	} else {
-		return self.Time_of_last_evaluation.Add(time.Duration(self.Parameters.Polling_interval) * time.Second).After(time.Now())
-	}
+	// self.write_to_log(fmt.Sprintf("Time_of_last_evaluation = %v now = %v Time_of_last_evaluation + polling_int = %v result = %v Cluster_name = %v\n", self.Time_of_last_evaluation, time.Now(), self.Time_of_last_evaluation.Add(time.Duration(self.Parameters.Polling_interval)*time.Second), self.Time_of_last_evaluation.Add(time.Duration(self.Parameters.Polling_interval)*time.Second).After(time.Now()), self.Cluster_name))
+	return self.Time_of_last_evaluation.Add(time.Duration(self.Parameters.Polling_interval) * time.Second).Before(time.Now())
 }
 
 func (self *LBCluster) write_to_log(msg string) error {
