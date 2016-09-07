@@ -401,7 +401,11 @@ func (self *LBCluster) snmp_req(host string, wg *sync.WaitGroup, result chan<- R
 	}
 	defer snmp.Close()
 
-	logmessage = logmessage + "\n" + fmt.Sprintf("contacted  cluster: %v node: %v - reply was %v", self.Cluster_name, host, metric)
+	if logmessage == "" {
+		logmessage = fmt.Sprintf("contacted  cluster: %v node: %v - reply was %v", self.Cluster_name, host, metric)
+	} else {
+		logmessage = logmessage + " - " + fmt.Sprintf("contacted  cluster: %v node: %v - reply was %v", self.Cluster_name, host, metric)
+	}
 	result <- RetSnmp{metric, host, logmessage}
 	return
 }
