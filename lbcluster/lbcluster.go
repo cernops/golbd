@@ -303,10 +303,11 @@ func (self *LBCluster) snmp_req(host string, result chan<- RetSnmp) {
 		}
 		metric = WorstValue - 1
 	}
+	transport := self.transportToUse(host)
 	//wapsnmp.DoGetTestV3(host, OID, self.Loadbalancing_username, "MD5", self.Loadbalancing_password, "NOPRIV", self.Loadbalancing_password)
 	snmp, err := snmpgo.NewSNMP(snmpgo.SNMPArguments{
 		Version:       snmpgo.V3,
-		Network:       "udp",
+		Network:       transport,
 		Address:       host + ":161",
 		Retries:       0,
 		UserName:      self.Loadbalancing_username,
@@ -342,8 +343,8 @@ func (self *LBCluster) snmp_req(host string, result chan<- RetSnmp) {
 				logmessage = logmessage + " - " + fmt.Sprintf("retrying: %v", i)
 				continue
 			} else {
-				logmessage = logmessage + fmt.Sprintf("snmp open failed with %v", err)
-				logmessage = fmt.Sprintf("contacted  cluster: %v node: %v - %v - setting reply %v", self.Cluster_name, host, logmessage, metric)
+				logmessage = logmessage + fmt.Sprintf("snmp open %v failed with %v", transport, err)
+				logmessage = fmt.Sprintf("contacted  cluster: %v node: %v - %v - %v - setting reply %v", self.Cluster_name, host, transport, logmessage, metric)
 				result <- RetSnmp{metric, host, logmessage}
 				return
 			}
@@ -357,7 +358,7 @@ func (self *LBCluster) snmp_req(host string, result chan<- RetSnmp) {
 				continue
 			} else {
 				logmessage = logmessage + fmt.Sprintf("snmp get failed with %v", err)
-				logmessage = fmt.Sprintf("contacted  cluster: %v node: %v - %v - setting reply %v", self.Cluster_name, host, logmessage, metric)
+				logmessage = fmt.Sprintf("contacted  cluster: %v node: %v - %v - %v - setting reply %v", self.Cluster_name, host, transport, logmessage, metric)
 				result <- RetSnmp{metric, host, logmessage}
 				return
 			}
@@ -395,9 +396,9 @@ func (self *LBCluster) snmp_req(host string, result chan<- RetSnmp) {
 	defer snmp.Close()
 
 	if logmessage == "" {
-		logmessage = fmt.Sprintf("contacted  cluster: %v node: %v - reply was %v", self.Cluster_name, host, metric)
+		logmessage = fmt.Sprintf("contacted  cluster: %v node: %v transport: %v - reply was %v", self.Cluster_name, host, transport, metric)
 	} else {
-		logmessage = logmessage + " - " + fmt.Sprintf("contacted  cluster: %v node: %v - reply was %v", self.Cluster_name, host, metric)
+		logmessage = logmessage + " - " + fmt.Sprintf("contacted  cluster: %v node: %v transport: %v - reply was %v", self.Cluster_name, host, transport, metric)
 	}
 	result <- RetSnmp{metric, host, logmessage}
 	return
@@ -414,6 +415,24 @@ func RemoveDuplicates(xs *[]string) {
 		}
 	}
 	*xs = (*xs)[:j]
+}
+
+func (self *LBCluster) transportToUse(hostname string) string {
+	// udp (IPv4) transport
+	result := "udp"
+	ips, err := net.LookupIP(hostname)
+	if err != nil {
+		self.write_to_log(fmt.Sprintf("LookupIP: %v has incorrect or missing IP address (%v)", hostname, err))
+		return result
+	}
+	for _, ip := range ips {
+		// If there is an IPv6 address use udp6 transport
+		if ip.To4() == nil {
+			result = "udp6"
+			break
+		}
+	}
+	return result
 }
 
 func (self *LBCluster) Update_dns(keyName, tsigKey, dnsManager string) error {
