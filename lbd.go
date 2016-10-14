@@ -1,22 +1,22 @@
 package main
 
 import (
-	"flag"
-	"fmt"
-	"log/syslog"
-	"os"
-	//"os/signal"
-	//"syscall"
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"flag"
+	"fmt"
 	"github.com/reguero/golbd/lbcluster"
 	"io"
 	"io/ioutil"
+	"log/syslog"
+	"os"
+	//"os/signal"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
+	//"syscall"
 	"time"
 )
 
@@ -261,6 +261,10 @@ func update_heartbeat(config Config, hostname string, lg lbcluster.Log) error {
 	return nil
 }
 
+func become_daemon() {
+
+}
+
 func main() {
 	flag.Parse()
 
@@ -301,44 +305,48 @@ func main() {
 	}
 	lbclusters := loadClusters(config)
 	var wg sync.WaitGroup
-	for i := range lbclusters {
-		pc := &lbclusters[i]
-		pc.Slog = lg
-		if *debugFlag {
-			fmt.Println("lbcluster ", *pc)
-		}
-		if pc.Time_to_refresh() {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				pc.Find_best_hosts()
-				if should_update_dns(config, hostname, lg) {
-					fmt.Println("should_update_dns true")
-					e = pc.Get_state_dns(config.DnsManager)
-					if e != nil {
-						lg.Warning("Get_state_dns Error: ")
-						lg.Warning(e.Error())
-					}
-					e = pc.Update_dns(config.TsigKeyPrefix+"internal.", config.TsigInternalKey, config.DnsManager)
-					if e != nil {
-						lg.Warning("Internal Update_dns Error: ")
-						lg.Warning(e.Error())
-					}
-					if pc.Externally_visible() {
-						e = pc.Update_dns(config.TsigKeyPrefix+"external.", config.TsigExternalKey, config.DnsManager)
+	for {
+		for i := range lbclusters {
+			pc := &lbclusters[i]
+			pc.Slog = lg
+			if *debugFlag {
+				fmt.Println("lbcluster ", *pc)
+			}
+			if pc.Time_to_refresh() {
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					pc.Find_best_hosts()
+					if should_update_dns(config, hostname, lg) {
+						fmt.Println("should_update_dns true")
+						e = pc.Get_state_dns(config.DnsManager)
 						if e != nil {
-							lg.Warning("External Update_dns Error: ")
+							lg.Warning("Get_state_dns Error: ")
 							lg.Warning(e.Error())
 						}
+						e = pc.Update_dns(config.TsigKeyPrefix+"internal.", config.TsigInternalKey, config.DnsManager)
+						if e != nil {
+							lg.Warning("Internal Update_dns Error: ")
+							lg.Warning(e.Error())
+						}
+						if pc.Externally_visible() {
+							e = pc.Update_dns(config.TsigKeyPrefix+"external.", config.TsigExternalKey, config.DnsManager)
+							if e != nil {
+								lg.Warning("External Update_dns Error: ")
+								lg.Warning(e.Error())
+							}
+						}
+						update_heartbeat(config, hostname, lg)
+					} else {
+						fmt.Println("should_update_dns false")
 					}
-					update_heartbeat(config, hostname, lg)
-				} else {
-					fmt.Println("should_update_dns false")
-				}
-			}()
+				}()
+			}
 		}
+		wg.Wait()
+		lg.Info("iteration done!")
+		time.Sleep(10 * time.Second)
 	}
-	wg.Wait()
 	lg.Info("all done!")
 	os.Exit(0)
 }
@@ -358,3 +366,19 @@ func main() {
 //		os.Exit(0)
 //	}()
 //}
+//        var sig_usr1, sig_hup, sig_term bool
+//        c := make(chan os.Signal, 1)
+//        signal.Notify(c, os.Interrupt, os.Kill, syscall.SIGHUP, syscall.SIGUSR1, syscall.SIGTERM)
+//        go func() {
+//                lg.Info("Waiting for signal")
+//                sig := <-c
+//                lg.Info(fmt.Sprintf("Given signal: %v", sig))
+//                switch sig {
+//                case syscall.SIGHUP:
+//                        sig_hup = true
+//                case syscall.SIGUSR1:
+//                        sig_usr1 = true
+//                case syscall.SIGTERM:
+//                        sig_term = true
+//                }
+//        }()
