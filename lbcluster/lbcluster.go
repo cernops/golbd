@@ -16,7 +16,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -231,13 +230,11 @@ func (self *LBCluster) Find_best_hosts() {
 }
 
 func (self *LBCluster) evaluate_hosts() {
-	var wg sync.WaitGroup
 	result := make(chan RetSnmp, 200)
 	for h := range self.Host_metric_table {
 		currenthost := h
 		self.write_to_log("contacting cluster: " + self.Cluster_name + " node: " + currenthost)
-		wg.Add(1)
-		go self.snmp_req(currenthost, &wg, result)
+		go self.snmp_req(currenthost, result)
 	}
 	for range self.Host_metric_table {
 		time.Sleep(1 * time.Millisecond)
@@ -247,7 +244,6 @@ func (self *LBCluster) evaluate_hosts() {
 			self.write_to_log(metrichostlog.Log)
 		}
 	}
-	wg.Wait()
 }
 
 func TimeoutDialer(cTimeout time.Duration, rwTimeout time.Duration) func(net, addr string) (c net.Conn, err error) {
@@ -270,8 +266,7 @@ func NewTimeoutClient(connectTimeout time.Duration, readWriteTimeout time.Durati
 	}
 }
 
-func (self *LBCluster) snmp_req(host string, wg *sync.WaitGroup, result chan<- RetSnmp) {
-	defer wg.Done()
+func (self *LBCluster) snmp_req(host string, result chan<- RetSnmp) {
 	//time.Sleep(time.Duration(rand.Int31n(1000)) * time.Millisecond)
 	metric := -100
 	logmessage := ""
@@ -311,6 +306,7 @@ func (self *LBCluster) snmp_req(host string, wg *sync.WaitGroup, result chan<- R
 	//wapsnmp.DoGetTestV3(host, OID, self.Loadbalancing_username, "MD5", self.Loadbalancing_password, "NOPRIV", self.Loadbalancing_password)
 	snmp, err := snmpgo.NewSNMP(snmpgo.SNMPArguments{
 		Version:       snmpgo.V3,
+		Network:       "udp",
 		Address:       host + ":161",
 		Retries:       0,
 		UserName:      self.Loadbalancing_username,
