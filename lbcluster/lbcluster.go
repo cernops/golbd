@@ -309,7 +309,7 @@ func (self *LBCluster) snmp_req(host string, result chan<- RetSnmp) {
 		Version:       snmpgo.V3,
 		Network:       transport,
 		Address:       host + ":161",
-		Retries:       0,
+		Retries:       1,
 		UserName:      self.Loadbalancing_username,
 		SecurityLevel: snmpgo.AuthNoPriv,
 		AuthProtocol:  snmpgo.Md5,
