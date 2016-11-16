@@ -237,7 +237,7 @@ func (self *LBCluster) evaluate_hosts() {
 		go self.snmp_req(currenthost, result)
 	}
 	for range self.Host_metric_table {
-		time.Sleep(1 * time.Millisecond)
+		//time.Sleep(1 * time.Millisecond)
 		select {
 		case metrichostlog := <-result:
 			self.Host_metric_table[metrichostlog.Host] = metrichostlog.Metric
@@ -334,13 +334,14 @@ func (self *LBCluster) snmp_req(host string, result chan<- RetSnmp) {
 		return
 	}
 	// retry MessageId mismatch
-	// although problem should not happen wiht retries: 0 in SNMPArguments
+	// could not reproduce the problem on 16 Nov 2016
+	// problem does not happen with retries: 0 in SNMPArguments
 	for i := 0; i <= 1; i++ {
 		if err = snmp.Open(); err != nil {
 			// Failed to open connection
 			if _, ok := err.(*snmpgo.MessageError); ok {
 				snmp.Close()
-				logmessage = logmessage + " - " + fmt.Sprintf("retrying: %v", i)
+				logmessage = logmessage + " - " + fmt.Sprintf("open error: %v retrying: %v", err, i)
 				continue
 			} else {
 				logmessage = logmessage + fmt.Sprintf("snmp open %v failed with %v", transport, err)
@@ -354,7 +355,7 @@ func (self *LBCluster) snmp_req(host string, result chan<- RetSnmp) {
 		if err != nil {
 			if _, ok := err.(*snmpgo.MessageError); ok {
 				snmp.Close()
-				logmessage = logmessage + fmt.Sprintf("retrying: %v", i)
+				logmessage = logmessage + fmt.Sprintf("get error: %v retrying: %v", err, i)
 				continue
 			} else {
 				logmessage = logmessage + fmt.Sprintf("snmp get failed with %v", err)
