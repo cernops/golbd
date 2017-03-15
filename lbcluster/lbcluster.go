@@ -128,7 +128,7 @@ func (self *LBCluster) Apply_metric_minino() {
 	var sorted_host_list []string
 	var useful_host_list []string
 	for _, v := range pl {
-		if (v.Value > 0) && (v.Value < WorstValue) {
+		if (v.Value > 0) && (v.Value <= WorstValue) {
 			useful_host_list = append(useful_host_list, v.Key)
 		}
 		sorted_host_list = append(sorted_host_list, v.Key)
@@ -301,7 +301,7 @@ func (self *LBCluster) snmp_req(host string, result chan<- RetSnmp) {
 			}
 
 		}
-		metric = WorstValue - 1
+		metric = WorstValue
 	}
 	transport := self.transportToUse(host)
 	//wapsnmp.DoGetTestV3(host, OID, self.Loadbalancing_username, "MD5", self.Loadbalancing_password, "NOPRIV", self.Loadbalancing_password)

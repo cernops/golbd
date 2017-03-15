@@ -96,7 +96,7 @@ func loadClusters(config Config) []lbcluster.LBCluster {
 			lbc = lbcluster.LBCluster{Cluster_name: k, Loadbalancing_username: "loadbalancing", Loadbalancing_password: config.SnmpPassword, Parameters: par, Statistics_filename: "/var/log/lb/lbstatistics." + k, Per_cluster_filename: "./" + k + ".log"}
 			hm = make(map[string]int)
 			for _, h := range v {
-				hm[h] = lbcluster.WorstValue
+				hm[h] = lbcluster.WorstValue + 1
 			}
 			lbc.Host_metric_table = hm
 			lbcs = append(lbcs, lbc)
