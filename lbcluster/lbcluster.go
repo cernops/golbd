@@ -102,6 +102,7 @@ type MetricPolicyApplier interface {
 	Apply_metric_minino()
 	Apply_metric_minimum()
 	Apply_metric_cmsweb()
+	Apply_metric_cmsfrontier()
 }
 
 type Pair struct {
@@ -155,6 +156,9 @@ func (self *LBCluster) Apply_metric_minino() {
 		} else if (self.Parameters.Metric == "minino") || (self.Parameters.Metric == "cmsweb") {
 			self.write_to_log(fmt.Sprintf("WARNING: no usable hosts found for cluster %v ! Returning no hosts.", self.Cluster_name))
 			self.Current_best_hosts = useful_host_list
+		} else if self.Parameters.Metric == "cmsfrontier" {
+			self.write_to_log(fmt.Sprintf("WARNING: no usable hosts found for cluster %v !", self.Cluster_name))
+			self.Current_best_hosts = useful_host_list
 		}
 	} else {
 		if useful_hosts < max {
@@ -176,6 +180,16 @@ func (self *LBCluster) Apply_metric_minimum() {
 func (self *LBCluster) Apply_metric_cmsweb() {
 	self.write_to_log("Got metric cmsweb = " + self.Parameters.Metric)
 	self.Apply_metric_minino()
+	return
+}
+
+func (self *LBCluster) Apply_metric_cmsfrontier() {
+	self.write_to_log("Got metric cmsfrontier = " + self.Parameters.Metric)
+	self.Apply_metric_minino()
+	if len(self.Current_best_hosts) == 0 {
+		self.write_to_log(fmt.Sprintf("best hosts for %v are: NONE using previous_best_hosts", self.Cluster_name))
+		self.Current_best_hosts = self.Previous_best_hosts
+	}
 	return
 }
 
@@ -541,16 +555,24 @@ func (self *LBCluster) Get_state_dns(dnsManager string) error {
 	self.Previous_best_hosts_dns = host_list
 	prevBesthostsDns := make([]string, len(self.Previous_best_hosts_dns))
 	prevBesthosts := make([]string, len(self.Previous_best_hosts))
+	currBesthosts := make([]string, len(self.Current_best_hosts))
 	copy(prevBesthostsDns, self.Previous_best_hosts_dns)
 	copy(prevBesthosts, self.Previous_best_hosts)
+	copy(currBesthosts, self.Current_best_hosts)
 	sort.Strings(prevBesthostsDns)
 	sort.Strings(prevBesthosts)
+	sort.Strings(currBesthosts)
 	pbhDns := strings.Join(prevBesthostsDns, " ")
 	pbh := strings.Join(prevBesthosts, " ")
+	cbh := strings.Join(currBesthosts, " ")
 	if pbh != "unknown" {
 		if pbh != pbhDns {
 			self.write_to_log("WARNING: Prev DNS state " + pbhDns + " - Prev local state  " + pbh + " differ")
 		}
+	}
+	if cbh == "unknown" {
+		self.write_to_log("WARNING: Current best hosts are unknown - Taking Previous DNS state  " + pbhDns)
+		self.Current_best_hosts = self.Previous_best_hosts_dns
 	}
 	return err
 }

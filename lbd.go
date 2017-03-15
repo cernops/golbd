@@ -93,7 +93,7 @@ func loadClusters(config Config) []lbcluster.LBCluster {
 			continue
 		}
 		if par, ok := config.Parameters[k]; ok {
-			lbc = lbcluster.LBCluster{Cluster_name: k, Loadbalancing_username: "loadbalancing", Loadbalancing_password: config.SnmpPassword, Parameters: par, Statistics_filename: "/var/log/lb/lbstatistics." + k, Per_cluster_filename: "./" + k + ".log"}
+			lbc = lbcluster.LBCluster{Cluster_name: k, Loadbalancing_username: "loadbalancing", Loadbalancing_password: config.SnmpPassword, Parameters: par, Current_best_hosts: []string{"unknown"}, Previous_best_hosts: []string{"unknown"}, Previous_best_hosts_dns: []string{"unknown"}, Statistics_filename: "/var/log/lb/lbstatistics." + k, Per_cluster_filename: "./" + k + ".log"}
 			hm = make(map[string]int)
 			for _, h := range v {
 				hm[h] = lbcluster.WorstValue + 1
