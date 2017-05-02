@@ -11,12 +11,12 @@ import (
 	"io/ioutil"
 	"log/syslog"
 	"os"
-	//"os/signal"
+	"os/signal"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
-	//"syscall"
+	"syscall"
 	"time"
 )
 
@@ -261,8 +261,23 @@ func update_heartbeat(config Config, hostname string, lg lbcluster.Log) error {
 	return nil
 }
 
-func become_daemon() {
+func installSignalHandler(sighup, sigterm *bool) {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGTERM, syscall.SIGHUP)
 
+	go func() {
+		for {
+			// Block until a signal is received.
+			sig := <-c
+			fmt.Printf("\nGiven signal: %v\n", sig)
+			switch sig {
+			case syscall.SIGHUP:
+				*sighup = true
+			case syscall.SIGTERM:
+				*sigterm = true
+			}
+		}
+	}()
 }
 
 func main() {
@@ -272,6 +287,9 @@ func main() {
 		fmt.Printf("This is a proof of concept golbd version %s \n", "0.000")
 		os.Exit(0)
 	}
+
+	var sig_hup, sig_term bool
+	installSignalHandler(&sig_hup, &sig_term)
 
 	log, e := syslog.New(syslog.LOG_NOTICE, "lbd")
 	lg := lbcluster.Log{*log, *debugFlag}
@@ -306,6 +324,34 @@ func main() {
 	lbclusters := loadClusters(config)
 	var wg sync.WaitGroup
 	for {
+		if sig_term {
+			break
+		}
+		if sig_hup {
+			config, e = loadConfig(*configFileFlag)
+			if e != nil {
+				lg.Warning("loadConfig Error: ")
+				lg.Warning(e.Error())
+				os.Exit(1)
+			} else {
+				if *debugFlag {
+					fmt.Println(config)
+				}
+			}
+
+			if *debugFlag {
+				for k, v := range config.Parameters {
+					fmt.Println("params ", k, v)
+				}
+				for k, v := range config.Clusters {
+					fmt.Println("clusters ", k, v)
+				}
+			}
+			lbclusters = loadClusters(config)
+
+			sig_hup = false
+		}
+
 		for i := range lbclusters {
 			pc := &lbclusters[i]
 			pc.Slog = lg
@@ -345,40 +391,10 @@ func main() {
 		}
 		wg.Wait()
 		lg.Info("iteration done!")
-		time.Sleep(10 * time.Second)
+		if !sig_term {
+			time.Sleep(10 * time.Second)
+		}
 	}
 	lg.Info("all done!")
 	os.Exit(0)
 }
-
-//func installSignalHandler(f finishFunc, done chan struct{}, wg *sync.WaitGroup, log *syslog.Writer) {
-//	c := make(chan os.Signal, 1)
-//	signal.Notify(c, os.Interrupt, os.Kill, syscall.SIGTERM)
-//
-//	// Block until a signal is received.
-//	go func() {
-//		sig := <-c
-//		mess := fmt.Sprintf("Exiting given signal: %v", sig)
-//		logInfo(log, mess)
-//		logInfo(log, "before exit")
-//		f(done, wg, log)
-//		logInfo(log, "about to exit")
-//		os.Exit(0)
-//	}()
-//}
-//        var sig_usr1, sig_hup, sig_term bool
-//        c := make(chan os.Signal, 1)
-//        signal.Notify(c, os.Interrupt, os.Kill, syscall.SIGHUP, syscall.SIGUSR1, syscall.SIGTERM)
-//        go func() {
-//                lg.Info("Waiting for signal")
-//                sig := <-c
-//                lg.Info(fmt.Sprintf("Given signal: %v", sig))
-//                switch sig {
-//                case syscall.SIGHUP:
-//                        sig_hup = true
-//                case syscall.SIGUSR1:
-//                        sig_usr1 = true
-//                case syscall.SIGTERM:
-//                        sig_term = true
-//                }
-//        }()
