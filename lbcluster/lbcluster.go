@@ -56,6 +56,7 @@ type RetSnmp struct {
 
 type Log struct {
 	Writer syslog.Writer
+	Syslog bool
 	Stdout bool
 }
 
@@ -65,7 +66,10 @@ type Logger interface {
 }
 
 func (l Log) Info(s string) error {
-	err := l.Writer.Info(s)
+	var err error
+	if l.Syslog {
+		err = l.Writer.Info(s)
+	}
 	if l.Stdout {
 		fmt.Println(s)
 	}
@@ -74,7 +78,10 @@ func (l Log) Info(s string) error {
 }
 
 func (l Log) Warning(s string) error {
-	err := l.Writer.Warning(s)
+	var err error
+	if l.Syslog {
+		err = l.Writer.Warning(s)
+	}
 	if l.Stdout {
 		fmt.Println(s)
 	}
@@ -203,7 +210,7 @@ func (self *LBCluster) Time_to_refresh() bool {
 }
 
 func (self *LBCluster) write_to_log(msg string) error {
-	self.Slog.Info(msg)
+	self.Slog.Info(self.Cluster_name + " " + msg)
 	f, err := os.OpenFile(self.Per_cluster_filename, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0640)
 	if err != nil {
 		return err
@@ -215,9 +222,9 @@ func (self *LBCluster) write_to_log(msg string) error {
 		nl = "\n"
 	}
 	timestamp := time.Now().Format(time.Stamp)
-	_, err = fmt.Fprintf(f, "%s %s[%d]: %s%s",
+	_, err = fmt.Fprintf(f, "%s %s[%d]: %s %s%s",
 		timestamp,
-		tag, os.Getpid(), msg, nl)
+		tag, os.Getpid(), self.Cluster_name, msg, nl)
 	return err
 }
 

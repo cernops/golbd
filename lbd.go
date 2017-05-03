@@ -292,7 +292,7 @@ func main() {
 	installSignalHandler(&sig_hup, &sig_term)
 
 	log, e := syslog.New(syslog.LOG_NOTICE, "lbd")
-	lg := lbcluster.Log{Writer: *log, Stdout: true}
+	lg := lbcluster.Log{Writer: *log, Syslog: false, Stdout: true}
 	if e == nil {
 		lg.Info("Starting lbd")
 	}
