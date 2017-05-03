@@ -56,7 +56,7 @@ type RetSnmp struct {
 
 type Log struct {
 	Writer syslog.Writer
-	Debug  bool
+	Stdout bool
 }
 
 type Logger interface {
@@ -66,7 +66,7 @@ type Logger interface {
 
 func (l Log) Info(s string) error {
 	err := l.Writer.Info(s)
-	if l.Debug {
+	if l.Stdout {
 		fmt.Println(s)
 	}
 	return err
@@ -75,7 +75,7 @@ func (l Log) Info(s string) error {
 
 func (l Log) Warning(s string) error {
 	err := l.Writer.Warning(s)
-	if l.Debug {
+	if l.Stdout {
 		fmt.Println(s)
 	}
 	return err
