@@ -292,7 +292,7 @@ func main() {
 	installSignalHandler(&sig_hup, &sig_term)
 
 	log, e := syslog.New(syslog.LOG_NOTICE, "lbd")
-	lg := lbcluster.Log{Writer: *log, Syslog: false, Stdout: true}
+	lg := lbcluster.Log{Writer: *log, Syslog: false, Stdout: true, TofilePath: "./lbd.log"}
 	if e == nil {
 		lg.Info("Starting lbd")
 	}
@@ -309,16 +309,16 @@ func main() {
 		os.Exit(1)
 	} else {
 		if *debugFlag {
-			fmt.Println(config)
+			lg.Debug(fmt.Sprintf("%v", config))
 		}
 	}
 
 	if *debugFlag {
 		for k, v := range config.Parameters {
-			fmt.Println("params ", k, v)
+			lg.Debug(fmt.Sprintf("params %v %v", k, v))
 		}
 		for k, v := range config.Clusters {
-			fmt.Println("clusters ", k, v)
+			lg.Debug(fmt.Sprintf("clusters %v %v", k, v))
 		}
 	}
 	lbclusters := loadClusters(config)
@@ -335,16 +335,16 @@ func main() {
 				os.Exit(1)
 			} else {
 				if *debugFlag {
-					fmt.Println(config)
+					lg.Debug(fmt.Sprintf("%v", config))
 				}
 			}
 
 			if *debugFlag {
 				for k, v := range config.Parameters {
-					fmt.Println("params ", k, v)
+					lg.Debug(fmt.Sprintf("params %v %v", k, v))
 				}
 				for k, v := range config.Clusters {
-					fmt.Println("clusters ", k, v)
+					lg.Debug(fmt.Sprintf("clusters %v %v", k, v))
 				}
 			}
 			lbclusters = loadClusters(config)
@@ -356,7 +356,7 @@ func main() {
 			pc := &lbclusters[i]
 			pc.Slog = lg
 			if *debugFlag {
-				fmt.Println("lbcluster ", *pc)
+				lg.Debug(fmt.Sprintf("lbcluster %v", *pc))
 			}
 			if pc.Time_to_refresh() {
 				wg.Add(1)
@@ -364,7 +364,9 @@ func main() {
 					defer wg.Done()
 					pc.Find_best_hosts()
 					if should_update_dns(config, hostname, lg) {
-						fmt.Println("should_update_dns true")
+						if *debugFlag {
+							lg.Debug("should_update_dns true")
+						}
 						e = pc.Get_state_dns(config.DnsManager)
 						if e != nil {
 							lg.Warning("Get_state_dns Error: ")
@@ -384,7 +386,9 @@ func main() {
 						}
 						update_heartbeat(config, hostname, lg)
 					} else {
-						fmt.Println("should_update_dns false")
+						if *debugFlag {
+							lg.Debug("should_update_dns false")
+						}
 					}
 				}()
 			}

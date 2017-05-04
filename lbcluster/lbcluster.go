@@ -16,6 +16,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -55,14 +56,17 @@ type RetSnmp struct {
 }
 
 type Log struct {
-	Writer syslog.Writer
-	Syslog bool
-	Stdout bool
+	Writer     syslog.Writer
+	Syslog     bool
+	Stdout     bool
+	TofilePath string
+	logMu      sync.Mutex
 }
 
 type Logger interface {
 	Info(s string) error
 	Warning(s string) error
+	Debug(s string) error
 }
 
 func (l Log) Info(s string) error {
@@ -70,8 +74,8 @@ func (l Log) Info(s string) error {
 	if l.Syslog {
 		err = l.Writer.Info(s)
 	}
-	if l.Stdout {
-		fmt.Println(s)
+	if l.Stdout || (l.TofilePath != "") {
+		err = l.Writefilestd("INFO: " + s)
 	}
 	return err
 
@@ -82,11 +86,50 @@ func (l Log) Warning(s string) error {
 	if l.Syslog {
 		err = l.Writer.Warning(s)
 	}
-	if l.Stdout {
-		fmt.Println(s)
+	if l.Stdout || (l.TofilePath != "") {
+		err = l.Writefilestd("WARNING: " + s)
 	}
 	return err
 
+}
+
+func (l Log) Debug(s string) error {
+	var err error
+	if l.Syslog {
+		err = l.Writer.Debug(s)
+	}
+	if l.Stdout || (l.TofilePath != "") {
+		err = l.Writefilestd("DEBUG: " + s)
+	}
+	return err
+
+}
+
+func (l Log) Writefilestd(s string) error {
+	var err error
+	tag := "lbd"
+	nl := ""
+	if !strings.HasSuffix(s, "\n") {
+		nl = "\n"
+	}
+	timestamp := time.Now().Format(time.Stamp)
+	msg := fmt.Sprintf("%s %s[%d]: %s%s",
+		timestamp,
+		tag, os.Getpid(), s, nl)
+	l.logMu.Lock()
+	defer l.logMu.Unlock()
+	if l.Stdout {
+		_, err = fmt.Printf(msg)
+	}
+	if l.TofilePath != "" {
+		f, err := os.OpenFile(l.TofilePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0640)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		_, err = fmt.Fprintf(f, msg)
+	}
+	return err
 }
 
 func fisher_yates_shuffle(array []string) []string {
