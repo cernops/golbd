@@ -44,14 +44,6 @@ type Config struct {
 	Parameters      map[string]lbcluster.Params
 }
 
-//func logInfo(log *syslog.Writer, s string) error {
-//	//err := log.Info(s)
-//	b := []byte(s)
-//	_, err := log.Write(b)
-//	fmt.Println(s)
-//	return err
-//}
-
 // Read a whole file into the memory and store it as array of lines
 func readLines(path string) (lines []string, err error) {
 	var (
@@ -82,14 +74,14 @@ func readLines(path string) (lines []string, err error) {
 	return
 }
 
-func loadClusters(config Config) []lbcluster.LBCluster {
+func loadClusters(config Config, lg lbcluster.Log) []lbcluster.LBCluster {
 	var hm map[string]int
 	var lbc lbcluster.LBCluster
 	var lbcs []lbcluster.LBCluster
 
 	for k, v := range config.Clusters {
 		if len(v) == 0 {
-			fmt.Println("cluster " + k + " is ignored as it has no members defined in the configuration file " + *configFileFlag)
+			lg.Warning(fmt.Sprintf("cluster %v is ignored as it has no members defined in the configuration file %v", k, *configFileFlag))
 			continue
 		}
 		if par, ok := config.Parameters[k]; ok {
@@ -100,17 +92,17 @@ func loadClusters(config Config) []lbcluster.LBCluster {
 			}
 			lbc.Host_metric_table = hm
 			lbcs = append(lbcs, lbc)
-			fmt.Println("(re-)loaded cluster " + k)
+			lg.Info(fmt.Sprintf("(re-)loaded cluster %v", k))
 
 		} else {
-			fmt.Println("missing parameters for cluster " + k + "; ignoring the cluster, please check the configuration file " + *configFileFlag)
+			lg.Warning(fmt.Sprintf("missing parameters for cluster %v; ignoring the cluster, please check the configuration file %v", k, *configFileFlag))
 		}
 	}
 	return lbcs
 
 }
 
-func loadConfig(configFile string) (Config, error) {
+func loadConfig(configFile string, lg lbcluster.Log) (Config, error) {
 	var config Config
 	var p lbcluster.Params
 	var mc map[string][]string
@@ -170,15 +162,17 @@ func loadConfig(configFile string) (Config, error) {
 					break
 				} else if err != nil {
 					//log.Fatal(err)
-					fmt.Println(err)
+					lg.Warning(fmt.Sprintf("%v", err))
 					os.Exit(1)
 				}
 				mp[words[1]] = p
 
 			} else if words[0] == "clusters" {
 				mc[words[1]] = words[3:]
-				fmt.Println(words[1])
-				fmt.Println(words[3:])
+				if *debugFlag {
+					lg.Debug(words[1])
+					lg.Debug(fmt.Sprintf("%v", words[3:]))
+				}
 			}
 		}
 	}
@@ -204,15 +198,19 @@ func should_update_dns(config Config, hostname string, lg lbcluster.Log) bool {
 		defer response.Body.Close()
 		contents, err := ioutil.ReadAll(response.Body)
 		if err != nil {
-			fmt.Printf("%s", err)
+			lg.Warning(fmt.Sprintf("%s", err))
 		}
-		fmt.Printf("%s", contents)
+		if *debugFlag {
+			lg.Debug(fmt.Sprintf("%s", contents))
+		}
 		master_heartbeat = strings.TrimSpace(string(contents))
 		lg.Info("primary master heartbeat: " + master_heartbeat)
 		r, _ := regexp.Compile(config.Master + ` : (\d+) : I am alive`)
 		if r.MatchString(master_heartbeat) {
 			matches := r.FindStringSubmatch(master_heartbeat)
-			fmt.Println(matches[1])
+			if *debugFlag {
+				lg.Debug(fmt.Sprintf(matches[1]))
+			}
 			if mastersecs, err := strconv.ParseInt(matches[1], 10, 64); err == nil {
 				now := time.Now()
 				localsecs := now.Unix()
@@ -261,7 +259,7 @@ func update_heartbeat(config Config, hostname string, lg lbcluster.Log) error {
 	return nil
 }
 
-func installSignalHandler(sighup, sigterm *bool) {
+func installSignalHandler(sighup, sigterm *bool, lg lbcluster.Log) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGTERM, syscall.SIGHUP)
 
@@ -269,7 +267,7 @@ func installSignalHandler(sighup, sigterm *bool) {
 		for {
 			// Block until a signal is received.
 			sig := <-c
-			fmt.Printf("\nGiven signal: %v\n", sig)
+			lg.Info(fmt.Sprintf("\nGiven signal: %v\n", sig))
 			switch sig {
 			case syscall.SIGHUP:
 				*sighup = true
@@ -284,12 +282,9 @@ func main() {
 	flag.Parse()
 
 	if *versionFlag {
-		fmt.Printf("This is a proof of concept golbd version %s \n", "0.000")
+		fmt.Printf("This is a proof of concept golbd version %s \n", "0.001")
 		os.Exit(0)
 	}
-
-	var sig_hup, sig_term bool
-	installSignalHandler(&sig_hup, &sig_term)
 
 	log, e := syslog.New(syslog.LOG_NOTICE, "lbd")
 	lg := lbcluster.Log{Writer: *log, Syslog: false, Stdout: true, TofilePath: "./lbd.log"}
@@ -297,12 +292,15 @@ func main() {
 		lg.Info("Starting lbd")
 	}
 
+	var sig_hup, sig_term bool
+	installSignalHandler(&sig_hup, &sig_term, lg)
+
 	hostname, e := os.Hostname()
 	if e == nil {
 		lg.Info("Hostname: " + hostname)
 	}
 
-	config, e := loadConfig(*configFileFlag)
+	config, e := loadConfig(*configFileFlag, lg)
 	if e != nil {
 		lg.Warning("loadConfig Error: ")
 		lg.Warning(e.Error())
@@ -321,14 +319,14 @@ func main() {
 			lg.Debug(fmt.Sprintf("clusters %v %v", k, v))
 		}
 	}
-	lbclusters := loadClusters(config)
+	lbclusters := loadClusters(config, lg)
 	var wg sync.WaitGroup
 	for {
 		if sig_term {
 			break
 		}
 		if sig_hup {
-			config, e = loadConfig(*configFileFlag)
+			config, e = loadConfig(*configFileFlag, lg)
 			if e != nil {
 				lg.Warning("loadConfig Error: ")
 				lg.Warning(e.Error())
@@ -347,7 +345,7 @@ func main() {
 					lg.Debug(fmt.Sprintf("clusters %v %v", k, v))
 				}
 			}
-			lbclusters = loadClusters(config)
+			lbclusters = loadClusters(config, lg)
 
 			sig_hup = false
 		}
