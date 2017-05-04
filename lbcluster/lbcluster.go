@@ -178,7 +178,7 @@ func (self *LBCluster) Apply_metric_minino() {
 		i++
 	}
 	sort.Sort(pl)
-	fmt.Println(pl)
+	self.Slog.Debug(fmt.Sprintf("%v", pl))
 	var sorted_host_list []string
 	var useful_host_list []string
 	for _, v := range pl {
@@ -187,7 +187,7 @@ func (self *LBCluster) Apply_metric_minino() {
 		}
 		sorted_host_list = append(sorted_host_list, v.Key)
 	}
-	fmt.Println(useful_host_list)
+	self.Slog.Debug(fmt.Sprintf("%v", useful_host_list))
 	useful_hosts := len(useful_host_list)
 	list_length := len(pl)
 	max := self.Parameters.Best_hosts
@@ -219,7 +219,7 @@ func (self *LBCluster) Apply_metric_minino() {
 			max = useful_hosts
 		}
 		self.Current_best_hosts = useful_host_list[:max]
-		fmt.Println(self.Current_best_hosts)
+		self.Slog.Debug(fmt.Sprintf("%v", self.Current_best_hosts))
 	}
 	return
 }
@@ -385,7 +385,7 @@ func (self *LBCluster) snmp_req(host string, result chan<- RetSnmp) {
 	})
 	if err != nil {
 		// Failed to create snmpgo.SNMP object
-		fmt.Println(err)
+		self.Slog.Debug(fmt.Sprintf("%v", err))
 		logmessage = logmessage + " - " + fmt.Sprintf("%v", err)
 		result <- RetSnmp{metric, host, logmessage}
 		return
@@ -566,13 +566,13 @@ func (self *LBCluster) Get_state_dns(dnsManager string) error {
 	var ips []net.IP
 	for _, a := range in.Answer {
 		if t, ok := a.(*dns.A); ok {
-			fmt.Println(t)
-			fmt.Println(t.A)
+			self.Slog.Debug(fmt.Sprintf("%v", t))
+			self.Slog.Debug(fmt.Sprintf("%v", t.A))
 			ips = append(ips, t.A)
 		}
 		if t, ok := a.(*dns.AAAA); ok {
-			fmt.Println(t)
-			fmt.Println(t.AAAA)
+			self.Slog.Debug(fmt.Sprintf("%v", t))
+			self.Slog.Debug(fmt.Sprintf("%v", t.AAAA))
 			ips = append(ips, t.AAAA)
 		}
 	}
