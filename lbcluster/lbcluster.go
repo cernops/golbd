@@ -59,6 +59,7 @@ type Log struct {
 	Writer     syslog.Writer
 	Syslog     bool
 	Stdout     bool
+	Debugflag  bool
 	TofilePath string
 	logMu      sync.Mutex
 }
@@ -95,11 +96,13 @@ func (l Log) Warning(s string) error {
 
 func (l Log) Debug(s string) error {
 	var err error
-	if l.Syslog {
-		err = l.Writer.Debug(s)
-	}
-	if l.Stdout || (l.TofilePath != "") {
-		err = l.Writefilestd("DEBUG: " + s)
+	if l.Debugflag {
+		if l.Syslog {
+			err = l.Writer.Debug(s)
+		}
+		if l.Stdout || (l.TofilePath != "") {
+			err = l.Writefilestd("DEBUG: " + s)
+		}
 	}
 	return err
 

@@ -169,10 +169,8 @@ func loadConfig(configFile string, lg lbcluster.Log) (Config, error) {
 
 			} else if words[0] == "clusters" {
 				mc[words[1]] = words[3:]
-				if *debugFlag {
-					lg.Debug(words[1])
-					lg.Debug(fmt.Sprintf("%v", words[3:]))
-				}
+				lg.Debug(words[1])
+				lg.Debug(fmt.Sprintf("%v", words[3:]))
 			}
 		}
 	}
@@ -200,17 +198,13 @@ func should_update_dns(config Config, hostname string, lg lbcluster.Log) bool {
 		if err != nil {
 			lg.Warning(fmt.Sprintf("%s", err))
 		}
-		if *debugFlag {
-			lg.Debug(fmt.Sprintf("%s", contents))
-		}
+		lg.Debug(fmt.Sprintf("%s", contents))
 		master_heartbeat = strings.TrimSpace(string(contents))
 		lg.Info("primary master heartbeat: " + master_heartbeat)
 		r, _ := regexp.Compile(config.Master + ` : (\d+) : I am alive`)
 		if r.MatchString(master_heartbeat) {
 			matches := r.FindStringSubmatch(master_heartbeat)
-			if *debugFlag {
-				lg.Debug(fmt.Sprintf(matches[1]))
-			}
+			lg.Debug(fmt.Sprintf(matches[1]))
 			if mastersecs, err := strconv.ParseInt(matches[1], 10, 64); err == nil {
 				now := time.Now()
 				localsecs := now.Unix()
@@ -287,7 +281,7 @@ func main() {
 	}
 
 	log, e := syslog.New(syslog.LOG_NOTICE, "lbd")
-	lg := lbcluster.Log{Writer: *log, Syslog: false, Stdout: true, TofilePath: "./lbd.log"}
+	lg := lbcluster.Log{Writer: *log, Syslog: false, Stdout: true, Debugflag: *debugFlag, TofilePath: "./lbd.log"}
 	if e == nil {
 		lg.Info("Starting lbd")
 	}
@@ -306,9 +300,7 @@ func main() {
 		lg.Warning(e.Error())
 		os.Exit(1)
 	} else {
-		if *debugFlag {
-			lg.Debug(fmt.Sprintf("%v", config))
-		}
+		lg.Debug(fmt.Sprintf("%v", config))
 	}
 
 	if *debugFlag {
@@ -332,9 +324,7 @@ func main() {
 				lg.Warning(e.Error())
 				os.Exit(1)
 			} else {
-				if *debugFlag {
-					lg.Debug(fmt.Sprintf("%v", config))
-				}
+				lg.Debug(fmt.Sprintf("%v", config))
 			}
 
 			if *debugFlag {
@@ -353,18 +343,14 @@ func main() {
 		for i := range lbclusters {
 			pc := &lbclusters[i]
 			pc.Slog = lg
-			if *debugFlag {
-				lg.Debug(fmt.Sprintf("lbcluster %v", *pc))
-			}
+			lg.Debug(fmt.Sprintf("lbcluster %v", *pc))
 			if pc.Time_to_refresh() {
 				wg.Add(1)
 				go func() {
 					defer wg.Done()
 					pc.Find_best_hosts()
 					if should_update_dns(config, hostname, lg) {
-						if *debugFlag {
-							lg.Debug("should_update_dns true")
-						}
+						lg.Debug("should_update_dns true")
 						e = pc.Get_state_dns(config.DnsManager)
 						if e != nil {
 							lg.Warning("Get_state_dns Error: ")
@@ -384,9 +370,7 @@ func main() {
 						}
 						update_heartbeat(config, hostname, lg)
 					} else {
-						if *debugFlag {
-							lg.Debug("should_update_dns false")
-						}
+						lg.Debug("should_update_dns false")
 					}
 				}()
 			}
