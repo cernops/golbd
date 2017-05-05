@@ -169,6 +169,83 @@ func (p PairList) Len() int           { return len(p) }
 func (p PairList) Less(i, j int) bool { return p[i].Value < p[j].Value }
 func (p PairList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
+func (self *LBCluster) initialize_statistics() error {
+	hostlist := make([]string, len(self.Host_metric_table))
+	i := 0
+	for k := range self.Host_metric_table {
+		hostlist[i] = k
+		i++
+	}
+	sort.Strings(hostlist)
+	f, err := os.OpenFile(self.Statistics_filename, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0640)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = fmt.Fprintf(f, "date\t\ttime\t\t")
+	for i := range self.Current_best_hosts {
+		_, err = fmt.Fprintf(f, "tcbh_%d\t\ttcbh_%d_metric\t", i+1, i+1)
+
+	}
+	if self.Parameters.Statistics == "long" {
+		for _, host := range hostlist {
+			_, err = fmt.Fprintf(f, "%s\t", host)
+		}
+	}
+	_, err = fmt.Fprintf(f, "\n")
+	return err
+}
+
+func (self *LBCluster) Create_statistics() error {
+	var err error
+	if self.Parameters.Statistics != "none" {
+		fi, err := os.Stat(self.Statistics_filename)
+		if os.IsNotExist(err) || (fi.Size() == 0) {
+			self.initialize_statistics()
+		}
+		f, err := os.OpenFile(self.Statistics_filename, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0640)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		t := time.Now()
+		timestamp := fmt.Sprintf("%04d-%02d-%02d\t%02d:%02d:%02d", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second())
+		_, err = fmt.Fprintf(f, "%v\t", timestamp)
+		for _, host := range self.Current_best_hosts {
+			if host != "unknown" {
+				if len(host) < 8 {
+					_, err = fmt.Fprintf(f, "%v\t\t%v\t\t", host, self.Host_metric_table[host])
+				} else {
+					_, err = fmt.Fprintf(f, "%v\t%v\t\t", host, self.Host_metric_table[host])
+				}
+			}
+		}
+		if self.Parameters.Statistics == "long" {
+			hostlist := make([]string, len(self.Host_metric_table))
+			i := 0
+			for k := range self.Host_metric_table {
+				hostlist[i] = k
+				i++
+			}
+			sort.Strings(hostlist)
+			metric_value := WorstValue
+			for _, host := range hostlist {
+				metric_value = self.Host_metric_table[host]
+				if metric_value == WorstValue {
+					// metric_value = 1000 - metric_value
+					metric_value = -9
+				}
+				if metric_value < 0 {
+					metric_value = 0
+				}
+				_, err = fmt.Fprintf(f, "%v\t", metric_value)
+			}
+		}
+		_, err = fmt.Fprintf(f, "\n")
+	}
+	return err
+}
+
 func (self *LBCluster) Apply_metric_minino() {
 	self.write_to_log("Got metric minino = " + self.Parameters.Metric)
 	pl := make(PairList, len(self.Host_metric_table))

@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/reguero/golbd/lbcluster"
+	"github.com/cernops/golbd/lbcluster"
 	"io"
 	"io/ioutil"
 	"log/syslog"
@@ -87,7 +87,7 @@ func loadClusters(config Config, lg lbcluster.Log) []lbcluster.LBCluster {
 		if par, ok := config.Parameters[k]; ok {
 			logfileDirs := strings.Split(*logFileFlag, "/")
 			logfilePath := strings.Join(logfileDirs[:len(logfileDirs)-1], "/")
-			lbc = lbcluster.LBCluster{Cluster_name: k, Loadbalancing_username: "loadbalancing", Loadbalancing_password: config.SnmpPassword, Parameters: par, Current_best_hosts: []string{"unknown"}, Previous_best_hosts: []string{"unknown"}, Previous_best_hosts_dns: []string{"unknown"}, Statistics_filename: "/var/log/lb/lbstatistics." + k, Per_cluster_filename: logfilePath + "/" + k + ".log"}
+			lbc = lbcluster.LBCluster{Cluster_name: k, Loadbalancing_username: "loadbalancing", Loadbalancing_password: config.SnmpPassword, Parameters: par, Current_best_hosts: []string{"unknown"}, Previous_best_hosts: []string{"unknown"}, Previous_best_hosts_dns: []string{"unknown"}, Statistics_filename: logfilePath + "/lbstatistics." + k, Per_cluster_filename: logfilePath + "/" + k + ".log"}
 			hm = make(map[string]int)
 			for _, h := range v {
 				hm[h] = lbcluster.WorstValue + 1
@@ -302,7 +302,7 @@ func main() {
 		lg.Warning(e.Error())
 		os.Exit(1)
 	} else {
-		lg.Debug(fmt.Sprintf("%v", config))
+		lg.Debug(fmt.Sprintf("config %v", config))
 	}
 
 	if *debugFlag {
@@ -351,6 +351,7 @@ func main() {
 				go func() {
 					defer wg.Done()
 					pc.Find_best_hosts()
+					pc.Create_statistics()
 					if should_update_dns(config, hostname, lg) {
 						lg.Debug("should_update_dns true")
 						e = pc.Get_state_dns(config.DnsManager)
