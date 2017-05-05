@@ -66,8 +66,8 @@ func TestLoadClusters(t *testing.T) {
 			}
 		}
 	}
-	if i != len(expected) {
-		t.Errorf("loadClusters: some clusters missing, got\n%v\nexpected\n%v", lbclusters, expected)
+	if (i != len(expected)) || (i != len(lbclusters)) {
+		t.Errorf("loadClusters: wrong number of clusters, got\n%v\nexpected\n%v", lbclusters, expected)
 
 	}
 }
