@@ -7,6 +7,7 @@ Requires=local-fs.target network-online.target
 [Service]
 EnvironmentFile=-/etc/sysconfig/golbd
 ExecStart=/usr/sbin/golbd $GOLBD_OPTIONS
+ExecReload=/bin/kill -HUP $MAINPID
 Restart=on-failure
 
 [Install]
