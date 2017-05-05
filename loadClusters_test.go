@@ -32,7 +32,7 @@ func TestLoadClusters(t *testing.T) {
 			Current_best_hosts:      []string{"unknown"},
 			Previous_best_hosts:     []string{"unknown"},
 			Previous_best_hosts_dns: []string{"unknown"},
-			Statistics_filename:     "/var/log/lb/lbstatistics.test01.cern.ch",
+			Statistics_filename:     "./lbstatistics.test01.cern.ch",
 			Per_cluster_filename:    "./test01.cern.ch.log",
 			//Slog:                    Log
 			Current_index: 0},
@@ -45,7 +45,7 @@ func TestLoadClusters(t *testing.T) {
 			Current_best_hosts:      []string{"unknown"},
 			Previous_best_hosts:     []string{"unknown"},
 			Previous_best_hosts_dns: []string{"unknown"},
-			Statistics_filename:     "/var/log/lb/lbstatistics.test02.cern.ch",
+			Statistics_filename:     "./lbstatistics.test02.cern.ch",
 			Per_cluster_filename:    "./test02.cern.ch.log",
 			//Slog:                    Log
 			Current_index: 0}}
