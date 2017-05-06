@@ -1,2 +1,1 @@
-# File is managed by puppet
-GOLBD_OPTIONS=""
+GOLBD_OPTIONS="-config /usr/local/etc/load-balancing.conf -log /var/log/lb/golbd.log"
