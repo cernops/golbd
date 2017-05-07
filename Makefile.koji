@@ -1,0 +1,15 @@
+PKGNAME=golbd
+PKGVERSION=0.1
+PKGRELEASE=0
+PKGID=$(PKGNAME)-$(PKGVERSION)
+TARFILE=$(PKGID).tgz
+
+all:
+	mkdir $(PKGID)
+	ls | grep -v -E '$(PKGID)$$|$(PKGNAME)$$|^cluster$|\.git' | xargs cp -rt $(PKGID)
+	tar cvzf $(TARFILE) $(PKGID)
+	rm -r $(PKGID)
+
+clean:
+	rm $(TARFILE)
+
