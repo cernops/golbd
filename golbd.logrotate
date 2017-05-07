@@ -1,0 +1,25 @@
+#
+#  rotate the load balancing statistic files and restart the deamon process
+#  the deamon will read its new configuration and create new statistic files
+#  the new files will also have the new header listing all the nodes of the cluster
+#
+
+/var/log/lb/golb* {
+           daily
+           rotate 31
+           olddir /var/log/lb/old
+           missingok
+           postrotate
+                     /usr/bin/systemctl restart golbd > /dev/null
+           endscript
+           sharedscripts
+           compress
+}
+
+/var/log/lb/cluster/* {
+           daily
+           rotate 31
+           olddir /var/log/lb/old/cluster
+           missingok
+           compress
+}
