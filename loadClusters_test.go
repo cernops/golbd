@@ -32,8 +32,8 @@ func TestLoadClusters(t *testing.T) {
 			Current_best_hosts:      []string{"unknown"},
 			Previous_best_hosts:     []string{"unknown"},
 			Previous_best_hosts_dns: []string{"unknown"},
-			Statistics_filename:     "./lbstatistics.test01.cern.ch",
-			Per_cluster_filename:    "./test01.cern.ch.log",
+			Statistics_filename:     "./golbstatistics.test01.cern.ch",
+			Per_cluster_filename:    "./cluster/test01.cern.ch.log",
 			//Slog:                    Log
 			Current_index: 0},
 		lbcluster.LBCluster{Cluster_name: "test02.cern.ch",
@@ -45,8 +45,8 @@ func TestLoadClusters(t *testing.T) {
 			Current_best_hosts:      []string{"unknown"},
 			Previous_best_hosts:     []string{"unknown"},
 			Previous_best_hosts_dns: []string{"unknown"},
-			Statistics_filename:     "./lbstatistics.test02.cern.ch",
-			Per_cluster_filename:    "./test02.cern.ch.log",
+			Statistics_filename:     "./golbstatistics.test02.cern.ch",
+			Per_cluster_filename:    "./cluster/test02.cern.ch.log",
 			//Slog:                    Log
 			Current_index: 0}}
 
