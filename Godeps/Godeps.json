@@ -1,0 +1,16 @@
+{
+	"ImportPath": "github.com/cernops/golbd",
+	"GoVersion": "go1.6",
+	"GodepVersion": "v69",
+	"Deps": [
+		{
+			"ImportPath": "github.com/k-sone/snmpgo",
+			"Comment": "v2.0.1",
+			"Rev": "7e2445751859d107939bce2db7d82043ee96c8f2"
+		},
+		{
+			"ImportPath": "github.com/miekg/dns",
+			"Rev": "799de7044d952a26f7def1dac9e87ff42aa0ea79"
+		}
+	]
+}
