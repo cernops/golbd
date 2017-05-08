@@ -11,7 +11,7 @@
 
 Name:		%{repo}
 Version:	0.1
-Release:	1%{?dist}
+Release:	2%{?dist}
 Summary:	CERN DNS Load Balancer Daemon
 License:	ASL 2.0
 URL:		https://%{import_path}
@@ -95,3 +95,7 @@ GOPATH=$(pwd)/_build:%{gopath} go test github.com/cernops/golbd
 %changelog
 * Sun May 07 2017 Ignacio Reguero <Ignacio.Reguero@cern.ch> - 0.0.1-0.0.gitf50fc79
 - First package for CC7
+* Mon May 08 2017 Ignacio Reguero <Ignacio.Reguero@cern.ch> - 0.1-1
+- point to /usr/bin for the golbd binary in service config
+* Mon May 08 2017 Ignacio Reguero <Ignacio.Reguero@cern.ch> - 0.1-2
+- fix permissions of the systemd service config file
