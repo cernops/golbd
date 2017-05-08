@@ -83,7 +83,7 @@ GOPATH=$(pwd)/_build:%{gopath} go test github.com/cernops/golbd
 %files
 %doc LICENSE COPYING README.md 
 %attr(755,root,root) %{_bindir}/golbd
-%attr(755,root,root) %{_unitdir}/%{name}.service
+%attr(644,root,root) %{_unitdir}/%{name}.service
 %attr(644,root,root) %config(noreplace) %{_sysconfdir}/sysconfig/%{name}
 %attr(640,root,root) %{_sysconfdir}/logrotate.d/%{name}
 %attr(755,root,root) /var/log/lb
