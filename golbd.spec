@@ -2,16 +2,16 @@
 %global provider_tld	com
 %global project		cernops
 %global repo		golbd
-%global commit		8c0c623bca8e33f4a9c1289ca965c19d9c6db2b1
+# %global commit		8c0c623bca8e33f4a9c1289ca965c19d9c6db2b1
 
 %global import_path	%{provider}.%{provider_tld}/%{project}/%{repo}
 %global gopath		%{_datadir}/gocode
-%global shortcommit	%(c=%{commit}; echo ${c:0:7})
+# %global shortcommit	%(c=%{commit}; echo ${c:0:7})
 %global debug_package	%{nil}
 
 Name:		%{repo}
 Version:	0.1
-Release:	0%{?dist}
+Release:	1%{?dist}
 Summary:	CERN DNS Load Balancer Daemon
 License:	ASL 2.0
 URL:		https://%{import_path}

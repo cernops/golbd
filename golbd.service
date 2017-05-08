@@ -1,12 +1,12 @@
 [Unit]
 Description=Load balancing daemon
-Documentation=https://gitlab.cern.ch/lb-experts/golbd https://gitlab.cern.ch/lb-experts/lbd
+Documentation=https://gitlab.cern.ch/lb-experts/golbd https://github.com/cernops/golbd
 After=local-fs.target network-online.target
 Requires=local-fs.target network-online.target
 
 [Service]
 EnvironmentFile=-/etc/sysconfig/golbd
-ExecStart=/usr/sbin/golbd $GOLBD_OPTIONS
+ExecStart=/usr/bin/golbd $GOLBD_OPTIONS
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=on-failure
 
