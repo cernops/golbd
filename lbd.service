@@ -5,8 +5,8 @@ After=local-fs.target network-online.target
 Requires=local-fs.target network-online.target
 
 [Service]
-EnvironmentFile=-/etc/sysconfig/golbd
-ExecStart=/usr/bin/golbd $GOLBD_OPTIONS
+EnvironmentFile=-/etc/sysconfig/lbd
+ExecStart=/usr/bin/lbd $GOLBD_OPTIONS
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=on-failure
 

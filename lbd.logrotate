@@ -4,13 +4,13 @@
 #  the new files will also have the new header listing all the nodes of the cluster
 #
 
-/var/log/lb/golb* {
+/var/log/lb/lb* {
            daily
            rotate 31
            olddir /var/log/lb/old
            missingok
            postrotate
-                     /usr/bin/systemctl restart golbd > /dev/null
+                     /usr/bin/systemctl restart lbd > /dev/null
            endscript
            sharedscripts
            compress

@@ -3,6 +3,7 @@
 %global project		cernops
 %global repo		golbd
 # %global commit		8c0c623bca8e33f4a9c1289ca965c19d9c6db2b1
+%global lbd             lbd
 
 %global import_path	%{provider}.%{provider_tld}/%{project}/%{repo}
 %global gopath		%{_datadir}/gocode
@@ -11,7 +12,7 @@
 
 Name:		%{repo}
 Version:	0.1
-Release:	3%{?dist}
+Release:	4%{?dist}
 Summary:	CERN DNS Load Balancer Daemon
 License:	ASL 2.0
 URL:		https://%{import_path}
@@ -52,15 +53,15 @@ GOPATH=$(pwd)/_build:%{gopath} go build %{import_path}
 %install
 # main package binary
 install -d -p %{buildroot}%{_bindir}
-install -p -m0755 golbd %{buildroot}%{_bindir}
+install -p -m0755 golbd %{buildroot}%{_bindir}/%{lbd}
 
 # install systemd/sysconfig/logrotate
 install -d -m0755 %{buildroot}%{_sysconfdir}/sysconfig/
-install -p -m0660 %{name}.sysconfig %{buildroot}%{_sysconfdir}/sysconfig/%{name} 
+install -p -m0660 %{lbd}.sysconfig %{buildroot}%{_sysconfdir}/sysconfig/%{lbd} 
 install -d -m0755 %{buildroot}%{_unitdir}
-install -p -m0644 %{name}.service %{buildroot}%{_unitdir}/%{name}.service
+install -p -m0644 %{lbd}.service %{buildroot}%{_unitdir}/%{lbd}.service
 install -d -m0755 %{buildroot}%{_sysconfdir}/logrotate.d
-install -p -m0640 %{name}.logrotate %{buildroot}%{_sysconfdir}/logrotate.d/%{name}
+install -p -m0640 %{lbd}.logrotate %{buildroot}%{_sysconfdir}/logrotate.d/%{lbd}
 
 # create some dirs for logs if needed
 install -d -m0755  %{buildroot}/var/log/lb
@@ -72,20 +73,20 @@ install -d -m0755  %{buildroot}/var/log/lb/old/cluster
 GOPATH=$(pwd)/_build:%{gopath} go test github.com/cernops/golbd
 
 %post
-%systemd_post golbd.service
+%systemd_post %{lbd}.service
 
 %preun
-%systemd_preun golbd.service
+%systemd_preun %{lbd}.service
 
 %postun
 %systemd_postun
 
 %files
 %doc LICENSE COPYING README.md 
-%attr(755,root,root) %{_bindir}/golbd
-%attr(644,root,root) %{_unitdir}/%{name}.service
-%attr(644,root,root) %config(noreplace) %{_sysconfdir}/sysconfig/%{name}
-%attr(640,root,root) %{_sysconfdir}/logrotate.d/%{name}
+%attr(755,root,root) %{_bindir}/%{lbd}
+%attr(644,root,root) %{_unitdir}/%{lbd}.service
+%attr(644,root,root) %config(noreplace) %{_sysconfdir}/sysconfig/%{lbd}
+%attr(640,root,root) %{_sysconfdir}/logrotate.d/%{lbd}
 %attr(755,root,root) /var/log/lb
 %attr(755,root,root) /var/log/lb/cluster
 %attr(755,root,root) /var/log/lb/old
@@ -93,6 +94,8 @@ GOPATH=$(pwd)/_build:%{gopath} go test github.com/cernops/golbd
 
 
 %changelog
+* Thu Nov 23 2017 Ignacio Reguero <Ignacio.Reguero@cern.ch> - 0.1-4
+- use lbd drop-in compatible binary and log names
 * Mon May 08 2017 Ignacio Reguero <Ignacio.Reguero@cern.ch> - 0.1-3
 - fix changelog not in descending chronological order
 * Mon May 08 2017 Ignacio Reguero <Ignacio.Reguero@cern.ch> - 0.1-2

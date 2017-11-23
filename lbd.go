@@ -20,11 +20,11 @@ import (
 	"time"
 )
 
-var versionFlag = flag.Bool("version", false, "print golbd version and exit")
-var debugFlag = flag.Bool("debug", false, "set golbd in debug mode")
-var startFlag = flag.Bool("start", false, "start golbd")
-var stopFlag = flag.Bool("stop", false, "stop golbd")
-var updateFlag = flag.Bool("update", false, "update golbd config")
+var versionFlag = flag.Bool("version", false, "print lbd version and exit")
+var debugFlag = flag.Bool("debug", false, "set lbd in debug mode")
+var startFlag = flag.Bool("start", false, "start lbd")
+var stopFlag = flag.Bool("stop", false, "stop lbd")
+var updateFlag = flag.Bool("update", false, "update lbd config")
 var configFileFlag = flag.String("config", "./load-balancing.conf", "specify configuration file path")
 var logFileFlag = flag.String("log", "./lbd.log", "specify log file path")
 
