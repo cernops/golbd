@@ -27,6 +27,7 @@ var stopFlag = flag.Bool("stop", false, "stop lbd")
 var updateFlag = flag.Bool("update", false, "update lbd config")
 var configFileFlag = flag.String("config", "./load-balancing.conf", "specify configuration file path")
 var logFileFlag = flag.String("log", "./lbd.log", "specify log file path")
+var stdoutFlag = flag.Bool("stdout", false, "send log to stdtout")
 
 const itCSgroupDNSserver string = "cfmgr.cern.ch"
 
@@ -283,7 +284,7 @@ func main() {
 	}
 
 	log, e := syslog.New(syslog.LOG_NOTICE, "lbd")
-	lg := lbcluster.Log{Writer: *log, Syslog: false, Stdout: true, Debugflag: *debugFlag, TofilePath: *logFileFlag}
+	lg := lbcluster.Log{Writer: *log, Syslog: false, Stdout: *stdoutFlag, Debugflag: *debugFlag, TofilePath: *logFileFlag}
 	if e == nil {
 		lg.Info("Starting lbd")
 	}
