@@ -12,7 +12,7 @@
 
 Name:		%{repo}
 Version:	0.1
-Release:	4%{?dist}
+Release:	5%{?dist}
 Summary:	CERN DNS Load Balancer Daemon
 License:	ASL 2.0
 URL:		https://%{import_path}
@@ -94,6 +94,8 @@ GOPATH=$(pwd)/_build:%{gopath} go test github.com/cernops/golbd
 
 
 %changelog
+* Thu Nov 23 2017 Ignacio Reguero <Ignacio.Reguero@cern.ch> - 0.1-5
+- add flag to send log to stdout. Fix log name
 * Thu Nov 23 2017 Ignacio Reguero <Ignacio.Reguero@cern.ch> - 0.1-4
 - use lbd drop-in compatible binary and log names
 * Mon May 08 2017 Ignacio Reguero <Ignacio.Reguero@cern.ch> - 0.1-3
