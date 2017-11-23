@@ -1,1 +1,1 @@
-GOLBD_OPTIONS="-config /usr/local/etc/load-balancing.conf -log /var/log/lb/golbd.log"
+GOLBD_OPTIONS="-config /usr/local/etc/load-balancing.conf -log /var/log/lb/lbd.log"
