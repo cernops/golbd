@@ -236,7 +236,7 @@ func update_heartbeat(config Config, hostname string, lg lbcluster.Log) error {
 	config.HeartbeatMu.Lock()
 	defer config.HeartbeatMu.Unlock()
 
-	f, err := os.OpenFile(heartbeat_file, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0640)
+	f, err := os.OpenFile(heartbeat_file, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		lg.Info(fmt.Sprintf("can not open %v for writing: %v", heartbeat_file, err))
 		return err
