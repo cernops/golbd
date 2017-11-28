@@ -226,7 +226,7 @@ func should_update_dns(config Config, hostname string, lg lbcluster.Log) bool {
 	}
 }
 
-func update_heartbeat(config Config, hostname string, lg lbcluster.Log) error {
+func update_heartbeat(config *Config, hostname string, lg lbcluster.Log) error {
 	if hostname != config.Master {
 		return nil
 	}
@@ -372,7 +372,7 @@ func main() {
 								lg.Warning(e.Error())
 							}
 						}
-						update_heartbeat(config, hostname, lg)
+						update_heartbeat(&config, hostname, lg)
 					} else {
 						lg.Debug("should_update_dns false")
 					}
