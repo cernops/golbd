@@ -12,7 +12,8 @@
 
 Name:		%{repo}
 Version:	0.1
-Release:	6%{?dist}
+Release:	7
+#psaiz: Removing the dist from the release %{?dist}
 Summary:	CERN DNS Load Balancer Daemon
 License:	ASL 2.0
 URL:		https://%{import_path}
@@ -94,6 +95,8 @@ GOPATH=$(pwd)/_build:%{gopath} go test github.com/cernops/golbd
 
 
 %changelog
+* Tue Nov 28 2017 Pablo Saiz <Pablo.Saiz@cern.ch>           - 0.1-7
+- Changing category level of errors
 * Fri Nov 24 2017 Ignacio Reguero <Ignacio.Reguero@cern.ch> - 0.1-6
 - heartbeat file needs to be world readable for apache to serve it
 * Thu Nov 23 2017 Ignacio Reguero <Ignacio.Reguero@cern.ch> - 0.1-5

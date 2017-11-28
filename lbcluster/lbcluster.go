@@ -108,6 +108,18 @@ func (l Log) Debug(s string) error {
 
 }
 
+func (l Log) Error(s string) error {
+	var err error
+	if l.Syslog {
+		err = l.Writer.Err(s)
+	}
+	if l.Stdout || (l.TofilePath != "") {
+		err = l.Writefilestd("ERROR: " + s)
+	}
+	return err
+
+}
+
 func (l Log) Writefilestd(s string) error {
 	var err error
 	tag := "lbd"
