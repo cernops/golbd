@@ -1,8 +1,9 @@
 PKGNAME=golbd
-PKGVERSION=0.1
-PKGRELEASE=6
+PKGVERSION=$(shell grep -s 'Version:' golbd.spec |sed 's/Version:\t//' )
+PKGRELEASE=$(shell grep -s 'Release:' golbd.spec |sed 's/Release:\t//' )
 PKGID=$(PKGNAME)-$(PKGVERSION)
 TARFILE=$(PKGID).tgz
+
 
 all:
 	mkdir $(PKGID)

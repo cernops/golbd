@@ -238,7 +238,7 @@ func update_heartbeat(config *Config, hostname string, lg lbcluster.Log) error {
 
 	f, err := os.OpenFile(heartbeat_file, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
-		lg.Info(fmt.Sprintf("can not open %v for writing: %v", heartbeat_file, err))
+		lg.Error(fmt.Sprintf("can not open %v for writing: %v", heartbeat_file, err))
 		return err
 	}
 	now := time.Now()
@@ -250,7 +250,7 @@ func update_heartbeat(config *Config, hostname string, lg lbcluster.Log) error {
 	}
 	f.Close()
 	if err = os.Rename(heartbeat_file, heartbeat_file_real); err != nil {
-		lg.Info(fmt.Sprintf("can not rename %v to %v: %v", heartbeat_file, heartbeat_file_real, err))
+		lg.Error(fmt.Sprintf("can not rename %v to %v: %v", heartbeat_file, heartbeat_file_real, err))
 		return err
 	}
 	return nil
@@ -277,7 +277,6 @@ func installSignalHandler(sighup, sigterm *bool, lg lbcluster.Log) {
 
 func main() {
 	flag.Parse()
-
 	if *versionFlag {
 		fmt.Printf("This is a proof of concept golbd version %s \n", "0.001")
 		os.Exit(0)
@@ -357,19 +356,16 @@ func main() {
 						lg.Debug("should_update_dns true")
 						e = pc.Get_state_dns(config.DnsManager)
 						if e != nil {
-							lg.Warning("Get_state_dns Error: ")
-							lg.Warning(e.Error())
+							lg.Warning(fmt.Sprintf("Get_state_dns Error:  cluster: %v error: %v", pc.Cluster_name, e.Error()))
 						}
 						e = pc.Update_dns(config.TsigKeyPrefix+"internal.", config.TsigInternalKey, config.DnsManager)
 						if e != nil {
-							lg.Warning("Internal Update_dns Error: ")
-							lg.Warning(e.Error())
+							lg.Warning(fmt.Sprintf("Internal Update_dns Error cluster: %v error: %v", pc.Cluster_name, e.Error()))
 						}
 						if pc.Externally_visible() {
 							e = pc.Update_dns(config.TsigKeyPrefix+"external.", config.TsigExternalKey, config.DnsManager)
 							if e != nil {
-								lg.Warning("External Update_dns Error: ")
-								lg.Warning(e.Error())
+								lg.Warning(fmt.Sprintf("External Update_dns Error: cluster: %v error: %v", pc.Cluster_name, e.Error()))
 							}
 						}
 						update_heartbeat(&config, hostname, lg)
