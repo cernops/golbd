@@ -37,7 +37,7 @@ type LBCluster struct {
 	Statistics_filename     string
 	Per_cluster_filename    string
 	Current_index           int
-	Slog                    Log
+	Slog                    *Log
 }
 
 type Params struct {
@@ -70,7 +70,7 @@ type Logger interface {
 	Debug(s string) error
 }
 
-func (l Log) Info(s string) error {
+func (l *Log) Info(s string) error {
 	var err error
 	if l.Syslog {
 		err = l.Writer.Info(s)
@@ -82,7 +82,7 @@ func (l Log) Info(s string) error {
 
 }
 
-func (l Log) Warning(s string) error {
+func (l *Log) Warning(s string) error {
 	var err error
 	if l.Syslog {
 		err = l.Writer.Warning(s)
@@ -94,7 +94,7 @@ func (l Log) Warning(s string) error {
 
 }
 
-func (l Log) Debug(s string) error {
+func (l *Log) Debug(s string) error {
 	var err error
 	if l.Debugflag {
 		if l.Syslog {
@@ -108,7 +108,7 @@ func (l Log) Debug(s string) error {
 
 }
 
-func (l Log) Error(s string) error {
+func (l *Log) Error(s string) error {
 	var err error
 	if l.Syslog {
 		err = l.Writer.Err(s)
@@ -120,7 +120,7 @@ func (l Log) Error(s string) error {
 
 }
 
-func (l Log) Writefilestd(s string) error {
+func (l *Log) Writefilestd(s string) error {
 	var err error
 	tag := "lbd"
 	nl := ""

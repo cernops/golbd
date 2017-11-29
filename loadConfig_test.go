@@ -68,12 +68,12 @@ clusters test02.cern.ch = lxplus013.cern.ch lxplus038.cern.ch lxplus025.cern.ch
 		Parameters: map[string]lbcluster.Params{"test01.cern.ch": lbcluster.Params{Behaviour: "mindless", Best_hosts: 2, External: true, Metric: "cmsfrontier", Polling_interval: 6, Statistics: "long"},
 			"test02.cern.ch": lbcluster.Params{Behaviour: "mindless", Best_hosts: 10, External: false, Metric: "cmsfrontier", Polling_interval: 6, Statistics: "long"}}}
 
-	config, e := loadConfig(f.Name(), lg)
+	config, e := loadConfig(f.Name(), &lg)
 	if e != nil {
 		t.Errorf("loadConfig Error: %v", e.Error())
 	} else {
-		if !reflect.DeepEqual(config, expected) {
-			t.Errorf("loadConfig: got %v expected %v", config, expected)
+		if !reflect.DeepEqual(config, &expected) {
+			t.Errorf("loadConfig: got %v expected %v", config, &expected)
 		}
 	}
 

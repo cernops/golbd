@@ -50,7 +50,7 @@ func TestLoadClusters(t *testing.T) {
 			//Slog:                    Log
 			Current_index: 0}}
 
-	lbclusters := loadClusters(config, lg)
+	lbclusters := loadClusters(&config, &lg)
 	// reflect.DeepEqual(lbclusters, expected) occassionally fails as the array order is not always the same
 	// so comparing element par element
 	i := 0

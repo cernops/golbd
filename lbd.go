@@ -75,7 +75,7 @@ func readLines(path string) (lines []string, err error) {
 	return
 }
 
-func loadClusters(config Config, lg lbcluster.Log) []lbcluster.LBCluster {
+func loadClusters(config *Config, lg *lbcluster.Log) []lbcluster.LBCluster {
 	var hm map[string]int
 	var lbc lbcluster.LBCluster
 	var lbcs []lbcluster.LBCluster
@@ -105,7 +105,7 @@ func loadClusters(config Config, lg lbcluster.Log) []lbcluster.LBCluster {
 
 }
 
-func loadConfig(configFile string, lg lbcluster.Log) (Config, error) {
+func loadConfig(configFile string, lg *lbcluster.Log) (*Config, error) {
 	var config Config
 	var p lbcluster.Params
 	var mc map[string][]string
@@ -115,7 +115,7 @@ func loadConfig(configFile string, lg lbcluster.Log) (Config, error) {
 
 	lines, err := readLines(configFile)
 	if err != nil {
-		return config, err
+		return &config, err
 	}
 	for _, line := range lines {
 		if strings.HasPrefix(line, "#") || (line == "") {
@@ -179,11 +179,11 @@ func loadConfig(configFile string, lg lbcluster.Log) (Config, error) {
 	}
 	config.Parameters = mp
 	config.Clusters = mc
-	return config, nil
+	return &config, nil
 
 }
 
-func should_update_dns(config Config, hostname string, lg lbcluster.Log) bool {
+func should_update_dns(config *Config, hostname string, lg *lbcluster.Log) bool {
 	if hostname == config.Master {
 		return true
 	}
@@ -226,7 +226,7 @@ func should_update_dns(config Config, hostname string, lg lbcluster.Log) bool {
 	}
 }
 
-func update_heartbeat(config *Config, hostname string, lg lbcluster.Log) error {
+func update_heartbeat(config *Config, hostname string, lg *lbcluster.Log) error {
 	if hostname != config.Master {
 		return nil
 	}
@@ -256,7 +256,7 @@ func update_heartbeat(config *Config, hostname string, lg lbcluster.Log) error {
 	return nil
 }
 
-func installSignalHandler(sighup, sigterm *bool, lg lbcluster.Log) {
+func installSignalHandler(sighup, sigterm *bool, lg *lbcluster.Log) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGTERM, syscall.SIGHUP)
 
@@ -289,14 +289,14 @@ func main() {
 	}
 
 	var sig_hup, sig_term bool
-	installSignalHandler(&sig_hup, &sig_term, lg)
+	installSignalHandler(&sig_hup, &sig_term, &lg)
 
 	hostname, e := os.Hostname()
 	if e == nil {
 		lg.Info("Hostname: " + hostname)
 	}
 
-	config, e := loadConfig(*configFileFlag, lg)
+	config, e := loadConfig(*configFileFlag, &lg)
 	if e != nil {
 		lg.Warning("loadConfig Error: ")
 		lg.Warning(e.Error())
@@ -313,14 +313,14 @@ func main() {
 			lg.Debug(fmt.Sprintf("clusters %v %v", k, v))
 		}
 	}
-	lbclusters := loadClusters(config, lg)
+	lbclusters := loadClusters(config, &lg)
 	var wg sync.WaitGroup
 	for {
 		if sig_term {
 			break
 		}
 		if sig_hup {
-			config, e = loadConfig(*configFileFlag, lg)
+			config, e = loadConfig(*configFileFlag, &lg)
 			if e != nil {
 				lg.Warning("loadConfig Error: ")
 				lg.Warning(e.Error())
@@ -337,14 +337,14 @@ func main() {
 					lg.Debug(fmt.Sprintf("clusters %v %v", k, v))
 				}
 			}
-			lbclusters = loadClusters(config, lg)
+			lbclusters = loadClusters(config, &lg)
 
 			sig_hup = false
 		}
 
 		for i := range lbclusters {
 			pc := &lbclusters[i]
-			pc.Slog = lg
+			pc.Slog = &lg
 			lg.Debug(fmt.Sprintf("lbcluster %v", *pc))
 			if pc.Time_to_refresh() {
 				wg.Add(1)
@@ -352,7 +352,7 @@ func main() {
 					defer wg.Done()
 					pc.Find_best_hosts()
 					pc.Create_statistics()
-					if should_update_dns(config, hostname, lg) {
+					if should_update_dns(config, hostname, &lg) {
 						lg.Debug("should_update_dns true")
 						e = pc.Get_state_dns(config.DnsManager)
 						if e != nil {
@@ -368,7 +368,7 @@ func main() {
 								lg.Warning(fmt.Sprintf("External Update_dns Error: cluster: %v error: %v", pc.Cluster_name, e.Error()))
 							}
 						}
-						update_heartbeat(&config, hostname, lg)
+						update_heartbeat(config, hostname, &lg)
 					} else {
 						lg.Debug("should_update_dns false")
 					}
