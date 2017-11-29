@@ -1,0 +1,30 @@
+---
+image: golang:1.7-alpine
+stages:
+  - build
+  - test
+
+before_script:
+  - apk add --update git
+  - go get github.com/tools/godep
+  - pwd
+  - ls -al 
+  - mkdir -p /go/src/github.com/cernops/
+  - ln -s  /builds/lb-experts/golbd /go/src/github.com/cernops/golbd
+  - cd /go/src/github.com/cernops/golbd
+
+build-my-project:
+  stage: build
+  script:
+    - pwd
+    - ls -al 
+    - cd /go/src/github.com/cernops/golbd
+    - godep restore
+    - godep go build
+
+test-my-project:
+  stage: test
+  script:
+    - godep restore
+    - godep go test -v -cover ./...
+
