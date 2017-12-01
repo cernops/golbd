@@ -7,6 +7,8 @@ stages:
 
 before_script:
   - apk add --update git
+  - apk add --update rpm
+  - apk add --update koji
   - go get github.com/tools/godep
   - pwd
   - ls -al 
