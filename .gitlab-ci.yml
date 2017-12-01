@@ -3,6 +3,7 @@ image: golang:1.7-alpine
 stages:
   - build
   - test
+  - deploy
 
 before_script:
   - apk add --update git
@@ -27,4 +28,21 @@ test-my-project:
   script:
     - godep restore
     - godep go test -v -cover ./...
+
+kojicheck:
+  stage: deploy
+  script:
+#    - curl https://gitlab.cern.ch/cloud-infrastructure/cloud-dev/raw/master/gitlab/kojicheck.sh | bash
+    - cd $CI_PROJECT_DIR
+    - export SPEC=$(ls *spec)
+    - echo SPEC=$SPEC
+    - export PKG=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}-%{release}")
+    - echo $SVCBUILD_PASSWORD | kinit svcbuild@CERN.CH
+    - if koji search -r build $PKG | grep $PKG; then exit 1; fi
+#kojiscratch:
+#  stage: deploy
+##  image: gitlab-registry.cern.ch/cloud/ciadm
+#  script:
+#    - export SCRATCH=1
+#    - curl https://gitlab.cern.ch/cloud-infrastructure/cloud-dev/raw/master/gitlab/kojibuild.sh | bash
 
