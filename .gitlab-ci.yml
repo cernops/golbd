@@ -1,14 +1,13 @@
 ---
-image: golang:1.7-alpine
+#image: golang:1.7-alpine
+image: gitlab-registry.cern.ch/cloud/ciadm
 stages:
   - build
   - test
   - deploy
 
 before_script:
-  - apk add --update git
-  - apk add --update rpm
-  - apk add --update koji
+  #- apk add --update git
   - go get github.com/tools/godep
   - pwd
   - ls -al 
