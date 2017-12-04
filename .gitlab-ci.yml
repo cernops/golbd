@@ -8,6 +8,7 @@ stages:
 
 before_script:
   - yum -y install golang git
+  - export GOPATH=/go
   - go get github.com/tools/godep
   - pwd
   - ls -al 
@@ -21,14 +22,14 @@ build-my-project:
     - pwd
     - ls -al 
     - cd /go/src/github.com/cernops/golbd
-    - godep restore
-    - godep go build
+    - /go/bin/godep restore
+    - /go/bin/godep go build
 
 test-my-project:
   stage: test
   script:
-    - godep restore
-    - godep go test -v -cover ./...
+    - /go/bin/godep restore
+    - /go/bin/godep go test -v -cover ./...
 
 kojicheck:
   stage: deploy
