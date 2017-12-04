@@ -37,7 +37,8 @@ test-my-project:
 kojicheck:
   stage: deploy
   script:
-    - if koji search -r build $PKG | grep $PKG; then exit 1; fi
+    - echo "Checking if $PKG_REL exists"
+    - if koji search -r build $PKG | grep $PKG_REL; then exit 1; fi
 kojiscratch:
   stage: deploy
   script:
