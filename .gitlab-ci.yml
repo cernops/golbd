@@ -39,7 +39,8 @@ kojicheck:
     - export SPEC=$(ls *spec)
     - echo SPEC=$SPEC
     - export PKG=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}-%{release}")
-    - echo $SVCBUILD_PASSWORD | kinit svcbuild@CERN.CH
+    - echo $PKG
+#    - echo $ESMON_PASSWORD | kinit esmon@CERN.CH
     - if koji search -r build $PKG | grep $PKG; then exit 1; fi
 #kojiscratch:
 #  stage: deploy
