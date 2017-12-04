@@ -8,7 +8,7 @@ stages:
 
 before_script:
 #  - apk add --update git
-  - yum install golang
+  - yum -y install golang
   - go get github.com/tools/godep
   - pwd
   - ls -al 
