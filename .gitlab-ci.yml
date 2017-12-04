@@ -62,7 +62,7 @@ kojiscratch:
     - mkdir /tmp/$PKG
     - cp -R * /tmp/$PKG
     - cd /tmp
-    - tar zcvf ~/rpmbuild/SOURCES/$PKG.tar.gz $PKG
+    - tar zcvf ~/rpmbuild/SOURCES/$PKG.tgz $PKG
     - cd $PKG
     - cp *spec ~/rpmbuild/SOURCES
 #fi
