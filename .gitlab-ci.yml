@@ -48,16 +48,9 @@ kojiscratch:
     - export SCRATCH=1
 #    - curl https://gitlab.cern.ch/cloud-infrastructure/cloud-dev/raw/master/gitlab/kojibuild.sh | bash
     - cd $CI_PROJECT_DIR
-#cp *patch ~/rpmbuild/SOURCES
     - export SPEC=$(ls *spec)
     - export PKG=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}\n" | head -n 1)
     - export PKG_REL=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
-#if [ "$USE_SOURCE_TARBALL" == "1" ]; then
-#        spectool -f -g $SPEC
-#        cp *.tar.gz $PKG.tar.gz
-#        cp *.tar.gz ~/rpmbuild/SOURCES
-#        cp *spec *patch *service *logrotate ~/rpmbuild/SOURCES
-#else
     - rm -rf /tmp/$PKG
     - mkdir /tmp/$PKG
     - cp -R * /tmp/$PKG
@@ -65,9 +58,9 @@ kojiscratch:
     - tar zcvf ~/rpmbuild/SOURCES/$PKG.tgz $PKG
     - cd $PKG
     - cp *spec ~/rpmbuild/SOURCES
-#fi
     - rpmbuild -bs -D "dist ${DIST:-.el7}" $SPEC
-# echo $SVCBUILD_PASSWORD | kinit svcbuild@CERN.CH
+    - echo $LBBUILD_PASSWORD | kinit lbbuild@CERN.CH
+    - klist
     - echo $PKG_REL
     - export SRPM=$(find ~/rpmbuild/SRPMS -name *.src.rpm)
     - export OPTIONS="--wait --scratch"
