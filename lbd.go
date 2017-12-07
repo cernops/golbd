@@ -376,7 +376,7 @@ func main() {
 			}
 		}
 		wg.Wait()
-		lg.Info("iteration done!")
+		lg.Debug("iteration done!")
 		if !sig_term {
 			time.Sleep(10 * time.Second)
 		}

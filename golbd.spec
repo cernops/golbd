@@ -12,7 +12,7 @@
 
 Name:		%{repo}
 Version:	0.1
-Release:	7
+Release:	8
 #psaiz: Removing the dist from the release %{?dist}
 Summary:	CERN DNS Load Balancer Daemon
 License:	ASL 2.0
@@ -75,6 +75,15 @@ GOPATH=$(pwd)/_build:%{gopath} go test github.com/cernops/golbd
 
 %post
 %systemd_post %{lbd}.service
+if [ $1 -eq 1 ] ; then 
+        # Initial installation 
+        systemctl start lbd.service >/dev/null 2>&1 || : 
+fi
+if [ $1 -eq 2 ] ; then 
+        # Initial installation 
+        systemctl restart lbd.service >/dev/null 2>&1 || : 
+fi
+
 
 %preun
 %systemd_preun %{lbd}.service

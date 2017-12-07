@@ -1,30 +1,74 @@
 ---
-image: golang:1.7-alpine
+#image: golang:1.7-alpine
+image: gitlab-registry.cern.ch/cloud/ciadm
 stages:
   - build
   - test
+  - deploy
+  - koji
 
 before_script:
-  - apk add --update git
+  - yum -y install golang git
+  - export GOPATH=/go
   - go get github.com/tools/godep
   - pwd
   - ls -al 
   - mkdir -p /go/src/github.com/cernops/
   - ln -s  /builds/lb-experts/golbd /go/src/github.com/cernops/golbd
   - cd /go/src/github.com/cernops/golbd
+  - export SPEC=$(ls *spec)
+  - export PKG=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}\n" | head -n 1)
+  - export PKG_REL=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
+
+
 
 build-my-project:
   stage: build
   script:
-    - pwd
-    - ls -al 
-    - cd /go/src/github.com/cernops/golbd
-    - godep restore
-    - godep go build
+    - /go/bin/godep restore
+    - /go/bin/godep go build
 
 test-my-project:
   stage: test
   script:
-    - godep restore
-    - godep go test -v -cover ./...
+    - /go/bin/godep restore
+    - /go/bin/godep go test -v -cover ./...
 
+kojicheck:
+  stage: deploy
+  script:
+    - echo "Checking if $PKG_REL exists"
+    - if koji search -r build $PKG | grep $PKG_REL; then exit 1; fi
+kojiscratch:
+  stage: deploy
+  script:
+    - rm -rf /tmp/$PKG && mkdir /tmp/$PKG &&  cp -R * /tmp/$PKG
+    - cd /tmp
+    - tar zcvf ~/rpmbuild/SOURCES/$PKG.tgz $PKG
+    - cd $PKG
+    - cp *spec ~/rpmbuild/SOURCES
+    - rpmbuild -bs -D "dist ${DIST:-.el7}" $SPEC
+    - echo $LBBUILD_PASSWORD | kinit lbbuild@CERN.CH
+    - klist
+    - echo $PKG_REL
+    - export SRPM=$(find ~/rpmbuild/SRPMS -name *.src.rpm)
+    - export OPTIONS="--wait --scratch"
+    - echo "koji build $OPTIONS $KOJI_TARGET $SRPM"
+    - koji build $OPTIONS $KOJI_TARGET $SRPM
+
+koji:
+  stage: koji
+  script:
+    - rm -rf /tmp/$PKG && mkdir /tmp/$PKG && cp -R * /tmp/$PKG
+    - cd /tmp
+    - tar zcvf ~/rpmbuild/SOURCES/$PKG.tgz $PKG
+    - cd $PKG
+    - cp *spec ~/rpmbuild/SOURCES
+    - rpmbuild -bs -D "dist ${DIST:-.el7}" $SPEC
+    - echo $LBBUILD_PASSWORD | kinit lbbuild@CERN.CH
+    - klist
+    - echo $PKG_REL
+    - export SRPM=$(find ~/rpmbuild/SRPMS -name *.src.rpm)
+    - export OPTIONS="--wait"
+    - echo "koji build $OPTIONS $KOJI_TARGET $SRPM"
+    - koji build $OPTIONS $KOJI_TARGET $SRPM
