@@ -81,7 +81,7 @@ if [ $1 -eq 1 ] ; then
 fi
 if [ $1 -eq 2 ] ; then 
         # Initial installation 
-        systemctl restart lbd.service >/dev/null 2>&1 || : 
+        systemctl try-restart lbd.service >/dev/null 2>&1 || : 
 fi
 
 
