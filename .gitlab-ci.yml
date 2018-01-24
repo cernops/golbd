@@ -11,7 +11,7 @@ stages:
 
 
 before_script:
-  - yum -y install golang git
+  - yum -y install golang git krb5-workstation koji rpm-build rpmdevtools
   - export GOPATH=/go
   - go get github.com/tools/godep
   - pwd
