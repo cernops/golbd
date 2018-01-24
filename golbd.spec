@@ -104,7 +104,7 @@ fi
 
 
 %changelog
-* Wed Jan 24 2017 Pablo Saiz <Pablo.Saiz@cern.ch>           - 0.1.9
+* Wed Jan 24 2018 Pablo Saiz <Pablo.Saiz@cern.ch>           - 0.1.9
 - Reducing the number of calls to the heartbeat
 - Changing the logging
 
