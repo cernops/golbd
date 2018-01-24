@@ -58,20 +58,20 @@ kojicheck:
   stage: koji_scratch
   script:
     - echo "Checking if $PKG_REL exists"
-    - if koji search -r build $PKG | grep $PKG_REL; then exit 1; fi
+    - if koji --config=.koji search -r build $PKG | grep $PKG_REL; then exit 1; fi
 kojiscratch:
   stage: koji_scratch
   script:
     - export SRPM="SRPMS/${PKG_REL}.src.rpm"
     - echo "koji build --wait --scratch $KOJI_TARGET $SRPM"
-    - koji build --wait --scratch $KOJI_TARGET $SRPM
+    - koji --config=.koji build --wait --scratch $KOJI_TARGET $SRPM
 
 koji:
   stage: koji
   script:
     - export SRPM="SRPMS/${PKG_REL}.src.rpm"
     - echo "koji build --wait $KOJI_TARGET $SRPM"
-    - koji build --wait $KOJI_TARGET $SRPM
+    - koji --config=.koji build --wait $KOJI_TARGET $SRPM
   only:
     - tags
 
