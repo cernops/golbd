@@ -12,7 +12,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	
 	"sort"
 	"strconv"
 	"strings"
@@ -371,7 +370,7 @@ func (self *LBCluster) Find_best_hosts() {
 	if len(self.Current_best_hosts) == 0 {
 		nodes = "NONE"
 	}
-	self.Write_to_log("INFO", "best hosts are: "+ nodes)
+	self.Write_to_log("INFO", "best hosts are: "+nodes)
 }
 
 func (self *LBCluster) evaluate_hosts() {
@@ -544,7 +543,7 @@ func (self *LBCluster) snmp_req(host string, result chan<- RetSnmp) {
 	if logmessage == "" {
 		logmessage = fmt.Sprintf("contacted node: %v transport: %v - reply was %v", host, transport, metric)
 	} else {
-		logmessage = logmessage + " - " + fmt.Sprintf("contacted node: %v transport: %v - reply was %v",  host, transport, metric)
+		logmessage = logmessage + " - " + fmt.Sprintf("contacted node: %v transport: %v - reply was %v", host, transport, metric)
 	}
 	result <- RetSnmp{metric, host, logmessage}
 	return

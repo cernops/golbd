@@ -18,10 +18,9 @@ func TestLoadClusters(t *testing.T) {
 		TsigExternalKey: "yyy123==",
 		SnmpPassword:    "zzz123",
 		DnsManager:      "111.111.0.111",
-		Clusters: map[string][]string{"test01.cern.ch": []string{"lxplus142.cern.ch", "lxplus177.cern.ch"},
-			"test02.cern.ch": []string{"lxplus013.cern.ch", "lxplus038.cern.ch", "lxplus025.cern.ch"}},
-		Parameters: map[string]lbcluster.Params{"test01.cern.ch": lbcluster.Params{Behaviour: "mindless", Best_hosts: 2, 
-																	External: true, Metric: "cmsfrontier", Polling_interval: 6, Statistics: "long"},
+		Clusters:        map[string][]string{"test01.cern.ch": []string{"lxplus142.cern.ch", "lxplus177.cern.ch"}, "test02.cern.ch": []string{"lxplus013.cern.ch", "lxplus038.cern.ch", "lxplus025.cern.ch"}},
+		Parameters: map[string]lbcluster.Params{"test01.cern.ch": lbcluster.Params{Behaviour: "mindless", Best_hosts: 2,
+			External: true, Metric: "cmsfrontier", Polling_interval: 6, Statistics: "long"},
 			"test02.cern.ch": lbcluster.Params{Behaviour: "mindless", Best_hosts: 10, External: false, Metric: "cmsfrontier", Polling_interval: 6, Statistics: "long"}}}
 	expected := []lbcluster.LBCluster{
 		lbcluster.LBCluster{Cluster_name: "test01.cern.ch",
@@ -36,7 +35,7 @@ func TestLoadClusters(t *testing.T) {
 			Statistics_filename:     "./golbstatistics.test01.cern.ch",
 			Per_cluster_filename:    "./cluster/test01.cern.ch.log",
 			Slog:                    &lg,
-			Current_index: 0},
+			Current_index:           0},
 		lbcluster.LBCluster{Cluster_name: "test02.cern.ch",
 			Loadbalancing_username: "loadbalancing",
 			Loadbalancing_password: "zzz123",
@@ -49,7 +48,7 @@ func TestLoadClusters(t *testing.T) {
 			Statistics_filename:     "./golbstatistics.test02.cern.ch",
 			Per_cluster_filename:    "./cluster/test02.cern.ch.log",
 			Slog:                    &lg,
-			Current_index: 0}}
+			Current_index:           0}}
 
 	lbclusters := loadClusters(&config, &lg)
 	// reflect.DeepEqual(lbclusters, expected) occassionally fails as the array order is not always the same

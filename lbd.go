@@ -82,19 +82,19 @@ func loadClusters(config *Config, lg *lbcluster.Log) []lbcluster.LBCluster {
 
 	for k, v := range config.Clusters {
 		if len(v) == 0 {
-			lg.Warning("cluster: " + k +" ignored as it has no members defined in the configuration file " + *configFileFlag)
+			lg.Warning("cluster: " + k + " ignored as it has no members defined in the configuration file " + *configFileFlag)
 			continue
 		}
 		if par, ok := config.Parameters[k]; ok {
 			logfileDirs := strings.Split(*logFileFlag, "/")
 			logfilePath := strings.Join(logfileDirs[:len(logfileDirs)-1], "/")
-			lbc = lbcluster.LBCluster{Cluster_name: k, Loadbalancing_username: "loadbalancing", 
-				Loadbalancing_password: config.SnmpPassword, Parameters: par, 
-				Current_best_hosts: []string{"unknown"}, 
-				Previous_best_hosts: []string{"unknown"}, 
-				Previous_best_hosts_dns: []string{"unknown"}, 
-				Slog : lg,				
-				Statistics_filename: logfilePath + "/golbstatistics." + k, 
+			lbc = lbcluster.LBCluster{Cluster_name: k, Loadbalancing_username: "loadbalancing",
+				Loadbalancing_password: config.SnmpPassword, Parameters: par,
+				Current_best_hosts:      []string{"unknown"},
+				Previous_best_hosts:     []string{"unknown"},
+				Previous_best_hosts_dns: []string{"unknown"},
+				Slog:                 lg,
+				Statistics_filename:  logfilePath + "/golbstatistics." + k,
 				Per_cluster_filename: logfilePath + "/cluster/" + k + ".log"}
 			hm = make(map[string]int)
 			for _, h := range v {
@@ -105,7 +105,7 @@ func loadClusters(config *Config, lg *lbcluster.Log) []lbcluster.LBCluster {
 			lbc.Write_to_log("INFO", "(re-)loaded cluster ")
 
 		} else {
-			lg.Warning("cluster: "+k+" missing parameters for cluster; ignoring the cluster, please check the configuration file " + *configFileFlag)
+			lg.Warning("cluster: " + k + " missing parameters for cluster; ignoring the cluster, please check the configuration file " + *configFileFlag)
 		}
 	}
 	return lbcs
@@ -325,7 +325,7 @@ func main() {
 	lg.Info("Clusters loaded")
 	var wg sync.WaitGroup
 	for {
-		lg.Info("Starting the loop");
+		lg.Info("Starting the loop")
 		if sig_term {
 			break
 		}
@@ -351,19 +351,19 @@ func main() {
 
 			sig_hup = false
 		}
-		
+
 		check_update := true
 		update_dns := true
-		lg.Info("Checking if any of the " +  strconv.Itoa(len(lbclusters))  + " clusters needs updating") 
+		lg.Info("Checking if any of the " + strconv.Itoa(len(lbclusters)) + " clusters needs updating")
 		for i := range lbclusters {
 			pc := &lbclusters[i]
 			pc.Write_to_log("DEBUG", "DO WE HAVE TO UPDATE?")
 			if pc.Time_to_refresh() {
 				pc.Write_to_log("INFO", "Time to refresh the cluster")
-				if check_update{
+				if check_update {
 					check_update = false
 					//Let's make one call to check if we have to update the dns (instead of one per alias)
-					update_dns = should_update_dns(config, hostname, &lg)					
+					update_dns = should_update_dns(config, hostname, &lg)
 				}
 				wg.Add(1)
 				go func() {
@@ -393,8 +393,10 @@ func main() {
 			}
 		}
 		wg.Wait()
-		
-   	    update_heartbeat(config, hostname, &lg)
+
+		if update_dns {
+			update_heartbeat(config, hostname, &lg)
+		}
 
 		lg.Debug("iteration done!")
 		if !sig_term {
