@@ -11,9 +11,7 @@ stages:
 
 
 before_script:
-  - yum -y install --exclude python2-libcomps  krb5-workstation koji rpm-build rpmdevtools golang git
-  - export GOPATH=/go
-  - go get github.com/tools/godep
+  - yum -y install --exclude python2-libcomps  krb5-workstation koji rpm-build rpmdevtools
   - pwd
   - ls -al 
   - mkdir -p /go/src/github.com/cernops/
@@ -29,12 +27,18 @@ before_script:
 build-my-project:
   stage: build
   script:
+    - yum -y install golang git
+    - export GOPATH=/go
+    - go get github.com/tools/godep
     - /go/bin/godep restore
     - /go/bin/godep go build
 
 test-my-project:
   stage: test
   script:
+    - yum -y install golang git
+    - export GOPATH=/go
+    - go get github.com/tools/godep
     - /go/bin/godep restore
     - /go/bin/godep go test -v -cover ./...
 
