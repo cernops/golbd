@@ -82,23 +82,30 @@ func loadClusters(config *Config, lg *lbcluster.Log) []lbcluster.LBCluster {
 
 	for k, v := range config.Clusters {
 		if len(v) == 0 {
-			lg.Warning(fmt.Sprintf("cluster %v is ignored as it has no members defined in the configuration file %v", k, *configFileFlag))
+			lg.Warning("cluster: " + k + " ignored as it has no members defined in the configuration file " + *configFileFlag)
 			continue
 		}
 		if par, ok := config.Parameters[k]; ok {
 			logfileDirs := strings.Split(*logFileFlag, "/")
 			logfilePath := strings.Join(logfileDirs[:len(logfileDirs)-1], "/")
-			lbc = lbcluster.LBCluster{Cluster_name: k, Loadbalancing_username: "loadbalancing", Loadbalancing_password: config.SnmpPassword, Parameters: par, Current_best_hosts: []string{"unknown"}, Previous_best_hosts: []string{"unknown"}, Previous_best_hosts_dns: []string{"unknown"}, Statistics_filename: logfilePath + "/golbstatistics." + k, Per_cluster_filename: logfilePath + "/cluster/" + k + ".log"}
+			lbc = lbcluster.LBCluster{Cluster_name: k, Loadbalancing_username: "loadbalancing",
+				Loadbalancing_password: config.SnmpPassword, Parameters: par,
+				Current_best_hosts:      []string{"unknown"},
+				Previous_best_hosts:     []string{"unknown"},
+				Previous_best_hosts_dns: []string{"unknown"},
+				Slog:                 lg,
+				Statistics_filename:  logfilePath + "/golbstatistics." + k,
+				Per_cluster_filename: logfilePath + "/cluster/" + k + ".log"}
 			hm = make(map[string]int)
 			for _, h := range v {
 				hm[h] = lbcluster.WorstValue + 1
 			}
 			lbc.Host_metric_table = hm
 			lbcs = append(lbcs, lbc)
-			lg.Info(fmt.Sprintf("(re-)loaded cluster %v", k))
+			lbc.Write_to_log("INFO", "(re-)loaded cluster ")
 
 		} else {
-			lg.Warning(fmt.Sprintf("missing parameters for cluster %v; ignoring the cluster, please check the configuration file %v", k, *configFileFlag))
+			lg.Warning("cluster: " + k + " missing parameters for cluster; ignoring the cluster, please check the configuration file " + *configFileFlag)
 		}
 	}
 	return lbcs
@@ -313,9 +320,12 @@ func main() {
 			lg.Debug(fmt.Sprintf("clusters %v %v", k, v))
 		}
 	}
+	lg.Info("Loading clusters")
 	lbclusters := loadClusters(config, &lg)
+	lg.Info("Clusters loaded")
 	var wg sync.WaitGroup
 	for {
+		lg.Info("Starting the loop")
 		if sig_term {
 			break
 		}
@@ -342,40 +352,52 @@ func main() {
 			sig_hup = false
 		}
 
+		check_update := true
+		update_dns := true
+		lg.Info("Checking if any of the " + strconv.Itoa(len(lbclusters)) + " clusters needs updating")
 		for i := range lbclusters {
 			pc := &lbclusters[i]
-			pc.Slog = &lg
-			lg.Debug(fmt.Sprintf("lbcluster %v", *pc))
+			pc.Write_to_log("DEBUG", "DO WE HAVE TO UPDATE?")
 			if pc.Time_to_refresh() {
+				pc.Write_to_log("INFO", "Time to refresh the cluster")
+				if check_update {
+					check_update = false
+					//Let's make one call to check if we have to update the dns (instead of one per alias)
+					update_dns = should_update_dns(config, hostname, &lg)
+				}
 				wg.Add(1)
 				go func() {
 					defer wg.Done()
 					pc.Find_best_hosts()
 					pc.Create_statistics()
-					if should_update_dns(config, hostname, &lg) {
-						lg.Debug("should_update_dns true")
+					if update_dns {
+						pc.Write_to_log("DEBUG", "Should update dns is true")
 						e = pc.Get_state_dns(config.DnsManager)
 						if e != nil {
-							lg.Warning(fmt.Sprintf("Get_state_dns Error:  cluster: %v error: %v", pc.Cluster_name, e.Error()))
+							pc.Write_to_log("WARNING", fmt.Sprintf("Get_state_dns Error: %v", e.Error()))
 						}
 						e = pc.Update_dns(config.TsigKeyPrefix+"internal.", config.TsigInternalKey, config.DnsManager)
 						if e != nil {
-							lg.Warning(fmt.Sprintf("Internal Update_dns Error cluster: %v error: %v", pc.Cluster_name, e.Error()))
+							pc.Write_to_log("WARNING", fmt.Sprintf("Internal Update_dns Error: %v", e.Error()))
 						}
 						if pc.Externally_visible() {
 							e = pc.Update_dns(config.TsigKeyPrefix+"external.", config.TsigExternalKey, config.DnsManager)
 							if e != nil {
-								lg.Warning(fmt.Sprintf("External Update_dns Error: cluster: %v error: %v", pc.Cluster_name, e.Error()))
+								pc.Write_to_log("WARNING", fmt.Sprintf("External Update_dns Error: cluster: %v error: %v", pc.Cluster_name, e.Error()))
 							}
 						}
-						update_heartbeat(config, hostname, &lg)
 					} else {
-						lg.Debug("should_update_dns false")
+						pc.Write_to_log("DEBUG", "should_update_dns false")
 					}
 				}()
 			}
 		}
 		wg.Wait()
+
+		if update_dns {
+			update_heartbeat(config, hostname, &lg)
+		}
+
 		lg.Debug("iteration done!")
 		if !sig_term {
 			time.Sleep(10 * time.Second)

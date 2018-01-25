@@ -12,7 +12,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -68,6 +67,7 @@ type Logger interface {
 	Info(s string) error
 	Warning(s string) error
 	Debug(s string) error
+	Error(s string) error
 }
 
 func (l *Log) Info(s string) error {
@@ -163,13 +163,6 @@ func fisher_yates_shuffle(array []string) []string {
 	return array
 }
 
-type MetricPolicyApplier interface {
-	Apply_metric_minino()
-	Apply_metric_minimum()
-	Apply_metric_cmsweb()
-	Apply_metric_cmsfrontier()
-}
-
 type Pair struct {
 	Key   string
 	Value int
@@ -258,8 +251,8 @@ func (self *LBCluster) Create_statistics() error {
 	return err
 }
 
-func (self *LBCluster) Apply_metric_minino() {
-	self.write_to_log("Got metric minino = " + self.Parameters.Metric)
+func (self *LBCluster) Apply_metric() {
+	self.Write_to_log("INFO", "Got metric = "+self.Parameters.Metric)
 	pl := make(PairList, len(self.Host_metric_table))
 	i := 0
 	for k, v := range self.Host_metric_table {
@@ -284,53 +277,31 @@ func (self *LBCluster) Apply_metric_minino() {
 		max = list_length
 	}
 	if max > list_length {
-		self.write_to_log(fmt.Sprintf("WARNING: impossible to return %v hosts from the list of %v hosts (%v). Check the configuration of cluster %v. Returning %v hosts.", max, list_length, sorted_host_list, self.Cluster_name, list_length))
+		self.Write_to_log("WARNING", fmt.Sprintf("impossible to return %v hosts from the list of %v hosts (%v). Check the configuration of cluster. Returning %v hosts.", max, list_length, sorted_host_list, list_length))
 		max = list_length
 	}
 	if list_length == 0 {
-		self.write_to_log(fmt.Sprintf("ERROR: cluster %v has no hosts defined ! Check the configuration.", self.Cluster_name))
+		self.Write_to_log("ERROR", "cluster has no hosts defined ! Check the configuration.")
 		self.Current_best_hosts = []string{"unknown"}
 	} else if useful_hosts == 0 {
 		if self.Parameters.Metric == "minimum" {
-			self.write_to_log(fmt.Sprintf("WARNING: no usable hosts found for cluster %v ! Returning random %v hosts.", self.Cluster_name, max))
+			self.Write_to_log("WARNING", fmt.Sprintf("no usable hosts found for cluster! Returning random %v hosts.", max))
 			sorted_host_list = fisher_yates_shuffle(sorted_host_list)
 			self.Current_best_hosts = sorted_host_list[:max]
 		} else if (self.Parameters.Metric == "minino") || (self.Parameters.Metric == "cmsweb") {
-			self.write_to_log(fmt.Sprintf("WARNING: no usable hosts found for cluster %v ! Returning no hosts.", self.Cluster_name))
+			self.Write_to_log("WARNING", "no usable hosts found for cluster! Returning no hosts.")
 			self.Current_best_hosts = useful_host_list
 		} else if self.Parameters.Metric == "cmsfrontier" {
-			self.write_to_log(fmt.Sprintf("WARNING: no usable hosts found for cluster %v !", self.Cluster_name))
-			self.Current_best_hosts = useful_host_list
+			self.Write_to_log("WARNING", "no usable hosts found for cluster!, using the previous_best_hosts")
+			self.Current_best_hosts = self.Previous_best_hosts
 		}
 	} else {
 		if useful_hosts < max {
-			self.write_to_log(fmt.Sprintf("WARNING: only %v useable hosts found in cluster %v", useful_hosts, self.Cluster_name))
+			self.Write_to_log("WARNING", fmt.Sprintf("only %v useable hosts found in cluster", useful_hosts))
 			max = useful_hosts
 		}
 		self.Current_best_hosts = useful_host_list[:max]
 		self.Slog.Debug(fmt.Sprintf("%v", self.Current_best_hosts))
-	}
-	return
-}
-
-func (self *LBCluster) Apply_metric_minimum() {
-	self.write_to_log("Got metric minimum = " + self.Parameters.Metric)
-	self.Apply_metric_minino()
-	return
-}
-
-func (self *LBCluster) Apply_metric_cmsweb() {
-	self.write_to_log("Got metric cmsweb = " + self.Parameters.Metric)
-	self.Apply_metric_minino()
-	return
-}
-
-func (self *LBCluster) Apply_metric_cmsfrontier() {
-	self.write_to_log("Got metric cmsfrontier = " + self.Parameters.Metric)
-	self.Apply_metric_minino()
-	if len(self.Current_best_hosts) == 0 {
-		self.write_to_log(fmt.Sprintf("best hosts for %v are: NONE using previous_best_hosts", self.Cluster_name))
-		self.Current_best_hosts = self.Previous_best_hosts
 	}
 	return
 }
@@ -340,56 +311,73 @@ func (self *LBCluster) Externally_visible() bool {
 }
 
 func (self *LBCluster) Time_to_refresh() bool {
-	// self.write_to_log(fmt.Sprintf("Time_of_last_evaluation = %v now = %v Time_of_last_evaluation + polling_int = %v result = %v Cluster_name = %v\n", self.Time_of_last_evaluation, time.Now(), self.Time_of_last_evaluation.Add(time.Duration(self.Parameters.Polling_interval)*time.Second), self.Time_of_last_evaluation.Add(time.Duration(self.Parameters.Polling_interval)*time.Second).After(time.Now()), self.Cluster_name))
+	// self.Write_to_log(fmt.Sprintf("Time_of_last_evaluation = %v now = %v Time_of_last_evaluation + polling_int = %v result = %v Cluster_name = %v\n", self.Time_of_last_evaluation, time.Now(), self.Time_of_last_evaluation.Add(time.Duration(self.Parameters.Polling_interval)*time.Second), self.Time_of_last_evaluation.Add(time.Duration(self.Parameters.Polling_interval)*time.Second).After(time.Now()), self.Cluster_name))
 	return self.Time_of_last_evaluation.Add(time.Duration(self.Parameters.Polling_interval) * time.Second).Before(time.Now())
 }
 
-func (self *LBCluster) write_to_log(msg string) error {
-	self.Slog.Info(self.Cluster_name + " " + msg)
-	f, err := os.OpenFile(self.Per_cluster_filename, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0640)
-	if err != nil {
-		return err
+func (self *LBCluster) Write_to_log(level string, msg string) error {
+
+	my_message := "cluster: " + self.Cluster_name + " " + msg
+
+	if level == "INFO" {
+		self.Slog.Info(my_message)
+	} else if level == "DEBUG" {
+		self.Slog.Debug(my_message)
+	} else if level == "WARNING" {
+		self.Slog.Warning(my_message)
+	} else if level == "ERROR" {
+		self.Slog.Error(my_message)
+	} else {
+		self.Slog.Error("LEVEL " + level + " NOT UNDERSTOOD, ASSUMING ERROR " + my_message)
 	}
-	defer f.Close()
-	tag := "lbd"
-	nl := ""
-	if !strings.HasSuffix(msg, "\n") {
-		nl = "\n"
-	}
-	timestamp := time.Now().Format(time.Stamp)
-	_, err = fmt.Fprintf(f, "%s %s[%d]: %s %s%s",
-		timestamp,
-		tag, os.Getpid(), self.Cluster_name, msg, nl)
-	return err
+
+	//We send the logs to timber, and in that one, it is quite easy to filter by cluster. We don't need the dedicated logs anymore
+	/*
+		f, err := os.OpenFile(self.Per_cluster_filename, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0640)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		tag := "lbd"
+		nl := ""
+		if !strings.HasSuffix(msg, "\n") {
+			nl = "\n"
+		}
+		timestamp := time.Now().Format(time.Stamp)
+		_, err = fmt.Fprintf(f, "%s %s[%d]: cluster: %s %s: %s%s",
+			timestamp,
+			tag, os.Getpid(), self.Cluster_name, level, msg, nl)
+		return err */
+	return nil
 }
 
 func (self *LBCluster) Find_best_hosts() {
 	self.Previous_best_hosts = self.Current_best_hosts
 	self.evaluate_hosts()
-	methodName := "Apply_metric_" + self.Parameters.Metric
-	var a MetricPolicyApplier
-	a = self
-	_, ok := reflect.TypeOf(a).MethodByName(methodName)
+	allMetrics := make(map[string]bool)
+	allMetrics["minimum"] = true
+	allMetrics["cmsfrontier"] = true
+	allMetrics["minino"] = true
+
+	_, ok := allMetrics[self.Parameters.Metric]
 	if !ok {
-		self.write_to_log("ERROR: wrong parameter(metric) in definition of cluster " + self.Parameters.Metric)
+		self.Write_to_log("ERROR", "wrong parameter(metric) in definition of cluster "+self.Parameters.Metric)
+		return
 	}
-	// invoke m
-	self.write_to_log(self.Cluster_name + " invoking " + self.Parameters.Metric)
-	//self.Apply_metric_minino()
-	reflect.ValueOf(a).MethodByName(methodName).Call([]reflect.Value{})
+	self.Apply_metric()
 	self.Time_of_last_evaluation = time.Now()
-	none := ""
+	nodes := strings.Join(self.Current_best_hosts, " ")
 	if len(self.Current_best_hosts) == 0 {
-		none = "NONE"
+		nodes = "NONE"
 	}
-	self.write_to_log(fmt.Sprintf("best hosts for %v are: %v%v\n", self.Cluster_name, strings.Join(self.Current_best_hosts, " "), none))
+	self.Write_to_log("INFO", "best hosts are: "+nodes)
 }
 
 func (self *LBCluster) evaluate_hosts() {
 	result := make(chan RetSnmp, 200)
 	for h := range self.Host_metric_table {
 		currenthost := h
-		self.write_to_log("contacting cluster: " + self.Cluster_name + " node: " + currenthost)
+		self.Write_to_log("INFO", "contacting node: "+currenthost)
 		go self.snmp_req(currenthost, result)
 	}
 	for range self.Host_metric_table {
@@ -397,7 +385,7 @@ func (self *LBCluster) evaluate_hosts() {
 		select {
 		case metrichostlog := <-result:
 			self.Host_metric_table[metrichostlog.Host] = metrichostlog.Metric
-			self.write_to_log(metrichostlog.Log)
+			self.Write_to_log("INFO", metrichostlog.Log)
 		}
 	}
 }
@@ -448,7 +436,7 @@ func (self *LBCluster) snmp_req(host string, result chan<- RetSnmp) {
 			if str, ok := dat["appstate"].(string); ok {
 				if str != "production" {
 					metric = -99
-					logmessage = logmessage + fmt.Sprintf("cluster: %s node: %s - %s - setting reply %v", self.Cluster_name, host, str, metric)
+					logmessage = logmessage + fmt.Sprintf("node: %s - %s - setting reply %v", host, str, metric)
 					result <- RetSnmp{metric, host, logmessage}
 					return
 				}
@@ -501,7 +489,7 @@ func (self *LBCluster) snmp_req(host string, result chan<- RetSnmp) {
 				continue
 			} else {
 				logmessage = logmessage + fmt.Sprintf("snmp open %v failed with %v", transport, err)
-				logmessage = fmt.Sprintf("contacted  cluster: %v node: %v - %v - %v - setting reply %v", self.Cluster_name, host, transport, logmessage, metric)
+				logmessage = fmt.Sprintf("contacted node: %v - %v - %v - setting reply %v", host, transport, logmessage, metric)
 				result <- RetSnmp{metric, host, logmessage}
 				return
 			}
@@ -515,7 +503,7 @@ func (self *LBCluster) snmp_req(host string, result chan<- RetSnmp) {
 				continue
 			} else {
 				logmessage = logmessage + fmt.Sprintf("snmp get failed with %v", err)
-				logmessage = fmt.Sprintf("contacted  cluster: %v node: %v - %v - %v - setting reply %v", self.Cluster_name, host, transport, logmessage, metric)
+				logmessage = fmt.Sprintf("contacted node: %v - %v - %v - setting reply %v", host, transport, logmessage, metric)
 				result <- RetSnmp{metric, host, logmessage}
 				return
 			}
@@ -553,9 +541,9 @@ func (self *LBCluster) snmp_req(host string, result chan<- RetSnmp) {
 	defer snmp.Close()
 
 	if logmessage == "" {
-		logmessage = fmt.Sprintf("contacted  cluster: %v node: %v transport: %v - reply was %v", self.Cluster_name, host, transport, metric)
+		logmessage = fmt.Sprintf("contacted node: %v transport: %v - reply was %v", host, transport, metric)
 	} else {
-		logmessage = logmessage + " - " + fmt.Sprintf("contacted  cluster: %v node: %v transport: %v - reply was %v", self.Cluster_name, host, transport, metric)
+		logmessage = logmessage + " - " + fmt.Sprintf("contacted node: %v transport: %v - reply was %v", host, transport, metric)
 	}
 	result <- RetSnmp{metric, host, logmessage}
 	return
@@ -579,7 +567,7 @@ func (self *LBCluster) transportToUse(hostname string) string {
 	result := "udp"
 	ips, err := net.LookupIP(hostname)
 	if err != nil {
-		self.write_to_log(fmt.Sprintf("LookupIP: %v has incorrect or missing IP address (%v)", hostname, err))
+		self.Write_to_log("WARNING", fmt.Sprintf("LookupIP: %v has incorrect or missing IP address (%v)", hostname, err))
 		return result
 	}
 	for _, ip := range ips {
@@ -596,7 +584,7 @@ func (self *LBCluster) Update_dns(keyName, tsigKey, dnsManager string) error {
 	pbhDns := strings.Join(self.Previous_best_hosts_dns, " ")
 	cbh := strings.Join(self.Current_best_hosts, " ")
 	if pbhDns == cbh {
-		self.write_to_log(fmt.Sprintf("DNS not update for %v with  keyName %v cbh == pbhDns == %v", self.Cluster_name, keyName, cbh))
+		self.Write_to_log("WARNING", fmt.Sprintf("DNS not update keyName %v cbh == pbhDns == %v", keyName, cbh))
 		return nil
 	}
 	cluster_name := self.Cluster_name
@@ -615,7 +603,7 @@ func (self *LBCluster) Update_dns(keyName, tsigKey, dnsManager string) error {
 	for _, hostname := range self.Current_best_hosts {
 		ips, err := net.LookupIP(hostname)
 		if err != nil {
-			self.write_to_log(fmt.Sprintf("LookupIP: %v has incorrect or missing IP address (%v)", hostname, err))
+			self.Write_to_log("WARNING", fmt.Sprintf("LookupIP: %v has incorrect or missing IP address (%v)", hostname, err))
 			continue
 		}
 		for _, ip := range ips {
@@ -633,9 +621,9 @@ func (self *LBCluster) Update_dns(keyName, tsigKey, dnsManager string) error {
 	c.TsigSecret = map[string]string{keyName: tsigKey}
 	_, _, err := c.Exchange(m, dnsManager+":53")
 	if err != nil {
-		self.write_to_log(fmt.Sprintf("DNS update for %v failed with (%v)", cluster_name, err))
+		self.Write_to_log("ERROR", fmt.Sprintf("DNS update failed with (%v)", err))
 	}
-	self.write_to_log(fmt.Sprintf("DNS update for %v with  keyName %v", cluster_name, keyName))
+	self.Write_to_log("INFO", fmt.Sprintf("DNS update with keyName %v", keyName))
 	return err
 }
 
@@ -648,7 +636,7 @@ func (self *LBCluster) Get_state_dns(dnsManager string) error {
 	m.SetQuestion(cluster_name+".", dns.TypeANY)
 	in, err := dns.Exchange(m, dnsManager+":53")
 	if err != nil {
-		self.write_to_log(fmt.Sprintf("%v", err))
+		self.Write_to_log("ERROR", fmt.Sprintf("Error getting the state of dns: %v", err))
 		return err
 	}
 
@@ -676,7 +664,7 @@ func (self *LBCluster) Get_state_dns(dnsManager string) error {
 	for _, ip := range ips {
 		names, err := net.LookupAddr(ip.String())
 		if err != nil {
-			self.write_to_log(fmt.Sprintf("%v", err))
+			self.Write_to_log("ERROR", fmt.Sprintf("Error getting the state of the dns %v", err))
 			return err
 		}
 		if len(names) > 0 {
@@ -685,7 +673,7 @@ func (self *LBCluster) Get_state_dns(dnsManager string) error {
 			} else {
 				name, err = net.LookupCNAME(names[0])
 				if err != nil {
-					self.write_to_log(fmt.Sprintf("%v", err))
+					self.Write_to_log("ERROR", fmt.Sprintf("Error getting the state of the dns %v", err))
 					return err
 				}
 				name = strings.TrimRight(name, ".")
@@ -709,11 +697,11 @@ func (self *LBCluster) Get_state_dns(dnsManager string) error {
 	cbh := strings.Join(currBesthosts, " ")
 	if pbh != "unknown" {
 		if pbh != pbhDns {
-			self.write_to_log("WARNING: Prev DNS state " + pbhDns + " - Prev local state  " + pbh + " differ")
+			self.Write_to_log("WARNING", "Prev DNS state "+pbhDns+" - Prev local state  "+pbh+" differ")
 		}
 	}
 	if cbh == "unknown" {
-		self.write_to_log("WARNING: Current best hosts are unknown - Taking Previous DNS state  " + pbhDns)
+		self.Write_to_log("WARNING", "Current best hosts are unknown - Taking Previous DNS state  "+pbhDns)
 		self.Current_best_hosts = self.Previous_best_hosts_dns
 	}
 	return err

@@ -12,7 +12,7 @@
 
 Name:		%{repo}
 Version:	0.1
-Release:	8
+Release:	9
 #psaiz: Removing the dist from the release %{?dist}
 Summary:	CERN DNS Load Balancer Daemon
 License:	ASL 2.0
@@ -104,6 +104,10 @@ fi
 
 
 %changelog
+* Wed Jan 24 2018 Pablo Saiz <Pablo.Saiz@cern.ch>           - 0.1.9
+- Reducing the number of calls to the heartbeat
+- Changing the logging
+
 * Tue Nov 28 2017 Pablo Saiz <Pablo.Saiz@cern.ch>           - 0.1-7
 - Changing category level of errors
 * Fri Nov 24 2017 Ignacio Reguero <Ignacio.Reguero@cern.ch> - 0.1-6
