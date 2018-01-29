@@ -369,23 +369,10 @@ func main() {
 				go func() {
 					defer wg.Done()
 					pc.Find_best_hosts()
-					pc.Create_statistics()
+					//pc.Create_statistics()
 					if update_dns {
 						pc.Write_to_log("DEBUG", "Should update dns is true")
-						e = pc.Get_state_dns(config.DnsManager)
-						if e != nil {
-							pc.Write_to_log("WARNING", fmt.Sprintf("Get_state_dns Error: %v", e.Error()))
-						}
-						e = pc.Update_dns(config.TsigKeyPrefix+"internal.", config.TsigInternalKey, config.DnsManager)
-						if e != nil {
-							pc.Write_to_log("WARNING", fmt.Sprintf("Internal Update_dns Error: %v", e.Error()))
-						}
-						if pc.Externally_visible() {
-							e = pc.Update_dns(config.TsigKeyPrefix+"external.", config.TsigExternalKey, config.DnsManager)
-							if e != nil {
-								pc.Write_to_log("WARNING", fmt.Sprintf("External Update_dns Error: cluster: %v error: %v", pc.Cluster_name, e.Error()))
-							}
-						}
+						pc.Refresh_dns(config.DnsManager, config.TsigKeyPrefix, config.TsigInternalKey, config.TsigExternalKey)
 					} else {
 						pc.Write_to_log("DEBUG", "should_update_dns false")
 					}

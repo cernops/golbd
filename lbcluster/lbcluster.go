@@ -1,21 +1,10 @@
 package lbcluster
 
 import (
-	"encoding/json"
 	"fmt"
-	//"github.com/tiebingzhang/wapsnmp"
-	"github.com/k-sone/snmpgo"
-	"github.com/miekg/dns"
-	"io/ioutil"
-	"log/syslog"
 	"math/rand"
-	"net"
-	"net/http"
-	"os"
 	"sort"
-	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -48,104 +37,6 @@ type Params struct {
 	Statistics       string
 }
 
-type RetSnmp struct {
-	Metric int
-	Host   string
-	Log    string
-}
-
-type Log struct {
-	Writer     syslog.Writer
-	Syslog     bool
-	Stdout     bool
-	Debugflag  bool
-	TofilePath string
-	logMu      sync.Mutex
-}
-
-type Logger interface {
-	Info(s string) error
-	Warning(s string) error
-	Debug(s string) error
-	Error(s string) error
-}
-
-func (l *Log) Info(s string) error {
-	var err error
-	if l.Syslog {
-		err = l.Writer.Info(s)
-	}
-	if l.Stdout || (l.TofilePath != "") {
-		err = l.Writefilestd("INFO: " + s)
-	}
-	return err
-
-}
-
-func (l *Log) Warning(s string) error {
-	var err error
-	if l.Syslog {
-		err = l.Writer.Warning(s)
-	}
-	if l.Stdout || (l.TofilePath != "") {
-		err = l.Writefilestd("WARNING: " + s)
-	}
-	return err
-
-}
-
-func (l *Log) Debug(s string) error {
-	var err error
-	if l.Debugflag {
-		if l.Syslog {
-			err = l.Writer.Debug(s)
-		}
-		if l.Stdout || (l.TofilePath != "") {
-			err = l.Writefilestd("DEBUG: " + s)
-		}
-	}
-	return err
-
-}
-
-func (l *Log) Error(s string) error {
-	var err error
-	if l.Syslog {
-		err = l.Writer.Err(s)
-	}
-	if l.Stdout || (l.TofilePath != "") {
-		err = l.Writefilestd("ERROR: " + s)
-	}
-	return err
-
-}
-
-func (l *Log) Writefilestd(s string) error {
-	var err error
-	tag := "lbd"
-	nl := ""
-	if !strings.HasSuffix(s, "\n") {
-		nl = "\n"
-	}
-	timestamp := time.Now().Format(time.Stamp)
-	msg := fmt.Sprintf("%s %s[%d]: %s%s",
-		timestamp,
-		tag, os.Getpid(), s, nl)
-	l.logMu.Lock()
-	defer l.logMu.Unlock()
-	if l.Stdout {
-		_, err = fmt.Printf(msg)
-	}
-	if l.TofilePath != "" {
-		f, err := os.OpenFile(l.TofilePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0640)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-		_, err = fmt.Fprintf(f, msg)
-	}
-	return err
-}
 
 func fisher_yates_shuffle(array []string) []string {
 	var jval, ival string
@@ -173,6 +64,9 @@ type PairList []Pair
 func (p PairList) Len() int           { return len(p) }
 func (p PairList) Less(i, j int) bool { return p[i].Value < p[j].Value }
 func (p PairList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
+
+/* I don't think we need this anymore. We can create the statistics based on the information from timber
 
 func (self *LBCluster) initialize_statistics() error {
 	hostlist := make([]string, len(self.Host_metric_table))
@@ -250,8 +144,40 @@ func (self *LBCluster) Create_statistics() error {
 	}
 	return err
 }
+*/
 
-func (self *LBCluster) Apply_metric() {
+
+func (self *LBCluster) Time_to_refresh() bool {
+	// self.Write_to_log(fmt.Sprintf("Time_of_last_evaluation = %v now = %v Time_of_last_evaluation + polling_int = %v result = %v Cluster_name = %v\n", self.Time_of_last_evaluation, time.Now(), self.Time_of_last_evaluation.Add(time.Duration(self.Parameters.Polling_interval)*time.Second), self.Time_of_last_evaluation.Add(time.Duration(self.Parameters.Polling_interval)*time.Second).After(time.Now()), self.Cluster_name))
+	return self.Time_of_last_evaluation.Add(time.Duration(self.Parameters.Polling_interval) * time.Second).Before(time.Now())
+}
+
+func (self *LBCluster) Find_best_hosts() {
+	self.Previous_best_hosts = self.Current_best_hosts
+	self.evaluate_hosts()
+	allMetrics := make(map[string]bool)
+	allMetrics["minimum"] = true
+	allMetrics["cmsfrontier"] = true
+	allMetrics["minino"] = true
+
+	_, ok := allMetrics[self.Parameters.Metric]
+	if !ok {
+		self.Write_to_log("ERROR", "wrong parameter(metric) in definition of cluster "+self.Parameters.Metric)
+		return
+	}
+	self.apply_metric()
+	self.Time_of_last_evaluation = time.Now()
+	nodes := strings.Join(self.Current_best_hosts, " ")
+	if len(self.Current_best_hosts) == 0 {
+		nodes = "NONE"
+	}
+	self.Write_to_log("INFO", "best hosts are: "+nodes)
+}
+
+
+// Internal functions
+/* This is the core of the lbcluster: based on the metrics, select the best hosts */
+func (self *LBCluster) apply_metric() {
 	self.Write_to_log("INFO", "Got metric = "+self.Parameters.Metric)
 	pl := make(PairList, len(self.Host_metric_table))
 	i := 0
@@ -260,7 +186,7 @@ func (self *LBCluster) Apply_metric() {
 		i++
 	}
 	sort.Sort(pl)
-	self.Slog.Debug(fmt.Sprintf("%v", pl))
+	self.Write_to_log("DEBUG", fmt.Sprintf("%v", pl))
 	var sorted_host_list []string
 	var useful_host_list []string
 	for _, v := range pl {
@@ -269,7 +195,7 @@ func (self *LBCluster) Apply_metric() {
 		}
 		sorted_host_list = append(sorted_host_list, v.Key)
 	}
-	self.Slog.Debug(fmt.Sprintf("%v", useful_host_list))
+	self.Write_to_log("DEBUG", fmt.Sprintf("%v", useful_host_list))
 	useful_hosts := len(useful_host_list)
 	list_length := len(pl)
 	max := self.Parameters.Best_hosts
@@ -306,403 +232,3 @@ func (self *LBCluster) Apply_metric() {
 	return
 }
 
-func (self *LBCluster) Externally_visible() bool {
-	return self.Parameters.External
-}
-
-func (self *LBCluster) Time_to_refresh() bool {
-	// self.Write_to_log(fmt.Sprintf("Time_of_last_evaluation = %v now = %v Time_of_last_evaluation + polling_int = %v result = %v Cluster_name = %v\n", self.Time_of_last_evaluation, time.Now(), self.Time_of_last_evaluation.Add(time.Duration(self.Parameters.Polling_interval)*time.Second), self.Time_of_last_evaluation.Add(time.Duration(self.Parameters.Polling_interval)*time.Second).After(time.Now()), self.Cluster_name))
-	return self.Time_of_last_evaluation.Add(time.Duration(self.Parameters.Polling_interval) * time.Second).Before(time.Now())
-}
-
-func (self *LBCluster) Write_to_log(level string, msg string) error {
-
-	my_message := "cluster: " + self.Cluster_name + " " + msg
-
-	if level == "INFO" {
-		self.Slog.Info(my_message)
-	} else if level == "DEBUG" {
-		self.Slog.Debug(my_message)
-	} else if level == "WARNING" {
-		self.Slog.Warning(my_message)
-	} else if level == "ERROR" {
-		self.Slog.Error(my_message)
-	} else {
-		self.Slog.Error("LEVEL " + level + " NOT UNDERSTOOD, ASSUMING ERROR " + my_message)
-	}
-
-	//We send the logs to timber, and in that one, it is quite easy to filter by cluster. We don't need the dedicated logs anymore
-	/*
-		f, err := os.OpenFile(self.Per_cluster_filename, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0640)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-		tag := "lbd"
-		nl := ""
-		if !strings.HasSuffix(msg, "\n") {
-			nl = "\n"
-		}
-		timestamp := time.Now().Format(time.Stamp)
-		_, err = fmt.Fprintf(f, "%s %s[%d]: cluster: %s %s: %s%s",
-			timestamp,
-			tag, os.Getpid(), self.Cluster_name, level, msg, nl)
-		return err */
-	return nil
-}
-
-func (self *LBCluster) Find_best_hosts() {
-	self.Previous_best_hosts = self.Current_best_hosts
-	self.evaluate_hosts()
-	allMetrics := make(map[string]bool)
-	allMetrics["minimum"] = true
-	allMetrics["cmsfrontier"] = true
-	allMetrics["minino"] = true
-
-	_, ok := allMetrics[self.Parameters.Metric]
-	if !ok {
-		self.Write_to_log("ERROR", "wrong parameter(metric) in definition of cluster "+self.Parameters.Metric)
-		return
-	}
-	self.Apply_metric()
-	self.Time_of_last_evaluation = time.Now()
-	nodes := strings.Join(self.Current_best_hosts, " ")
-	if len(self.Current_best_hosts) == 0 {
-		nodes = "NONE"
-	}
-	self.Write_to_log("INFO", "best hosts are: "+nodes)
-}
-
-func (self *LBCluster) evaluate_hosts() {
-	result := make(chan RetSnmp, 200)
-	for h := range self.Host_metric_table {
-		currenthost := h
-		self.Write_to_log("INFO", "contacting node: "+currenthost)
-		go self.snmp_req(currenthost, result)
-	}
-	for range self.Host_metric_table {
-		//time.Sleep(1 * time.Millisecond)
-		select {
-		case metrichostlog := <-result:
-			self.Host_metric_table[metrichostlog.Host] = metrichostlog.Metric
-			self.Write_to_log("INFO", metrichostlog.Log)
-		}
-	}
-}
-
-func TimeoutDialer(cTimeout time.Duration, rwTimeout time.Duration) func(net, addr string) (c net.Conn, err error) {
-	return func(netw, addr string) (net.Conn, error) {
-		conn, err := net.DialTimeout(netw, addr, cTimeout)
-		if err != nil {
-			return nil, err
-		}
-		conn.SetDeadline(time.Now().Add(rwTimeout))
-		return conn, nil
-	}
-}
-
-func NewTimeoutClient(connectTimeout time.Duration, readWriteTimeout time.Duration) *http.Client {
-
-	return &http.Client{
-		Transport: &http.Transport{
-			Dial: TimeoutDialer(connectTimeout, readWriteTimeout),
-		},
-	}
-}
-
-func (self *LBCluster) snmp_req(host string, result chan<- RetSnmp) {
-	//time.Sleep(time.Duration(rand.Int31n(1000)) * time.Millisecond)
-	metric := -100
-	logmessage := ""
-	if self.Parameters.Metric == "cmsweb" {
-		connectTimeout := (10 * time.Second)
-		readWriteTimeout := (20 * time.Second)
-		httpClient := NewTimeoutClient(connectTimeout, readWriteTimeout)
-		response, err := httpClient.Get("http://woger-direct.cern.ch:9098/roger/v1/state/" + host)
-		if err != nil {
-			logmessage = logmessage + fmt.Sprintf("%s", err)
-		} else {
-			defer response.Body.Close()
-			contents, err := ioutil.ReadAll(response.Body)
-			if err != nil {
-				logmessage = logmessage + fmt.Sprintf("%s", err)
-			}
-			var dat map[string]interface{}
-			if err := json.Unmarshal([]byte(contents), &dat); err != nil {
-				logmessage = logmessage + " - " + fmt.Sprintf("%s", host)
-				logmessage = logmessage + " - " + fmt.Sprintf("%v", response.Body)
-				logmessage = logmessage + " - " + fmt.Sprintf("%v", err)
-			}
-			if str, ok := dat["appstate"].(string); ok {
-				if str != "production" {
-					metric = -99
-					logmessage = logmessage + fmt.Sprintf("node: %s - %s - setting reply %v", host, str, metric)
-					result <- RetSnmp{metric, host, logmessage}
-					return
-				}
-			} else {
-				logmessage = logmessage + fmt.Sprintf("dat[\"appstate\"] not a string for node %s", host)
-			}
-
-		}
-		metric = WorstValue
-	}
-	transport := self.transportToUse(host)
-	//wapsnmp.DoGetTestV3(host, OID, self.Loadbalancing_username, "MD5", self.Loadbalancing_password, "NOPRIV", self.Loadbalancing_password)
-	snmp, err := snmpgo.NewSNMP(snmpgo.SNMPArguments{
-		Version:       snmpgo.V3,
-		Network:       transport,
-		Address:       host + ":161",
-		Retries:       1,
-		UserName:      self.Loadbalancing_username,
-		SecurityLevel: snmpgo.AuthNoPriv,
-		AuthProtocol:  snmpgo.Md5,
-		AuthPassword:  self.Loadbalancing_password,
-		Timeout:       time.Duration(TIMEOUT) * time.Second,
-	})
-	if err != nil {
-		// Failed to create snmpgo.SNMP object
-		self.Slog.Debug(fmt.Sprintf("%v", err))
-		logmessage = logmessage + " - " + fmt.Sprintf("%v", err)
-		result <- RetSnmp{metric, host, logmessage}
-		return
-	}
-
-	oids, err := snmpgo.NewOids([]string{
-		OID,
-	})
-	if err != nil {
-		// Failed to parse Oids
-		logmessage = logmessage + " - " + fmt.Sprintf("%v", err)
-		result <- RetSnmp{metric, host, logmessage}
-		return
-	}
-	// retry MessageId mismatch
-	// could not reproduce the problem on 16 Nov 2016
-	// problem does not happen with retries: 0 in SNMPArguments
-	for i := 0; i <= 1; i++ {
-		if err = snmp.Open(); err != nil {
-			// Failed to open connection
-			if _, ok := err.(*snmpgo.MessageError); ok {
-				snmp.Close()
-				logmessage = logmessage + " - " + fmt.Sprintf("open error: %v retrying: %v", err, i)
-				continue
-			} else {
-				logmessage = logmessage + fmt.Sprintf("snmp open %v failed with %v", transport, err)
-				logmessage = fmt.Sprintf("contacted node: %v - %v - %v - setting reply %v", host, transport, logmessage, metric)
-				result <- RetSnmp{metric, host, logmessage}
-				return
-			}
-		}
-
-		pdu, err := snmp.GetRequest(oids)
-		if err != nil {
-			if _, ok := err.(*snmpgo.MessageError); ok {
-				snmp.Close()
-				logmessage = logmessage + fmt.Sprintf("get error: %v retrying: %v", err, i)
-				continue
-			} else {
-				logmessage = logmessage + fmt.Sprintf("snmp get failed with %v", err)
-				logmessage = fmt.Sprintf("contacted node: %v - %v - %v - setting reply %v", host, transport, logmessage, metric)
-				result <- RetSnmp{metric, host, logmessage}
-				return
-			}
-		}
-		if pdu.ErrorStatus() != snmpgo.NoError {
-			// Received an error from the agent
-			logmessage = logmessage + " - " + fmt.Sprintf("%v %v", pdu.ErrorStatus(), pdu.ErrorIndex())
-		}
-
-		// select a VarBind
-		Varbind := pdu.VarBinds().MatchOid(oids[0])
-		if Varbind.Variable.Type() == "Integer" {
-			metricstr := Varbind.Variable.String()
-			if metric, err = strconv.Atoi(metricstr); err != nil {
-				logmessage = logmessage + " - " + fmt.Sprintf("%v", err)
-				result <- RetSnmp{metric, host, logmessage}
-				return
-			}
-		} else if Varbind.Variable.Type() == "OctetString" {
-			cskvpair := Varbind.Variable.String()
-			kvpair := strings.Split(cskvpair, ",")
-			for _, kv := range kvpair {
-				cm := strings.Split(kv, "=")
-				if cm[0] == self.Cluster_name {
-					if metric, err = strconv.Atoi(cm[1]); err != nil {
-						logmessage = logmessage + " - " + fmt.Sprintf("%v", err)
-						result <- RetSnmp{metric, host, logmessage}
-						return
-					}
-				}
-			}
-		}
-		break
-	}
-	defer snmp.Close()
-
-	if logmessage == "" {
-		logmessage = fmt.Sprintf("contacted node: %v transport: %v - reply was %v", host, transport, metric)
-	} else {
-		logmessage = logmessage + " - " + fmt.Sprintf("contacted node: %v transport: %v - reply was %v", host, transport, metric)
-	}
-	result <- RetSnmp{metric, host, logmessage}
-	return
-}
-
-func RemoveDuplicates(xs *[]string) {
-	found := make(map[string]bool)
-	j := 0
-	for i, x := range *xs {
-		if !found[x] {
-			found[x] = true
-			(*xs)[j] = (*xs)[i]
-			j++
-		}
-	}
-	*xs = (*xs)[:j]
-}
-
-func (self *LBCluster) transportToUse(hostname string) string {
-	// udp (IPv4) transport
-	result := "udp"
-	ips, err := net.LookupIP(hostname)
-	if err != nil {
-		self.Write_to_log("WARNING", fmt.Sprintf("LookupIP: %v has incorrect or missing IP address (%v)", hostname, err))
-		return result
-	}
-	for _, ip := range ips {
-		// If there is an IPv6 address use udp6 transport
-		if ip.To4() == nil {
-			result = "udp6"
-			break
-		}
-	}
-	return result
-}
-
-func (self *LBCluster) Update_dns(keyName, tsigKey, dnsManager string) error {
-	pbhDns := strings.Join(self.Previous_best_hosts_dns, " ")
-	cbh := strings.Join(self.Current_best_hosts, " ")
-	if pbhDns == cbh {
-		self.Write_to_log("WARNING", fmt.Sprintf("DNS not update keyName %v cbh == pbhDns == %v", keyName, cbh))
-		return nil
-	}
-	cluster_name := self.Cluster_name
-	if !strings.HasSuffix(cluster_name, ".cern.ch") {
-		cluster_name = cluster_name + ".cern.ch"
-	}
-	//best_hosts_len := len(self.Current_best_hosts)
-	m := new(dns.Msg)
-	m.SetUpdate(cluster_name + ".")
-	m.Id = 1234
-	rr_removeA, _ := dns.NewRR(cluster_name + ". 60 IN A 127.0.0.1")
-	rr_removeAAAA, _ := dns.NewRR(cluster_name + ". 60 IN AAAA ::1")
-	m.RemoveRRset([]dns.RR{rr_removeA})
-	m.RemoveRRset([]dns.RR{rr_removeAAAA})
-
-	for _, hostname := range self.Current_best_hosts {
-		ips, err := net.LookupIP(hostname)
-		if err != nil {
-			self.Write_to_log("WARNING", fmt.Sprintf("LookupIP: %v has incorrect or missing IP address (%v)", hostname, err))
-			continue
-		}
-		for _, ip := range ips {
-			var rr_insert dns.RR
-			if ip.To4() != nil {
-				rr_insert, _ = dns.NewRR(cluster_name + ". 60 IN A " + ip.String())
-			} else if ip.To16() != nil {
-				rr_insert, _ = dns.NewRR(cluster_name + ". 60 IN AAAA " + ip.String())
-			}
-			m.Insert([]dns.RR{rr_insert})
-		}
-	}
-	c := new(dns.Client)
-	m.SetTsig(keyName, dns.HmacMD5, 300, time.Now().Unix())
-	c.TsigSecret = map[string]string{keyName: tsigKey}
-	_, _, err := c.Exchange(m, dnsManager+":53")
-	if err != nil {
-		self.Write_to_log("ERROR", fmt.Sprintf("DNS update failed with (%v)", err))
-	}
-	self.Write_to_log("INFO", fmt.Sprintf("DNS update with keyName %v", keyName))
-	return err
-}
-
-func (self *LBCluster) Get_state_dns(dnsManager string) error {
-	cluster_name := self.Cluster_name
-	if !strings.HasSuffix(cluster_name, ".cern.ch") {
-		cluster_name = cluster_name + ".cern.ch"
-	}
-	m := new(dns.Msg)
-	m.SetQuestion(cluster_name+".", dns.TypeANY)
-	in, err := dns.Exchange(m, dnsManager+":53")
-	if err != nil {
-		self.Write_to_log("ERROR", fmt.Sprintf("Error getting the state of dns: %v", err))
-		return err
-	}
-
-	var ips []net.IP
-	for _, a := range in.Answer {
-		if t, ok := a.(*dns.A); ok {
-			self.Slog.Debug(fmt.Sprintf("%v", t))
-			self.Slog.Debug(fmt.Sprintf("%v", t.A))
-			ips = append(ips, t.A)
-		}
-		if t, ok := a.(*dns.AAAA); ok {
-			self.Slog.Debug(fmt.Sprintf("%v", t))
-			self.Slog.Debug(fmt.Sprintf("%v", t.AAAA))
-			ips = append(ips, t.AAAA)
-		}
-	}
-	//addrs, err := net.LookupHost(cluster_name)
-	//ips, err := net.LookupIP(cluster_name)
-	//if err != nil {
-	//	fmt.Println(err)
-	//}
-	//fmt.Println(ips)
-	var name string
-	var host_list []string
-	for _, ip := range ips {
-		names, err := net.LookupAddr(ip.String())
-		if err != nil {
-			self.Write_to_log("ERROR", fmt.Sprintf("Error getting the state of the dns %v", err))
-			return err
-		}
-		if len(names) > 0 {
-			if len(names) == 1 {
-				name = strings.TrimRight(names[0], ".")
-			} else {
-				name, err = net.LookupCNAME(names[0])
-				if err != nil {
-					self.Write_to_log("ERROR", fmt.Sprintf("Error getting the state of the dns %v", err))
-					return err
-				}
-				name = strings.TrimRight(name, ".")
-			}
-			host_list = append(host_list, name)
-		}
-	}
-	RemoveDuplicates(&host_list)
-	self.Previous_best_hosts_dns = host_list
-	prevBesthostsDns := make([]string, len(self.Previous_best_hosts_dns))
-	prevBesthosts := make([]string, len(self.Previous_best_hosts))
-	currBesthosts := make([]string, len(self.Current_best_hosts))
-	copy(prevBesthostsDns, self.Previous_best_hosts_dns)
-	copy(prevBesthosts, self.Previous_best_hosts)
-	copy(currBesthosts, self.Current_best_hosts)
-	sort.Strings(prevBesthostsDns)
-	sort.Strings(prevBesthosts)
-	sort.Strings(currBesthosts)
-	pbhDns := strings.Join(prevBesthostsDns, " ")
-	pbh := strings.Join(prevBesthosts, " ")
-	cbh := strings.Join(currBesthosts, " ")
-	if pbh != "unknown" {
-		if pbh != pbhDns {
-			self.Write_to_log("WARNING", "Prev DNS state "+pbhDns+" - Prev local state  "+pbh+" differ")
-		}
-	}
-	if cbh == "unknown" {
-		self.Write_to_log("WARNING", "Current best hosts are unknown - Taking Previous DNS state  "+pbhDns)
-		self.Current_best_hosts = self.Previous_best_hosts_dns
-	}
-	return err
-}
