@@ -27,7 +27,7 @@ before_script:
 build-my-project:
   stage: build
   script:
-    - yum -y install golang git
+    - yum -y install golang git gcc
     - export GOPATH=/go
     - go get github.com/tools/godep
     - go get github.com/reguero/go-snmplib
@@ -39,7 +39,7 @@ build-my-project:
 test-my-project:
   stage: test
   script:
-    - yum -y install golang git
+    - yum -y install golang git gcc
     - export GOPATH=/go
     - go get github.com/tools/godep
     - /go/bin/godep restore
