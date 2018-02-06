@@ -42,6 +42,8 @@ test-my-project:
     - yum -y install golang git gcc
     - export GOPATH=/go
     - go get github.com/tools/godep
+    - go get github.com/reguero/go-snmplib
+    - (cd /go/src/github.com/reguero/go-snmplib; git checkout nopriv)
     - /go/bin/godep restore
     - /go/bin/godep go test -v -cover ./...
     - /go/bin/godep go test -race 
