@@ -37,7 +37,6 @@ type Params struct {
 	Statistics       string
 }
 
-
 func fisher_yates_shuffle(array []string) []string {
 	var jval, ival string
 	var i, j int32
@@ -64,7 +63,6 @@ type PairList []Pair
 func (p PairList) Len() int           { return len(p) }
 func (p PairList) Less(i, j int) bool { return p[i].Value < p[j].Value }
 func (p PairList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
-
 
 /* I don't think we need this anymore. We can create the statistics based on the information from timber
 
@@ -146,7 +144,6 @@ func (self *LBCluster) Create_statistics() error {
 }
 */
 
-
 func (self *LBCluster) Time_to_refresh() bool {
 	// self.Write_to_log(fmt.Sprintf("Time_of_last_evaluation = %v now = %v Time_of_last_evaluation + polling_int = %v result = %v Cluster_name = %v\n", self.Time_of_last_evaluation, time.Now(), self.Time_of_last_evaluation.Add(time.Duration(self.Parameters.Polling_interval)*time.Second), self.Time_of_last_evaluation.Add(time.Duration(self.Parameters.Polling_interval)*time.Second).After(time.Now()), self.Cluster_name))
 	return self.Time_of_last_evaluation.Add(time.Duration(self.Parameters.Polling_interval) * time.Second).Before(time.Now())
@@ -173,7 +170,6 @@ func (self *LBCluster) Find_best_hosts() {
 	}
 	self.Write_to_log("INFO", "best hosts are: "+nodes)
 }
-
 
 // Internal functions
 /* This is the core of the lbcluster: based on the metrics, select the best hosts */
@@ -231,4 +227,3 @@ func (self *LBCluster) apply_metric() {
 	}
 	return
 }
-

@@ -10,11 +10,11 @@ import (
 )
 
 /* This is the only public function here. It retrieves the status of the dns,
- and then updates it with the new hosts */ 
+and then updates it with the new hosts */
 func (self *LBCluster) Refresh_dns(dnsManager, keyPrefix, internalKey, externalKey string) {
-	
+
 	e := self.get_state_dns(dnsManager)
-    if e != nil {
+	if e != nil {
 		self.Write_to_log("WARNING", fmt.Sprintf("Get_state_dns Error: %v", e.Error()))
 	}
 	e = self.update_dns(keyPrefix+"internal.", internalKey, dnsManager)
@@ -24,12 +24,10 @@ func (self *LBCluster) Refresh_dns(dnsManager, keyPrefix, internalKey, externalK
 	if self.externally_visible() {
 		e = self.update_dns(keyPrefix+"external.", externalKey, dnsManager)
 		if e != nil {
-			self.Write_to_log("WARNING", fmt.Sprintf("External Update_dns Error: %v",  e.Error()))
+			self.Write_to_log("WARNING", fmt.Sprintf("External Update_dns Error: %v", e.Error()))
 		}
 	}
 }
-
-
 
 //Internal functions
 func (self *LBCluster) externally_visible() bool {
