@@ -42,18 +42,8 @@ The lowest loaded machine names are updated on the DNS servers via the DynDNS me
 %setup -n %{name}-%{version} -q
 
 %build
-#mkdir _build
-#
-#pushd _build
- mkdir -p src/%{provider}.%{provider_tld}/%{project}
- ln -s $(dirs +1 -l) src/%{import_path}
-#popd
-echo "Checking where we are"
-pwd
-ls -al
-echo "AND THE _build"
-#ls -al _build
-#GOPATH=$(pwd)/_build:%{gopath} go build %{import_path}
+mkdir -p src/%{provider}.%{provider_tld}/%{project}
+ln -s ../../../ src/%{provider}.%{provider_tld}/%{project}/%{repo} 
 GOPATH=$(pwd):%{gopath} go build %{import_path}
 
 %install
@@ -76,7 +66,7 @@ install -d -m0755  %{buildroot}/var/log/lb/old
 install -d -m0755  %{buildroot}/var/log/lb/old/cluster
 
 %check
-GOPATH=$(pwd)/_build:%{gopath} go test github.com/cernops/golbd
+GOPATH=$(pwd)/:%{gopath} go test github.com/cernops/golbd
 
 %post
 %systemd_post %{lbd}.service
