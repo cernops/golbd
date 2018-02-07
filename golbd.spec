@@ -45,8 +45,8 @@ The lowest loaded machine names are updated on the DNS servers via the DynDNS me
 #mkdir _build
 #
 #pushd _build
-#  mkdir -p src/%{provider}.%{provider_tld}/%{project}
-#  ln -s $(dirs +1 -l) src/%{import_path}
+ mkdir -p src/%{provider}.%{provider_tld}/%{project}
+ ln -s $(dirs +1 -l) src/%{import_path}
 #popd
 echo "Checking where we are"
 pwd
