@@ -48,6 +48,9 @@ pushd _build
   mkdir -p src/%{provider}.%{provider_tld}/%{project}
   ln -s $(dirs +1 -l) src/%{import_path}
 popd
+echo "Checking where we are"
+pwd
+ls -al
 GOPATH=$(pwd)/_build:%{gopath} go build %{import_path}
 
 %install
