@@ -42,16 +42,19 @@ The lowest loaded machine names are updated on the DNS servers via the DynDNS me
 %setup -n %{name}-%{version} -q
 
 %build
-mkdir _build
-
-pushd _build
-  mkdir -p src/%{provider}.%{provider_tld}/%{project}
-  ln -s $(dirs +1 -l) src/%{import_path}
-popd
+#mkdir _build
+#
+#pushd _build
+#  mkdir -p src/%{provider}.%{provider_tld}/%{project}
+#  ln -s $(dirs +1 -l) src/%{import_path}
+#popd
 echo "Checking where we are"
 pwd
 ls -al
-GOPATH=$(pwd)/_build:%{gopath} go build %{import_path}
+echo "AND THE _build"
+#ls -al _build
+#GOPATH=$(pwd)/_build:%{gopath} go build %{import_path}
+GOPATH=$(pwd):%{gopath} go build %{import_path}
 
 %install
 # main package binary
