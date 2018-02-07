@@ -45,6 +45,10 @@ The lowest loaded machine names are updated on the DNS servers via the DynDNS me
 mkdir -p src/%{provider}.%{provider_tld}/%{project}
 ln -s ../../../ src/%{provider}.%{provider_tld}/%{project}/%{repo} 
 (cd src/github.com/; ln -s ../../vendor/github.com/*  .)
+echo "What do we have"
+ls -al src/github.com/reguero/go-snmplib
+which go
+ls -lR src/github.com/
 GOPATH=$(pwd):%{gopath} go build %{import_path}
 
 %install
