@@ -30,8 +30,6 @@ build-my-project:
     - yum -y install golang git gcc
     - export GOPATH=/go
     - go get github.com/tools/godep
-    - go get github.com/reguero/go-snmplib
-    - (cd /go/src/github.com/reguero/go-snmplib; git checkout nopriv)
     - /go/bin/godep restore
     - /go/bin/godep go build
     - /go/bin/godep go build -race
@@ -42,8 +40,6 @@ test-my-project:
     - yum -y install golang git gcc
     - export GOPATH=/go
     - go get github.com/tools/godep
-    - go get github.com/reguero/go-snmplib
-    - (cd /go/src/github.com/reguero/go-snmplib; git checkout nopriv)
     - /go/bin/godep restore
     - /go/bin/godep go test -v -cover ./...
     - /go/bin/godep go test -race 
@@ -52,6 +48,7 @@ build_rpm:
   stage: build_rpm
   script:
     - mkdir SOURCES
+    - ls src/github.com/reguero/go-snmplib
     - tar zcvf SOURCES/$PKG.tgz  --exclude SOURCES --exclude .git --exclude .koji --exclude .gitlab-ci.yml --transform "s||$PKG/|" .
     - rpmbuild -bs --define "_topdir $(pwd)" -D "dist ${DIST:-.ai7}" $SPEC
   artifacts:

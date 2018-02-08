@@ -47,6 +47,10 @@ ln -s ../../../ src/%{provider}.%{provider_tld}/%{project}/%{repo}
 (cd src/github.com/; ln -s ../../vendor/github.com/*  .)
 echo "What do we have"
 ls -al src/github.com/reguero/go-snmplib
+ls -lR vendor/github.com
+echo "AND UNDER SRC"
+ls -lR src/github.com
+
 which go
 ls -lR src/github.com/
 GOPATH=$(pwd):%{gopath} go build %{import_path}
