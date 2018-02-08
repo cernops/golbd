@@ -7,7 +7,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/deejross/go-snmplib"
+	"github.com/reguero/go-snmplib"
 )
 
 func myUDPServer(listenIPAddr string, port int) *net.UDPConn {

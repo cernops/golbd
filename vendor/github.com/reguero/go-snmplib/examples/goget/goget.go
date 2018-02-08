@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/deejross/go-snmplib"
+	"github.com/reguero/go-snmplib"
 )
 
 func main() {

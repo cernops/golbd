@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/deejross/go-snmplib"
+	"github.com/reguero/go-snmplib"
 )
 
 var target = flag.String("target", "", "The host to connect to")

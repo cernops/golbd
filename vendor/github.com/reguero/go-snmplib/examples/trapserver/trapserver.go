@@ -10,7 +10,7 @@ import (
 	"log"
 	"net"
 
-	snmplib "github.com/deejross/go-snmplib"
+	snmplib "github.com/reguero/go-snmplib"
 )
 
 type snmpHandler struct{}
