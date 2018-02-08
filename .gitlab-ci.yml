@@ -16,6 +16,7 @@ before_script:
   - ls -al 
   - mkdir -p /go/src/github.com/cernops/
   - ln -s  /builds/lb-experts/golbd /go/src/github.com/cernops/golbd
+  - ln -s  /builds/lb-experts/golbd/vendor/github.com/reguero/ /go/src/github.com/
   - cd /go/src/github.com/cernops/golbd
   - export SPEC=$(ls *spec)
   - export PKG=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}\n" | head -n 1)
