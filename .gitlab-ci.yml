@@ -17,6 +17,11 @@ before_script:
   - mkdir -p /go/src/github.com/cernops/
   - ln -s  /builds/lb-experts/golbd /go/src/github.com/cernops/golbd
   - ln -s  /builds/lb-experts/golbd/vendor/github.com/reguero/ /go/src/github.com/
+  - ls -al /go/src/github.com/
+  - ls -al /go/src/github.com/reguero/
+  - ls -al /go/src/github.com/reguero/go-snmplib
+  - echo "AND IN VENDOR"
+  - ls -alR vendor
   - cd /go/src/github.com/cernops/golbd
   - export SPEC=$(ls *spec)
   - export PKG=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}\n" | head -n 1)
