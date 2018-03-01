@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"log/syslog"
 	"os"
-	"sync"
 	"strings"
+	"sync"
 	"time"
 )
+
 type Log struct {
 	Writer     syslog.Writer
 	Syslog     bool
@@ -59,7 +60,6 @@ func (self *LBCluster) Write_to_log(level string, msg string) error {
 		return err */
 	return nil
 }
-
 
 func (l *Log) Info(s string) error {
 	var err error
