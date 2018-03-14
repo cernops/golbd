@@ -10,6 +10,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log/syslog"
+	"math/rand"
 	"os"
 	"os/signal"
 	"regexp"
@@ -288,7 +289,7 @@ func main() {
 		fmt.Printf("This is a proof of concept golbd version %s \n", "0.001")
 		os.Exit(0)
 	}
-
+	rand.Seed(time.Now().UTC().UnixNano())
 	log, e := syslog.New(syslog.LOG_NOTICE, "lbd")
 	lg := lbcluster.Log{Writer: *log, Syslog: false, Stdout: *stdoutFlag, Debugflag: *debugFlag, TofilePath: *logFileFlag}
 	if e == nil {
