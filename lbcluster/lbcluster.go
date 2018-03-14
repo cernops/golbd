@@ -37,20 +37,29 @@ type Params struct {
 	Statistics       string
 }
 
-func fisher_yates_shuffle(array []string) []string {
-	var jval, ival string
-	var i, j int32
-	for i = int32(len(array) - 1); i > 0; i-- {
-		j = rand.Int31n(i + 1)
-		if i == j {
-			continue
-		}
-		jval = array[j]
-		ival = array[i]
-		array[j] = ival
-		array[i] = jval
+// Shuffle pseudo-randomizes the order of elements.
+// n is the number of elements. Shuffle panics if n < 0.
+// swap swaps the elements with indexes i and j.
+func Shuffle(n int, swap func(i, j int)) {
+	if n < 0 {
+		panic("invalid argument to Shuffle")
 	}
-	return array
+
+	// Fisher-Yates shuffle: https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle
+	// Shuffle really ought not be called with n that doesn't fit in 32 bits.
+	// Not only will it take a very long time, but with 2³¹! possible permutations,
+	// there's no way that any PRNG can have a big enough internal state to
+	// generate even a minuscule percentage of the possible permutations.
+	// Nevertheless, the right API signature accepts an int n, so handle it as best we can.
+	i := n - 1
+	for ; i > 1<<31-1-1; i-- {
+		j := int(rand.Int63n(int64(i + 1)))
+		swap(i, j)
+	}
+	for ; i > 0; i-- {
+		j := int(rand.Int31n(int32(i + 1)))
+		swap(i, j)
+	}
 }
 
 type Pair struct {
@@ -181,6 +190,8 @@ func (self *LBCluster) apply_metric() {
 		pl[i] = Pair{k, v}
 		i++
 	}
+	//Let's shuffle the hosts before sorting them, in case some hosts have the same value
+	Shuffle(len(pl), func(i, j int) { pl[i], pl[j] = pl[j], pl[i] })
 	sort.Sort(pl)
 	self.Write_to_log("DEBUG", fmt.Sprintf("%v", pl))
 	var sorted_host_list []string
@@ -208,7 +219,9 @@ func (self *LBCluster) apply_metric() {
 	} else if useful_hosts == 0 {
 		if self.Parameters.Metric == "minimum" {
 			self.Write_to_log("WARNING", fmt.Sprintf("no usable hosts found for cluster! Returning random %v hosts.", max))
-			sorted_host_list = fisher_yates_shuffle(sorted_host_list)
+			Shuffle(len(sorted_host_list), func(i, j int) {
+				sorted_host_list[i], sorted_host_list[j] = sorted_host_list[j], sorted_host_list[i]
+			})
 			self.Current_best_hosts = sorted_host_list[:max]
 		} else if (self.Parameters.Metric == "minino") || (self.Parameters.Metric == "cmsweb") {
 			self.Write_to_log("WARNING", "no usable hosts found for cluster! Returning no hosts.")
