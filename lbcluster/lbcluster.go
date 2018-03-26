@@ -1,8 +1,14 @@
 package lbcluster
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+
 	"math/rand"
+	"net"
+	"net/http"
+
 	"sort"
 	"strings"
 	"time"
@@ -240,3 +246,64 @@ func (self *LBCluster) apply_metric() {
 	}
 	return
 }
+
+
+/* The following functions are for the roger state and its timeout
+
+*/
+func NewTimeoutClient(connectTimeout time.Duration, readWriteTimeout time.Duration) *http.Client {
+
+	return &http.Client{
+		Transport: &http.Transport{
+			Dial: timeoutDialer(connectTimeout, readWriteTimeout),
+		},
+	}
+}
+
+func timeoutDialer(cTimeout time.Duration, rwTimeout time.Duration) func(net, addr string) (c net.Conn, err error) {
+	return func(netw, addr string) (net.Conn, error) {
+		conn, err := net.DialTimeout(netw, addr, cTimeout)
+		if err != nil {
+			return nil, err
+		}
+		conn.SetDeadline(time.Now().Add(rwTimeout))
+		return conn, nil
+	}
+}
+
+
+func (self *LBCluster) checkRogerState(host string) string {
+
+	logmessage := ""
+
+	connectTimeout := (10 * time.Second)
+	readWriteTimeout := (20 * time.Second)
+	httpClient := NewTimeoutClient(connectTimeout, readWriteTimeout)
+	response, err := httpClient.Get("http://woger-direct.cern.ch:9098/roger/v1/state/" + host)
+	if err != nil {
+		logmessage = logmessage + fmt.Sprintf("%s", err)
+	} else {
+		defer response.Body.Close()
+		contents, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			logmessage = logmessage + fmt.Sprintf("%s", err)
+		}
+		var dat map[string]interface{}
+		if err := json.Unmarshal([]byte(contents), &dat); err != nil {
+			logmessage = logmessage + " - " + fmt.Sprintf("%s", host)
+			logmessage = logmessage + " - " + fmt.Sprintf("%v", response.Body)
+			logmessage = logmessage + " - " + fmt.Sprintf("%v", err)
+		}
+		if str, ok := dat["appstate"].(string); ok {
+			if str != "production" {
+				return fmt.Sprintf("node: %s - %s - setting reply -99", host, str)
+			}
+		} else {
+			logmessage = logmessage + fmt.Sprintf("dat[\"appstate\"] not a string for node %s", host)
+		}
+	}
+	return logmessage
+
+}
+
+

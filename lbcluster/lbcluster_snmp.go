@@ -1,26 +1,15 @@
 package lbcluster
 
 import (
-	"encoding/json"
 	"fmt"
 	//"github.com/k-sone/snmpgo"
 	"github.com/reguero/go-snmplib"
-	"io/ioutil"
 	"net"
-	"net/http"
 	"strconv"
 	//"strings"
 	"time"
 )
 
-func NewTimeoutClient(connectTimeout time.Duration, readWriteTimeout time.Duration) *http.Client {
-
-	return &http.Client{
-		Transport: &http.Transport{
-			Dial: timeoutDialer(connectTimeout, readWriteTimeout),
-		},
-	}
-}
 
 //This one has only internal methods. They should not be called from outside the lbcluster
 
@@ -32,8 +21,7 @@ type RetSnmp struct {
 
 func (self *LBCluster) evaluate_hosts() {
 	result := make(chan RetSnmp, 200)
-	for h := range self.Host_metric_table {
-		currenthost := h
+	for currenthost := range self.Host_metric_table {
 		self.Write_to_log("INFO", "contacting node: "+currenthost)
 		go self.snmp_req(currenthost, result)
 	}
@@ -45,51 +33,6 @@ func (self *LBCluster) evaluate_hosts() {
 			self.Write_to_log("INFO", metrichostlog.Log)
 		}
 	}
-}
-
-func timeoutDialer(cTimeout time.Duration, rwTimeout time.Duration) func(net, addr string) (c net.Conn, err error) {
-	return func(netw, addr string) (net.Conn, error) {
-		conn, err := net.DialTimeout(netw, addr, cTimeout)
-		if err != nil {
-			return nil, err
-		}
-		conn.SetDeadline(time.Now().Add(rwTimeout))
-		return conn, nil
-	}
-}
-
-func (self *LBCluster) checkRogerState(host string) string {
-
-	logmessage := ""
-
-	connectTimeout := (10 * time.Second)
-	readWriteTimeout := (20 * time.Second)
-	httpClient := NewTimeoutClient(connectTimeout, readWriteTimeout)
-	response, err := httpClient.Get("http://woger-direct.cern.ch:9098/roger/v1/state/" + host)
-	if err != nil {
-		logmessage = logmessage + fmt.Sprintf("%s", err)
-	} else {
-		defer response.Body.Close()
-		contents, err := ioutil.ReadAll(response.Body)
-		if err != nil {
-			logmessage = logmessage + fmt.Sprintf("%s", err)
-		}
-		var dat map[string]interface{}
-		if err := json.Unmarshal([]byte(contents), &dat); err != nil {
-			logmessage = logmessage + " - " + fmt.Sprintf("%s", host)
-			logmessage = logmessage + " - " + fmt.Sprintf("%v", response.Body)
-			logmessage = logmessage + " - " + fmt.Sprintf("%v", err)
-		}
-		if str, ok := dat["appstate"].(string); ok {
-			if str != "production" {
-				return fmt.Sprintf("node: %s - %s - setting reply -99", host, str)
-			}
-		} else {
-			logmessage = logmessage + fmt.Sprintf("dat[\"appstate\"] not a string for node %s", host)
-		}
-	}
-	return logmessage
-
 }
 
 func (self *LBCluster) snmp_req(host string, result chan<- RetSnmp) {
@@ -109,14 +52,14 @@ func (self *LBCluster) snmp_req(host string, result chan<- RetSnmp) {
 		time.Duration(TIMEOUT)*time.Second, 2)
 	if err != nil {
 		// Failed to create snmpgo.SNMP object
-		result <- RetSnmp{metric, host, "Error creating the snmp object" + fmt.Sprintf("%v", err)}
+		result <- RetSnmp{metric, host, fmt.Sprint("contacted node: %v error creating the snmp object: %v", host, err)}
 		return
 	}
 	defer snmp.Close()
 	err = snmp.Discover()
 
 	if err != nil {
-		result <- RetSnmp{metric, host, "Error in the snmp discovery of " + host}
+		result <- RetSnmp{metric, host, fmt.Sprintf("contacted node: %v error in the snmp discovery of ", host)}
 		return
 	}
 
@@ -124,13 +67,13 @@ func (self *LBCluster) snmp_req(host string, result chan<- RetSnmp) {
 
 	if err != nil {
 		// Failed to parse Oids
-		result <- RetSnmp{metric, host, "Error parsing the OID " + fmt.Sprintf("%v", err)}
+		result <- RetSnmp{metric, host, fmt.Sprintf("contacted node: %v Error parsing the OID %v", host, err)}
 		return
 	}
 	pdu, err := snmp.GetV3(oid)
 
 	if err != nil {
-		result <- RetSnmp{metric, host, "The Getv3 failed! " + fmt.Sprintf("get error: %v ", err)}
+		result <- RetSnmp{metric, host, fmt.Sprintf("contacted node: %v The getv3 failed: %v ", host, err)}
 		return
 	}
 	// select a VarBind
