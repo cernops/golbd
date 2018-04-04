@@ -73,7 +73,7 @@ func (self *LBCluster) snmp_req(host string, result chan<- RetSnmp) {
 	pdu, err := snmp.GetV3(oid)
 
 	if err != nil {
-		result <- RetSnmp{metric, host, fmt.Sprintf("contacted node: %v The getv3 failed: %v ", host, err)}
+		result <- RetSnmp{metric, host, fmt.Sprintf("contacted node: %v The getv3 gave the following error: %v ", host, err)}
 		return
 	}
 	// select a VarBind
