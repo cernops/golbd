@@ -182,7 +182,7 @@ func poll(conn net.Conn, toSend []byte, respondBuffer []byte, retries int, timeo
 
 		numRead := 0
 		if numRead, err = conn.Read(respondBuffer); err != nil {
-			log.Printf("Couldn't read. Retrying. Retry %d/%d\n", i, retries)
+			log.Printf("Couldn't read. Retrying. Retry %d/%d timeout %d\n%v\n", i, retries, timeout, err)
 			continue
 		}
 
@@ -523,7 +523,7 @@ func (w *SNMP) doGetV3(oid Oid, request BERType) (*Oid, interface{}, error) {
 	finalPacket := strings.Replace(string(packet), strings.Repeat("\x00", 12), authParam, 1)
 
 	response := make([]byte, bufSize)
-	numRead, err := poll(w.conn, []byte(finalPacket), response, w.retries, 500*time.Millisecond)
+	numRead, err := poll(w.conn, []byte(finalPacket), response, w.retries, w.timeout) //500*time.Millisecond)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -598,7 +598,7 @@ func (w SNMP) GetNext(oid Oid) (*Oid, interface{}, error) {
 	}
 
 	response := make([]byte, bufSize)
-	numRead, err := poll(w.conn, req, response, w.retries, 500*time.Millisecond)
+	numRead, err := poll(w.conn, req, response, w.retries, w.timeout)
 	if err != nil {
 		return nil, nil, err
 	}
