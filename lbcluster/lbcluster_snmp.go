@@ -76,28 +76,26 @@ func (self *LBCluster) snmp_req(host string, result chan<- RetSnmp) {
 		result <- RetSnmp{metric, host, fmt.Sprintf("contacted node: %v The getv3 gave the following error: %v ", host, err)}
 		return
 	}
-	// select a VarBind
-	pduString := fmt.Sprintf("%v", pdu)
+
 
 	logmessage := fmt.Sprintf("contacted node: %v transport: %v - reply was %v", host, transport, pdu)
 
-	if pduInteger, err := strconv.Atoi(pduString); err != nil {
-		// THIS MIGHT BE A COMMA SEPARATED LIST. Let's check if the host is there
+	var pduInteger int
+	switch t := pdu.(type) {
+    case int:
+		pduInteger = pdu.(int)
+    case string:
 		re := regexp.MustCompile(self.Cluster_name + "=([0-9]+)")
-		submatch := re.FindStringSubmatch(pduString)
+		submatch := re.FindStringSubmatch(pdu.(string))
 		if submatch != nil {
 			pduInteger, err = strconv.Atoi(submatch[1])
 		}
-
-		if err != nil {
-			logmessage = logmessage + " - " + fmt.Sprintf("%v", err)
-		}
-		result <- RetSnmp{pduInteger, host, logmessage}
-		return
-	} else {
-		result <- RetSnmp{pduInteger, host, logmessage}
-		return
-	}
+    default:
+        result <- RetSnmp{metric, host, fmt.Sprintf("The node returned an unexpected type %s in %v", t, pdu)}
+        return	   
+    }
+	result <- RetSnmp{pduInteger, host, logmessage}
+	return
 
 }
 func (self *LBCluster) transportToUse(hostname string) string {
