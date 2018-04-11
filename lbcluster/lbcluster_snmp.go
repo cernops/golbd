@@ -5,11 +5,11 @@ import (
 	//"github.com/k-sone/snmpgo"
 	"github.com/reguero/go-snmplib"
 	"net"
+	"regexp"
 	"strconv"
 	//"strings"
 	"time"
 )
-
 
 //This one has only internal methods. They should not be called from outside the lbcluster
 
@@ -82,8 +82,16 @@ func (self *LBCluster) snmp_req(host string, result chan<- RetSnmp) {
 	logmessage := fmt.Sprintf("contacted node: %v transport: %v - reply was %v", host, transport, pdu)
 
 	if pduInteger, err := strconv.Atoi(pduString); err != nil {
-		// THIS MIGHT BE A COMMA SEPARATED LIST
-		logmessage = logmessage + " - " + fmt.Sprintf("%v", err)
+		// THIS MIGHT BE A COMMA SEPARATED LIST. Let's check if the host is there
+		re := regexp.MustCompile(self.Cluster_name + "=([0-9]+)")
+		submatch := re.FindStringSubmatch(pduString)
+		if submatch != nil {
+			pduInteger, err = strconv.Atoi(submatch[1])
+		}
+
+		if err != nil {
+			logmessage = logmessage + " - " + fmt.Sprintf("%v", err)
+		}
 		result <- RetSnmp{pduInteger, host, logmessage}
 		return
 	} else {
