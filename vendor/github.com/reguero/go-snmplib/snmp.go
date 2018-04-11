@@ -100,6 +100,9 @@ func passwordToKey(password string, engineID string, hashAlg string) string {
 // NewSNMP creates a new SNMP object. Opens a UDP connection to the device that will be used for the SNMP packets.
 func NewSNMP(target, community string, version SNMPVersion, timeout time.Duration, retries int) (*SNMP, error) {
 	targetPort := fmt.Sprintf("%s:161", target)
+        if strings.Contains(target, ":") {
+  	    targetPort =  fmt.Sprintf("[%s]:161", target)
+        }
 	conn, err := net.DialTimeout("udp", targetPort, timeout)
 	if err != nil {
 		return nil, fmt.Errorf(`error connecting to ("udp", "%s") : %s`, targetPort, err)
@@ -120,10 +123,14 @@ func NewSNMPv3(target, user, authAlg, authPwd, privAlg, privPwd string, timeout 
 		return nil, fmt.Errorf(`Invalid auth algorithm %s, needs SHA1 or MD5`, authAlg)
 	}
 	if privAlg != SnmpAES && privAlg != SnmpDES && privAlg != SnmpNOPRIV {
-		return nil, fmt.Errorf(`Invalid priv algorithm %s, needs AES or DES`, privAlg)
+		return nil, fmt.Errorf(`Invalid priv algorithm %s, needs AES, DES or NOPRIV`, privAlg)
 	}
 
 	targetPort := fmt.Sprintf("%s:161", target)
+//	protocol := "udp"
+	if strings.Contains(target, ":"){
+		targetPort =  fmt.Sprintf("[%s]:161", target)
+	}
 	conn, err := net.DialTimeout("udp", targetPort, timeout)
 	if err != nil {
 		return nil, fmt.Errorf(`error connecting to ("udp", "%s") : %s`, targetPort, err)
@@ -580,9 +587,34 @@ func (w *SNMP) doGetV3(oid Oid, request BERType) (*Oid, interface{}, error) {
 	varbinds := respPacket[4].([]interface{})
 	result := varbinds[1].([]interface{})
 
+
+
+
 	resultOid := result[1].(Oid)
 	resultVal := result[2]
 
+	if respPacket[0] != AsnGetResponse {
+		// The table comes from 		
+		//http://www.mibdepot.com/cgi-bin/getmib3.cgi?win=mib_a&n=SNMP-USER-BASED-SM-MIB&r=cisco&f=SNMP-USM-MIB-V1SMI.my&t=tree&v=v1&i=0
+                my_error := errors.New(fmt.Sprintf("This return an element of type %s, instead of a AsnGetResponse. The oid returned is %s with value %s", respPacket[0],  resultOid, resultVal))
+
+		if  respPacket[0] == AsnReport {
+			var my_errors = make(map[string]string)
+			my_errors[".1.3.6.1.6.3.15.1.1.1.0"] ="usmStatsUnsupportedSecLevels"
+                        my_errors[".1.3.6.1.6.3.15.1.1.2.0"] ="usmStatsNotInTimeWindows"
+                        my_errors[".1.3.6.1.6.3.15.1.1.3.0"] ="usmStatsUnknownUserNames"
+                        my_errors[".1.3.6.1.6.3.15.1.1.4.0"] ="usmStatsUnknownEngineIDs"
+                        my_errors[".1.3.6.1.6.3.15.1.1.5.0"] ="usmStatsWrongDigests"
+                        my_errors[".1.3.6.1.6.3.15.1.1.6.0"] ="usmStatsDecryptionErrors"
+			my_error = errors.New(fmt.Sprintf("Got an AsnReport with oid %s and value %s instead of a AsnGetResponse. That oid means '%s'\n", resultOid, resultVal, my_errors[resultOid.String()]))
+                }
+		return nil, nil, my_error
+	}
+
+	if resultOid.String() != oid.String() {
+		return  &resultOid,nil, errors.New(fmt.Sprintf("Asking for the oid %s, but returned in fact %s with value %s", oid, resultOid, resultVal))
+	}
+	
 	return &resultOid, resultVal, nil
 }
 
