@@ -48,7 +48,7 @@ func (self *LBCluster) snmp_req(host string, result chan<- RetSnmp) {
 	}
 	transport := self.transportToUse(host)
 
-	snmp, err := snmplib.NewSNMPv3(host, self.Loadbalancing_username, "MD5", self.Loadbalancing_password, "DES", self.Loadbalancing_password,
+	snmp, err := snmplib.NewSNMPv3(host, self.Loadbalancing_username, "MD5", self.Loadbalancing_password, "NOPRIV", self.Loadbalancing_password,
 		time.Duration(TIMEOUT)*time.Second, 2)
 	if err != nil {
 		// Failed to create snmpgo.SNMP object
