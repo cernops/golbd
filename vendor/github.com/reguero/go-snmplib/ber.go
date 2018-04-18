@@ -77,6 +77,9 @@ const (
 	AsnInform         BERType = 0xa6
 	AsnTrap2          BERType = 0xa7
 	AsnReport         BERType = 0xa8
+
+	noSuchObject   BERType = 0x80
+	noSuchInstance BERType = 0x81
 )
 
 // SNMPVersion indicates which SNMP version is in use.
@@ -296,6 +299,10 @@ func DecodeSequence(toparse []byte) ([]interface{}, error) {
 				return nil, err
 			}
 			result = append(result, pdu)
+		case noSuchObject:
+			return nil, fmt.Errorf("No Such Object")
+		case noSuchInstance:
+			return nil, fmt.Errorf("No Such Instance currently exists at this OID")
 		default:
 			return nil, fmt.Errorf("did not understand type %v", berType)
 		}
