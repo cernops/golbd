@@ -557,7 +557,8 @@ func (w *SNMP) doGetV3(oid Oid, request BERType) (*Oid, interface{}, error) {
 	respengineID := v3HeaderDecoded[1].(string)
 	respengineBoots := int32(v3HeaderDecoded[2].(int))
 	respengineTime := int32(v3HeaderDecoded[3].(int))
-	if (respengineID != w.engineID) || (respengineBoots != w.engineBoots) || ((respengineTime - w.engineTime) > 150) || (respengineTime < w.engineTime) {
+	// https://www.ietf.org/rfc/rfc2574.txt
+	if (respengineID != w.engineID) || (respengineBoots != w.engineBoots) || ((respengineTime - w.engineTime) > 150) || ((respengineTime - w.engineTime) < -150) {
 		engine_mismatch_error := errors.New(fmt.Sprintf("engine data mismatch: Response EngineID = '%x' EngineBoots = '%d' EngineTime = '%d'. Expected EngineID = '%x' EngineBoots = '%d' EngineTime = '%d'\n", respengineID, respengineBoots, respengineTime, w.engineID, w.engineBoots, w.engineTime))
 		return nil, nil, engine_mismatch_error
 	}
