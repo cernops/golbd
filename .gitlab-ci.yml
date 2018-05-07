@@ -15,8 +15,7 @@ before_script:
   - pwd
   - ls -al 
   - mkdir -p /go/src/gitlab.cern.ch/lb-experts
-  - [ -d /builds ] && ln -s  /builds/lb-experts/golbd /go/src/gitlab.cern.ch/lb-experts/golbd
-  - [ -d /builds ] || ln -s  /lb-experts/golbd /go/src/gitlab.cern.ch/lb-experts/golbd
+  - if [ -d /builds ] ;  then  ln -s  /builds/lb-experts/golbd /go/src/gitlab.cern.ch/lb-experts/golbd; else  ln -s  /lb-experts/golbd /go/src/gitlab.cern.ch/lb-experts/golbd ;  fi
 
 #  - ln -s  /builds/lb-experts/golbd/vendor/github.com/reguero/ /go/src/github.com/
 #  - ls -al /go/src/github.com/
