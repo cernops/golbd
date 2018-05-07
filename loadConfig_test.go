@@ -1,7 +1,7 @@
 package main
 
 import (
-	"gitlab.cern.ch/lbexperts/golbd/lbcluster"
+	"gitlab.cern.ch/lb-experts/golbd/lbcluster"
 	//"sync"
 	"io/ioutil"
 	"reflect"
