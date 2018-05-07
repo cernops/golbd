@@ -22,7 +22,7 @@ before_script:
 #  - ls -al /go/src/github.com/reguero/go-snmplib
 #  - echo "AND IN VENDOR"
 #  - ls -alR vendor
-  - cd /go/src/github.com/cernops/golbd
+  - cd /go/src/gitlab.cern.ch/lb-experts/golbd
   - export SPEC=$(ls *spec)
   - export PKG=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}\n" | head -n 1)
   - export PKG_REL=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
