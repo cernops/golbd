@@ -14,9 +14,9 @@ before_script:
   - yum -y install --exclude python2-libcomps  krb5-workstation koji rpm-build rpmdevtools
   - pwd
   - ls -al 
-  - mkdir -p /go/src/github.com/cernops/
-  - ln -s  /builds/lb-experts/golbd /go/src/github.com/cernops/golbd
-  - ln -s  /builds/lb-experts/golbd/vendor/github.com/reguero/ /go/src/github.com/
+  - mkdir -p /go/src/gitlab.cern.ch/lb-experts
+  - ln -s  /builds/lb-experts/golbd /go/src/gitlab.cern.ch/lb-experts/golbd
+#  - ln -s  /builds/lb-experts/golbd/vendor/github.com/reguero/ /go/src/github.com/
 #  - ls -al /go/src/github.com/
 #  - ls -al /go/src/github.com/reguero/
 #  - ls -al /go/src/github.com/reguero/go-snmplib
