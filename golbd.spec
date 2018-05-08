@@ -45,7 +45,7 @@ The lowest loaded machine names are updated on the DNS servers via the DynDNS me
 %build
 mkdir -p src/%{provider_full}
 ln -s ../../../ src/%{provider_full}/%{repo} 
-(cd src/gitlab.cern.ch/; ln -s ../../vendor/gitlab.cern.ch/*  .)
+(cd src/; ln -s ../vendor/github.com  .)
 echo "What do we have"
 ls -al src/github.com/reguero/go-snmplib
 ls -lR vendor/github.com
