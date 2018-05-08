@@ -44,7 +44,8 @@ The lowest loaded machine names are updated on the DNS servers via the DynDNS me
 
 %build
 mkdir -p src/%{provider_full}
-ln -s ../../../ src/%{provider_full}/%{repo} 
+ln -s ../../../ src/%{provider_full}/%{repo}
+ln -s src/gitlab.cern.ch . 
 (cd src/; ln -s ../vendor/github.com  .)
 echo "What do we have"
 ls -al src/github.com/reguero/go-snmplib
@@ -76,7 +77,7 @@ install -d -m0755  %{buildroot}/var/log/lb/old
 install -d -m0755  %{buildroot}/var/log/lb/old/cluster
 
 %check
-GOPATH=$(pwd)/:%{gopath} go test %{provider_full}
+GOPATH=$(pwd)/:%{gopath} go test %{provider_full}/%{repo}
 
 %post
 %systemd_post %{lbd}.service
