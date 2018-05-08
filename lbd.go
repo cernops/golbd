@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/cernops/golbd/lbcluster"
+	"gitlab.cern.ch/lb-experts/golbd/lbcluster"
 	"io"
 	"io/ioutil"
 	"log/syslog"

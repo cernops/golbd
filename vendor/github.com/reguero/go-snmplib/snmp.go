@@ -100,9 +100,9 @@ func passwordToKey(password string, engineID string, hashAlg string) string {
 // NewSNMP creates a new SNMP object. Opens a UDP connection to the device that will be used for the SNMP packets.
 func NewSNMP(target, community string, version SNMPVersion, timeout time.Duration, retries int) (*SNMP, error) {
 	targetPort := fmt.Sprintf("%s:161", target)
-        if strings.Contains(target, ":") {
-  	    targetPort =  fmt.Sprintf("[%s]:161", target)
-        }
+	if strings.Contains(target, ":") {
+		targetPort = fmt.Sprintf("[%s]:161", target)
+	}
 	conn, err := net.DialTimeout("udp", targetPort, timeout)
 	if err != nil {
 		return nil, fmt.Errorf(`error connecting to ("udp", "%s") : %s`, targetPort, err)
@@ -127,9 +127,9 @@ func NewSNMPv3(target, user, authAlg, authPwd, privAlg, privPwd string, timeout 
 	}
 
 	targetPort := fmt.Sprintf("%s:161", target)
-//	protocol := "udp"
-	if strings.Contains(target, ":"){
-		targetPort =  fmt.Sprintf("[%s]:161", target)
+	//	protocol := "udp"
+	if strings.Contains(target, ":") {
+		targetPort = fmt.Sprintf("[%s]:161", target)
 	}
 	conn, err := net.DialTimeout("udp", targetPort, timeout)
 	if err != nil {
@@ -288,7 +288,7 @@ func (w *SNMP) Discover() error {
 	}
 
 	response := make([]byte, bufSize)
-	numRead, err := poll(w.conn, req, response, w.retries, 500*time.Millisecond)
+	numRead, err := poll(w.conn, req, response, w.retries, w.timeout)
 	if err != nil {
 		return err
 	}
@@ -537,7 +537,7 @@ func (w *SNMP) doGetV3(oid Oid, request BERType) (*Oid, interface{}, error) {
 
 	decodedResponse, err := DecodeSequence(response[:numRead])
 	if err != nil {
-		fmt.Printf("Error decoding getNext:%v\n", err)
+		fmt.Printf("Error decoding getV3:%v\n", err)
 		return nil, nil, err
 	}
 
@@ -554,9 +554,14 @@ func (w *SNMP) doGetV3(oid Oid, request BERType) (*Oid, interface{}, error) {
 		return nil, nil, err
 	}
 
-	w.engineID = v3HeaderDecoded[1].(string)
-	w.engineBoots = int32(v3HeaderDecoded[2].(int))
-	w.engineTime = int32(v3HeaderDecoded[3].(int))
+	respengineID := v3HeaderDecoded[1].(string)
+	respengineBoots := int32(v3HeaderDecoded[2].(int))
+	respengineTime := int32(v3HeaderDecoded[3].(int))
+	// https://www.ietf.org/rfc/rfc2574.txt
+	if (respengineID != w.engineID) || (respengineBoots != w.engineBoots) || ((respengineTime - w.engineTime) > 150) || ((respengineTime - w.engineTime) < -150) {
+		engine_mismatch_error := errors.New(fmt.Sprintf("engine data mismatch: Response EngineID = '%x' EngineBoots = '%d' EngineTime = '%d'. Expected EngineID = '%x' EngineBoots = '%d' EngineTime = '%d'\n", respengineID, respengineBoots, respengineTime, w.engineID, w.engineBoots, w.engineTime))
+		return nil, nil, engine_mismatch_error
+	}
 	// skip checking authParam for now
 	respAuthParam := v3HeaderDecoded[5].(string)
 	respPrivParam := v3HeaderDecoded[6].(string)
@@ -587,34 +592,31 @@ func (w *SNMP) doGetV3(oid Oid, request BERType) (*Oid, interface{}, error) {
 	varbinds := respPacket[4].([]interface{})
 	result := varbinds[1].([]interface{})
 
-
-
-
 	resultOid := result[1].(Oid)
 	resultVal := result[2]
 
 	if respPacket[0] != AsnGetResponse {
-		// The table comes from 		
+		// The table comes from
 		//http://www.mibdepot.com/cgi-bin/getmib3.cgi?win=mib_a&n=SNMP-USER-BASED-SM-MIB&r=cisco&f=SNMP-USM-MIB-V1SMI.my&t=tree&v=v1&i=0
-                my_error := errors.New(fmt.Sprintf("This return an element of type %s, instead of a AsnGetResponse. The oid returned is %s with value %s", respPacket[0],  resultOid, resultVal))
+		my_error := errors.New(fmt.Sprintf("This return an element of type %s, instead of a AsnGetResponse. The oid returned is %s with value %s", respPacket[0], resultOid, resultVal))
 
-		if  respPacket[0] == AsnReport {
+		if respPacket[0] == AsnReport {
 			var my_errors = make(map[string]string)
-			my_errors[".1.3.6.1.6.3.15.1.1.1.0"] ="usmStatsUnsupportedSecLevels"
-                        my_errors[".1.3.6.1.6.3.15.1.1.2.0"] ="usmStatsNotInTimeWindows"
-                        my_errors[".1.3.6.1.6.3.15.1.1.3.0"] ="usmStatsUnknownUserNames"
-                        my_errors[".1.3.6.1.6.3.15.1.1.4.0"] ="usmStatsUnknownEngineIDs"
-                        my_errors[".1.3.6.1.6.3.15.1.1.5.0"] ="usmStatsWrongDigests"
-                        my_errors[".1.3.6.1.6.3.15.1.1.6.0"] ="usmStatsDecryptionErrors"
+			my_errors[".1.3.6.1.6.3.15.1.1.1.0"] = "usmStatsUnsupportedSecLevels"
+			my_errors[".1.3.6.1.6.3.15.1.1.2.0"] = "usmStatsNotInTimeWindows"
+			my_errors[".1.3.6.1.6.3.15.1.1.3.0"] = "usmStatsUnknownUserNames"
+			my_errors[".1.3.6.1.6.3.15.1.1.4.0"] = "usmStatsUnknownEngineIDs"
+			my_errors[".1.3.6.1.6.3.15.1.1.5.0"] = "usmStatsWrongDigests"
+			my_errors[".1.3.6.1.6.3.15.1.1.6.0"] = "usmStatsDecryptionErrors"
 			my_error = errors.New(fmt.Sprintf("Got an AsnReport with oid %s and value %s instead of a AsnGetResponse. That oid means '%s'\n", resultOid, resultVal, my_errors[resultOid.String()]))
-                }
+		}
 		return nil, nil, my_error
 	}
 
 	if resultOid.String() != oid.String() {
-		return  &resultOid,nil, errors.New(fmt.Sprintf("Asking for the oid %s, but returned in fact %s with value %s", oid, resultOid, resultVal))
+		return &resultOid, nil, errors.New(fmt.Sprintf("Asking for the oid %s, but returned in fact %s with value %s", oid, resultOid, resultVal))
 	}
-	
+
 	return &resultOid, resultVal, nil
 }
 

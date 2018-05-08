@@ -1,11 +1,12 @@
-%global provider	github
-%global provider_tld	com
-%global project		cernops
+%global provider	gitlab
+%global provider_tld	cern.ch
+%global project		lb-experts
+%global provider_full %{provider}.%{provider_tld}/%{project}
 %global repo		golbd
 # %global commit		8c0c623bca8e33f4a9c1289ca965c19d9c6db2b1
 %global lbd             lbd
 
-%global import_path	%{provider}.%{provider_tld}/%{project}/%{repo}
+%global import_path	%{provider_full}/%{repo}
 %global gopath		%{_datadir}/gocode
 # %global shortcommit	%(c=%{commit}; echo ${c:0:7})
 %global debug_package	%{nil}
@@ -42,9 +43,10 @@ The lowest loaded machine names are updated on the DNS servers via the DynDNS me
 %setup -n %{name}-%{version} -q
 
 %build
-mkdir -p src/%{provider}.%{provider_tld}/%{project}
-ln -s ../../../ src/%{provider}.%{provider_tld}/%{project}/%{repo} 
-(cd src/github.com/; ln -s ../../vendor/github.com/*  .)
+mkdir -p src/%{provider_full}
+ln -s ../../../ src/%{provider_full}/%{repo}
+ln -s src/gitlab.cern.ch . 
+(cd src/; ln -s ../vendor/github.com  .)
 echo "What do we have"
 ls -al src/github.com/reguero/go-snmplib
 ls -lR vendor/github.com
@@ -75,7 +77,7 @@ install -d -m0755  %{buildroot}/var/log/lb/old
 install -d -m0755  %{buildroot}/var/log/lb/old/cluster
 
 %check
-GOPATH=$(pwd)/:%{gopath} go test github.com/cernops/golbd
+GOPATH=$(pwd)/:%{gopath} go test %{provider_full}/%{repo}
 
 %post
 %systemd_post %{lbd}.service

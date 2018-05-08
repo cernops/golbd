@@ -59,7 +59,7 @@ func (self *LBCluster) snmp_req(host string, result chan<- RetSnmp) {
 	err = snmp.Discover()
 
 	if err != nil {
-		result <- RetSnmp{metric, host, fmt.Sprintf("contacted node: %v error in the snmp discovery of ", host)}
+		result <- RetSnmp{metric, host, fmt.Sprintf("contacted node: %v error in the snmp discovery: %v", host, err)}
 		return
 	}
 
@@ -77,23 +77,22 @@ func (self *LBCluster) snmp_req(host string, result chan<- RetSnmp) {
 		return
 	}
 
-
 	logmessage := fmt.Sprintf("contacted node: %v transport: %v - reply was %v", host, transport, pdu)
 
 	var pduInteger int
 	switch t := pdu.(type) {
-    case int:
+	case int:
 		pduInteger = pdu.(int)
-    case string:
+	case string:
 		re := regexp.MustCompile(self.Cluster_name + "=([0-9]+)")
 		submatch := re.FindStringSubmatch(pdu.(string))
 		if submatch != nil {
 			pduInteger, err = strconv.Atoi(submatch[1])
 		}
-    default:
-        result <- RetSnmp{metric, host, fmt.Sprintf("The node returned an unexpected type %s in %v", t, pdu)}
-        return	   
-    }
+	default:
+		result <- RetSnmp{metric, host, fmt.Sprintf("The node returned an unexpected type %s in %v", t, pdu)}
+		return
+	}
 	result <- RetSnmp{pduInteger, host, logmessage}
 	return
 
