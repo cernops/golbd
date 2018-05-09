@@ -3,8 +3,8 @@ package lbcluster
 import (
 	"encoding/json"
 	"fmt"
+	"gitlab.cern.ch/lb-experts/golbd/lbhost"
 	"io/ioutil"
-
 	"math/rand"
 	"net"
 	"net/http"
@@ -163,10 +163,32 @@ func (self *LBCluster) Time_to_refresh() bool {
 	// self.Write_to_log(fmt.Sprintf("Time_of_last_evaluation = %v now = %v Time_of_last_evaluation + polling_int = %v result = %v Cluster_name = %v\n", self.Time_of_last_evaluation, time.Now(), self.Time_of_last_evaluation.Add(time.Duration(self.Parameters.Polling_interval)*time.Second), self.Time_of_last_evaluation.Add(time.Duration(self.Parameters.Polling_interval)*time.Second).After(time.Now()), self.Cluster_name))
 	return self.Time_of_last_evaluation.Add(time.Duration(self.Parameters.Polling_interval) * time.Second).Before(time.Now())
 }
+func (self *LBCluster) Get_list_hosts(current_list map[string]lbhost.LBHost) {
+	self.Write_to_log("INFO", "Getting the list of hosts for the alias")
+	for host, _ := range self.Host_metric_table {
+		my_host, ok := current_list[host]
+		if ok {
+			my_host.Cluster_name = my_host.Cluster_name + "," + self.Cluster_name
+		} else {
+			my_host = lbhost.LBHost{
+				Cluster_name:           self.Cluster_name,
+				Host_name:              host,
+				Host_response_int:      -100,
+				Host_response_string:   "",
+				Host_response_error:    "",
+				Loadbalancing_username: self.Loadbalancing_username,
+				Loadbalancing_password: self.Loadbalancing_password,
+				LogFile:                self.Slog.TofilePath,
+			}
+		}
+		current_list[host] = my_host
 
-func (self *LBCluster) Find_best_hosts() {
+	}
+
+}
+func (self *LBCluster) Find_best_hosts(hosts_to_check map[string]lbhost.LBHost) {
 	self.Previous_best_hosts = self.Current_best_hosts
-	self.evaluate_hosts()
+	self.evaluate_hosts(hosts_to_check)
 	allMetrics := make(map[string]bool)
 	allMetrics["minimum"] = true
 	allMetrics["cmsfrontier"] = true
@@ -247,10 +269,9 @@ func (self *LBCluster) apply_metric() {
 	return
 }
 
-
 /* The following functions are for the roger state and its timeout
 
-*/
+ */
 func NewTimeoutClient(connectTimeout time.Duration, readWriteTimeout time.Duration) *http.Client {
 
 	return &http.Client{
@@ -270,7 +291,6 @@ func timeoutDialer(cTimeout time.Duration, rwTimeout time.Duration) func(net, ad
 		return conn, nil
 	}
 }
-
 
 func (self *LBCluster) checkRogerState(host string) string {
 
@@ -306,4 +326,12 @@ func (self *LBCluster) checkRogerState(host string) string {
 
 }
 
+func (self *LBCluster) evaluate_hosts(hosts_to_check map[string]lbhost.LBHost) {
 
+	for currenthost := range self.Host_metric_table {
+		self.Write_to_log("INFO", "contacting node: "+currenthost)
+		host_tested := hosts_to_check[currenthost]
+		self.Host_metric_table[currenthost] = host_tested.Get_load_for_alias(self.Cluster_name)
+		self.Write_to_log("INFO", fmt.Sprintf("It has a load of %d", self.Host_metric_table[currenthost]))
+	}
+}
