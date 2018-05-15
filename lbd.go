@@ -99,7 +99,7 @@ func loadClusters(config *Config, lg *lbcluster.Log) []lbcluster.LBCluster {
 				Per_cluster_filename: logfilePath + "/cluster/" + k + ".log"}
 			hm := make(map[string]int)
 			for _, h := range v {
-				hm[h] = -100
+				hm[h] = 100000
 			}
 			lbc.Host_metric_table = hm
 			lbcs = append(lbcs, lbc)
