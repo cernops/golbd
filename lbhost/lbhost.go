@@ -45,7 +45,7 @@ func (self *LBHost) Snmp_req() {
 	self.find_transports()
 
 	for i, my_transport := range self.Host_transports {
-		my_transport.Response_int = -100
+		my_transport.Response_int = 100000
 		transport := my_transport.Transport
 		self.Write_to_log("DEBUG", "Checking the host with "+transport)
 		snmp, err := snmplib.NewSNMPv3(self.Host_name, self.Loadbalancing_username, "MD5", self.Loadbalancing_password, "NOPRIV", self.Loadbalancing_password,
@@ -172,7 +172,7 @@ func (self *LBHost) find_transports() {
 			transport = "udp6"
 		}
 		self.Host_transports = append(self.Host_transports, LBHostTransportResult{Transport: transport,
-			Response_int: -100, Response_string: "", IP: ip,
+			Response_int: 100000, Response_string: "", IP: ip,
 			Response_error: ""})
 	}
 
