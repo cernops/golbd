@@ -133,6 +133,7 @@ func (self *LBCluster) apply_metric() {
 	i := 0
 	for k, v := range self.Host_metric_table {
 		pl[i] = Pair{k, v}
+		i++
 	}
 	//Let's shuffle the hosts before sorting them, in case some hosts have the same value
 	Shuffle(len(pl), func(i, j int) { pl[i], pl[j] = pl[j], pl[i] })
