@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"gitlab.cern.ch/lb-experts/golbd/lbcluster"
+	"gitlab.cern.ch/lb-experts/golbd/lbhost"
 	"io"
 	"io/ioutil"
 	"log/syslog"
@@ -109,6 +110,7 @@ func loadClusters(config *Config, lg *lbcluster.Log) []lbcluster.LBCluster {
 			lg.Warning("cluster: " + k + " missing parameters for cluster; ignoring the cluster, please check the configuration file " + *configFileFlag)
 		}
 	}
+
 	return lbcs
 
 }
@@ -324,7 +326,7 @@ func main() {
 	lg.Info("Loading clusters")
 	lbclusters := loadClusters(config, &lg)
 	lg.Info("Clusters loaded")
-	var wg sync.WaitGroup
+	//var wg sync.WaitGroup
 	for {
 		lg.Info("Starting the loop")
 		if sig_term {
@@ -353,34 +355,57 @@ func main() {
 			sig_hup = false
 		}
 
-		check_update := true
 		update_dns := true
 		lg.Info("Checking if any of the " + strconv.Itoa(len(lbclusters)) + " clusters needs updating")
+		hosts_to_check := make(map[string]lbhost.LBHost)
+		var clusters_to_update []*lbcluster.LBCluster
+		/* First, let's identify the hosts that have to be checked */
 		for i := range lbclusters {
 			pc := &lbclusters[i]
 			pc.Write_to_log("DEBUG", "DO WE HAVE TO UPDATE?")
 			if pc.Time_to_refresh() {
 				pc.Write_to_log("INFO", "Time to refresh the cluster")
-				if check_update {
-					check_update = false
-					//Let's make one call to check if we have to update the dns (instead of one per alias)
-					update_dns = should_update_dns(config, hostname, &lg)
-				}
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
-					pc.Find_best_hosts()
-					//pc.Create_statistics()
-					if update_dns {
-						pc.Write_to_log("DEBUG", "Should update dns is true")
-						pc.Refresh_dns(config.DnsManager, config.TsigKeyPrefix, config.TsigInternalKey, config.TsigExternalKey)
-					} else {
-						pc.Write_to_log("DEBUG", "should_update_dns false")
-					}
-				}()
+				pc.Get_list_hosts(hosts_to_check)
+				clusters_to_update = append(clusters_to_update, pc)
 			}
 		}
-		wg.Wait()
+		if len(hosts_to_check) != 0 {
+			my_channel := make(chan lbhost.LBHost)
+			/* Now, let's go through the hosts, issuing the snmp call */
+			for _, host_value := range hosts_to_check {
+				go func(my_host lbhost.LBHost) {
+					//my_host.Write_to_log("INFO", fmt.Sprintf("Checking the load on the host " + my_host.Cluster_name + " %v", my_host.Host_response_int))
+					my_host.Snmp_req()
+					my_channel <- my_host
+				}(host_value)
+			}
+			lg.Info("Let's start gathering the results")
+			for i := 0; i < len(hosts_to_check); i++ {
+				my_new_host := <-my_channel
+				//my_new_host.Write_to_log("INFO", fmt.Sprintf("THE HOST FINISHED with value %d", my_new_host.Host_response_int))
+				hosts_to_check[my_new_host.Host_name] = my_new_host
+			}
+
+			lg.Info("All the hosts have been tested")
+			for _, host := range hosts_to_check {
+				lg.Info(fmt.Sprintf("HOST :%v INT: %v STRING %v", host.Host_name, host.Host_response_int, host.Host_response_string))
+			}
+			update_dns = should_update_dns(config, hostname, &lg)
+
+			/* Finally, let's go through the aliases, selecting the best hosts*/
+			for _, pc := range clusters_to_update {
+				pc.Write_to_log("INFO", "READY TO UPDATE THE CLUSTER")
+				pc.Find_best_hosts(hosts_to_check)
+				if update_dns {
+					pc.Write_to_log("DEBUG", "Should update dns is true")
+					pc.Refresh_dns(config.DnsManager, config.TsigKeyPrefix, config.TsigInternalKey, config.TsigExternalKey)
+				} else {
+					pc.Write_to_log("DEBUG", "should_update_dns false")
+				}
+
+			}
+
+		}
 
 		if update_dns {
 			update_heartbeat(config, hostname, &lg)
