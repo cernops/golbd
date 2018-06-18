@@ -47,7 +47,12 @@ func (self *LBHost) Snmp_req() {
 	for i, my_transport := range self.Host_transports {
 		my_transport.Response_int = 100000
 		transport := my_transport.Transport
-		self.Write_to_log("DEBUG", "Checking the host with "+transport)
+		node_ip := my_transport.IP.String()
+		if transport=="udp6" {
+			node_ip = "[" + node_ip + "]"
+		}
+		
+		self.Write_to_log("INFO", "Checking the host " + node_ip + " with "+transport)
 		snmp, err := snmplib.NewSNMPv3(self.Host_name, self.Loadbalancing_username, "MD5", self.Loadbalancing_password, "NOPRIV", self.Loadbalancing_password,
 			time.Duration(TIMEOUT)*time.Second, 2)
 		if err != nil {

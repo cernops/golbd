@@ -246,9 +246,8 @@ func (self *LBCluster) checkRogerState(host string) string {
 func (self *LBCluster) evaluate_hosts(hosts_to_check map[string]lbhost.LBHost) {
 
 	for currenthost := range self.Host_metric_table {
-		self.Write_to_log("INFO", "contacting node: "+currenthost)
 		host_tested := hosts_to_check[currenthost]
 		self.Host_metric_table[currenthost] = host_tested.Get_load_for_alias(self.Cluster_name)
-		self.Write_to_log("INFO", fmt.Sprintf("It has a load of %d", self.Host_metric_table[currenthost]))
+		self.Write_to_log("INFO", fmt.Sprintf("node: %s It has a load of %d", currenthost, self.Host_metric_table[currenthost]))
 	}
 }

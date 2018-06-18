@@ -13,7 +13,7 @@
 
 Name:		%{repo}
 Version:	0.1
-Release:	12
+Release:	13
 #psaiz: Removing the dist from the release %{?dist}
 Summary:	CERN DNS Load Balancer Daemon
 License:	ASL 2.0
@@ -110,6 +110,8 @@ fi
 
 
 %changelog
+* Mon Jun 18 2018 Pablo Saiz <Pablo.Saiz@cern.ch>           - 0.1.13
+- Using the ip name to check  the host
 * Wed Apr 11 2018 Pablo Saiz <Pablo.Saiz@cern.ch>           - 0.1.11
 - Using NoPriv by default
 - Detecting more errors in the snmp module
