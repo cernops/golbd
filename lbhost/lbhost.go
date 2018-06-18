@@ -47,12 +47,17 @@ func (self *LBHost) Snmp_req() {
 	for i, my_transport := range self.Host_transports {
 		my_transport.Response_int = 100000
 		transport := my_transport.Transport
-		self.Write_to_log("DEBUG", "Checking the host with "+transport)
-		snmp, err := snmplib.NewSNMPv3(self.Host_name, self.Loadbalancing_username, "MD5", self.Loadbalancing_password, "NOPRIV", self.Loadbalancing_password,
+		node_ip := my_transport.IP.String()
+		if transport=="udp6" {
+			node_ip = "[" + node_ip + "]"
+		}
+		
+		self.Write_to_log("INFO", "Checking the host " + node_ip + " with "+transport)
+		snmp, err := snmplib.NewSNMPv3(node_ip, self.Loadbalancing_username, "MD5", self.Loadbalancing_password, "NOPRIV", self.Loadbalancing_password,
 			time.Duration(TIMEOUT)*time.Second, 2)
 		if err != nil {
 			// Failed to create snmpgo.SNMP object
-			my_transport.Response_error = fmt.Sprint("contacted node: %v error creating the snmp object: %v", self.Host_name, err)
+			my_transport.Response_error = fmt.Sprint("contacted node: %v %v error creating the snmp object: %v", self.Host_name, node_ip, err)
 		} else {
 			defer snmp.Close()
 			err = snmp.Discover()
@@ -76,7 +81,7 @@ func (self *LBHost) Snmp_req() {
 
 					} else {
 
-						self.Write_to_log("INFO", fmt.Sprintf("contacted node: %v transport: %v - reply was %v", self.Host_name, transport, pdu))
+						self.Write_to_log("INFO", fmt.Sprintf("contacted node: %v transport: %v ip: %v - reply was %v", self.Host_name, transport, node_ip, pdu))
 
 						//var pduInteger int
 						switch t := pdu.(type) {

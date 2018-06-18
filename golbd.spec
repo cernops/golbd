@@ -13,7 +13,7 @@
 
 Name:		%{repo}
 Version:	0.1
-Release:	13
+Release:	14
 #psaiz: Removing the dist from the release %{?dist}
 Summary:	CERN DNS Load Balancer Daemon
 License:	ASL 2.0
@@ -110,6 +110,8 @@ fi
 
 
 %changelog
+* Mon Jun 18 2018 Pablo Saiz <Pablo.Saiz@cern.ch>           - 0.1.14
+- Using the ip name to check  the host
 * Wed Jun 06 2018 Pablo Saiz <Pablo.Saiz@cern.ch>           - 0.1.13
 - Making a single call per host (insead of one call per host per alias)
 * Wed Apr 11 2018 Pablo Saiz <Pablo.Saiz@cern.ch>           - 0.1.11
