@@ -78,7 +78,6 @@ func readLines(path string) (lines []string, err error) {
 }
 
 func loadClusters(config *Config, lg *lbcluster.Log) []lbcluster.LBCluster {
-	var hm map[string]int
 	var lbc lbcluster.LBCluster
 	var lbcs []lbcluster.LBCluster
 
@@ -98,9 +97,9 @@ func loadClusters(config *Config, lg *lbcluster.Log) []lbcluster.LBCluster {
 				Slog:                 lg,
 				Statistics_filename:  logfilePath + "/golbstatistics." + k,
 				Per_cluster_filename: logfilePath + "/cluster/" + k + ".log"}
-			hm = make(map[string]int)
+			hm := make(map[string]int)
 			for _, h := range v {
-				hm[h] = lbcluster.WorstValue + 1
+				hm[h] = 100000
 			}
 			lbc.Host_metric_table = hm
 			lbcs = append(lbcs, lbc)
@@ -374,7 +373,6 @@ func main() {
 			/* Now, let's go through the hosts, issuing the snmp call */
 			for _, host_value := range hosts_to_check {
 				go func(my_host lbhost.LBHost) {
-					//my_host.Write_to_log("INFO", fmt.Sprintf("Checking the load on the host " + my_host.Cluster_name + " %v", my_host.Host_response_int))
 					my_host.Snmp_req()
 					my_channel <- my_host
 				}(host_value)
@@ -382,14 +380,11 @@ func main() {
 			lg.Info("Let's start gathering the results")
 			for i := 0; i < len(hosts_to_check); i++ {
 				my_new_host := <-my_channel
-				//my_new_host.Write_to_log("INFO", fmt.Sprintf("THE HOST FINISHED with value %d", my_new_host.Host_response_int))
 				hosts_to_check[my_new_host.Host_name] = my_new_host
 			}
 
 			lg.Info("All the hosts have been tested")
-			for _, host := range hosts_to_check {
-				lg.Info(fmt.Sprintf("HOST :%v INT: %v STRING %v", host.Host_name, host.Host_response_int, host.Host_response_string))
-			}
+
 			update_dns = should_update_dns(config, hostname, &lg)
 
 			/* Finally, let's go through the aliases, selecting the best hosts*/
@@ -398,7 +393,7 @@ func main() {
 				pc.Find_best_hosts(hosts_to_check)
 				if update_dns {
 					pc.Write_to_log("DEBUG", "Should update dns is true")
-					pc.Refresh_dns(config.DnsManager, config.TsigKeyPrefix, config.TsigInternalKey, config.TsigExternalKey)
+					pc.Refresh_dns(config.DnsManager, config.TsigKeyPrefix, config.TsigInternalKey, config.TsigExternalKey, hosts_to_check)
 				} else {
 					pc.Write_to_log("DEBUG", "should_update_dns false")
 				}

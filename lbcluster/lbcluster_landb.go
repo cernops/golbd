@@ -3,6 +3,7 @@ package lbcluster
 import (
 	"fmt"
 	"github.com/miekg/dns"
+	"gitlab.cern.ch/lb-experts/golbd/lbhost"
 	"net"
 	"sort"
 	"strings"
@@ -11,18 +12,18 @@ import (
 
 /* This is the only public function here. It retrieves the status of the dns,
 and then updates it with the new hosts */
-func (self *LBCluster) Refresh_dns(dnsManager, keyPrefix, internalKey, externalKey string) {
+func (self *LBCluster) Refresh_dns(dnsManager, keyPrefix, internalKey, externalKey string, hosts_to_check map[string]lbhost.LBHost) {
 
 	e := self.get_state_dns(dnsManager)
 	if e != nil {
 		self.Write_to_log("WARNING", fmt.Sprintf("Get_state_dns Error: %v", e.Error()))
 	}
-	e = self.update_dns(keyPrefix+"internal.", internalKey, dnsManager)
+	e = self.update_dns(keyPrefix+"internal.", internalKey, dnsManager, hosts_to_check)
 	if e != nil {
 		self.Write_to_log("WARNING", fmt.Sprintf("Internal Update_dns Error: %v", e.Error()))
 	}
 	if self.externally_visible() {
-		e = self.update_dns(keyPrefix+"external.", externalKey, dnsManager)
+		e = self.update_dns(keyPrefix+"external.", externalKey, dnsManager, hosts_to_check)
 		if e != nil {
 			self.Write_to_log("WARNING", fmt.Sprintf("External Update_dns Error: %v", e.Error()))
 		}
@@ -34,7 +35,7 @@ func (self *LBCluster) externally_visible() bool {
 	return self.Parameters.External
 }
 
-func (self *LBCluster) update_dns(keyName, tsigKey, dnsManager string) error {
+func (self *LBCluster) update_dns(keyName, tsigKey, dnsManager string, hosts_to_check map[string]lbhost.LBHost) error {
 	pbhDns := strings.Join(self.Previous_best_hosts_dns, " ")
 	cbh := strings.Join(self.Current_best_hosts, " ")
 	if pbhDns == cbh {
@@ -55,7 +56,8 @@ func (self *LBCluster) update_dns(keyName, tsigKey, dnsManager string) error {
 	m.RemoveRRset([]dns.RR{rr_removeAAAA})
 
 	for _, hostname := range self.Current_best_hosts {
-		ips, err := net.LookupIP(hostname)
+		my_host := hosts_to_check[hostname]
+		ips, err := my_host.Get_working_IPs()
 		if err != nil {
 			self.Write_to_log("WARNING", fmt.Sprintf("LookupIP: %v has incorrect or missing IP address (%v)", hostname, err))
 			continue
@@ -70,6 +72,7 @@ func (self *LBCluster) update_dns(keyName, tsigKey, dnsManager string) error {
 			m.Insert([]dns.RR{rr_insert})
 		}
 	}
+	self.Write_to_log("INFO", fmt.Sprintf("WE WOULD UPDATE THE DNS WITH THE IPS %v", m))
 	c := new(dns.Client)
 	m.SetTsig(keyName, dns.HmacMD5, 300, time.Now().Unix())
 	c.TsigSecret = map[string]string{keyName: tsigKey}
