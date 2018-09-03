@@ -108,7 +108,7 @@ func (self *LBHost) Write_to_log(level string, msg string) error {
 	if !strings.HasSuffix(msg, "\n") {
 		msg += "\n"
 	}
-	timestamp := time.Now().Format(time.Stamp)
+	timestamp := time.Now().Format(time.StampMilli)
 	msg = fmt.Sprintf("%s lbd[%d]: %s: cluster: %s host: %s %s", timestamp, os.Getpid(), level, self.Cluster_name, self.Host_name, msg)
 
 	self.logMu.Lock()
