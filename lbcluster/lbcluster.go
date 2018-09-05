@@ -96,6 +96,7 @@ func (self *LBCluster) Get_list_hosts(current_list map[string]lbhost.LBHost) {
 				Loadbalancing_username: self.Loadbalancing_username,
 				Loadbalancing_password: self.Loadbalancing_password,
 				LogFile:                self.Slog.TofilePath,
+				Debugflag:				self.Slog.Debugflag,
 			}
 		}
 		current_list[host] = my_host

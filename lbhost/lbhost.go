@@ -38,6 +38,7 @@ type LBHost struct {
 	Loadbalancing_password string
 	LogFile                string
 	logMu                  sync.Mutex
+	Debugflag              bool
 }
 
 func (self *LBHost) Snmp_req() {
@@ -48,19 +49,19 @@ func (self *LBHost) Snmp_req() {
 		my_transport.Response_int = 100000
 		transport := my_transport.Transport
 		node_ip := my_transport.IP.String()
-		/* There is no need to put square brackets around the ipv6 addresses*/		
-		self.Write_to_log("INFO", "Checking the host " + node_ip + " with "+transport)
+		/* There is no need to put square brackets around the ipv6 addresses*/
+		self.Write_to_log("INFO", "Checking the host "+node_ip+" with "+transport)
 		snmp, err := snmplib.NewSNMPv3(node_ip, self.Loadbalancing_username, "MD5", self.Loadbalancing_password, "NOPRIV", self.Loadbalancing_password,
 			time.Duration(TIMEOUT)*time.Second, 2)
 		if err != nil {
 			// Failed to create snmpgo.SNMP object
-			my_transport.Response_error = fmt.Sprint("contacted node: %v %v error creating the snmp object: %v", self.Host_name, node_ip, err)
+			my_transport.Response_error = fmt.Sprint("contacted node: error creating the snmp object: %v", err)
 		} else {
 			defer snmp.Close()
 			err = snmp.Discover()
 
 			if err != nil {
-				my_transport.Response_error = fmt.Sprintf("contacted node: %v error in the snmp discovery: %v", self.Host_name, err)
+				my_transport.Response_error = fmt.Sprintf("contacted node: error in the snmp discovery: %v", err)
 
 			} else {
 
@@ -68,17 +69,17 @@ func (self *LBHost) Snmp_req() {
 
 				if err != nil {
 					// Failed to parse Oids
-					my_transport.Response_error = fmt.Sprintf("contacted node: %v Error parsing the OID %v", self.Host_name, err)
+					my_transport.Response_error = fmt.Sprintf("contacted node: Error parsing the OID %v", err)
 
 				} else {
 					pdu, err := snmp.GetV3(oid)
 
 					if err != nil {
-						my_transport.Response_error = fmt.Sprintf("contacted node: %v The getv3 gave the following error: %v ", self.Host_name, err)
+						my_transport.Response_error = fmt.Sprintf("contacted node: The getv3 gave the following error: %v ", err)
 
 					} else {
 
-						self.Write_to_log("INFO", fmt.Sprintf("contacted node: %v transport: %v ip: %v - reply was %v", self.Host_name, transport, node_ip, pdu))
+						self.Write_to_log("INFO", fmt.Sprintf("contacted node: transport: %v ip: %v - reply was %v", transport, node_ip, pdu))
 
 						//var pduInteger int
 						switch t := pdu.(type) {
@@ -105,11 +106,15 @@ func (self *LBHost) Snmp_req() {
 
 func (self *LBHost) Write_to_log(level string, msg string) error {
 	var err error
+	if level == "DEBUG" && ! self.Debugflag {
+		//The debug messages should not appear
+		return nil
+	}
 	if !strings.HasSuffix(msg, "\n") {
 		msg += "\n"
 	}
-	timestamp := time.Now().Format(time.Stamp)
-	msg = fmt.Sprintf("%s lbd[%d]: %s: cluster: %s host: %s %s", timestamp, os.Getpid(), level, self.Cluster_name, self.Host_name, msg)
+	timestamp := time.Now().Format(time.StampMilli)
+	msg = fmt.Sprintf("%s lbd[%d]: %s: cluster: %s node: %s %s", timestamp, os.Getpid(), level, self.Cluster_name, self.Host_name, msg)
 
 	self.logMu.Lock()
 	defer self.logMu.Unlock()

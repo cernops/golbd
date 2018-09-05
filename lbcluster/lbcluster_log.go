@@ -41,23 +41,6 @@ func (self *LBCluster) Write_to_log(level string, msg string) error {
 		self.Slog.Error("LEVEL " + level + " NOT UNDERSTOOD, ASSUMING ERROR " + my_message)
 	}
 
-	//We send the logs to timber, and in that one, it is quite easy to filter by cluster. We don't need the dedicated logs anymore
-	/*
-		f, err := os.OpenFile(self.Per_cluster_filename, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0640)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-		tag := "lbd"
-		nl := ""
-		if !strings.HasSuffix(msg, "\n") {
-			nl = "\n"
-		}
-		timestamp := time.Now().Format(time.Stamp)
-		_, err = fmt.Fprintf(f, "%s %s[%d]: cluster: %s %s: %s%s",
-			timestamp,
-			tag, os.Getpid(), self.Cluster_name, level, msg, nl)
-		return err */
 	return nil
 }
 
@@ -118,7 +101,7 @@ func (l *Log) writefilestd(s string) error {
 	if !strings.HasSuffix(s, "\n") {
 		nl = "\n"
 	}
-	timestamp := time.Now().Format(time.Stamp)
+	timestamp := time.Now().Format(time.StampMilli)
 	msg := fmt.Sprintf("%s %s[%d]: %s%s",
 		timestamp,
 		tag, os.Getpid(), s, nl)
