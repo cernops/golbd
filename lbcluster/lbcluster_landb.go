@@ -90,10 +90,11 @@ func (self *LBCluster) get_state_dns(dnsManager string) error {
 		cluster_name = cluster_name + ".cern.ch"
 	}
 	m := new(dns.Msg)
-	m.SetQuestion(cluster_name+".", dns.TypeANY)
+	m.SetEdns0(4096, false)	
+	m.SetQuestion(cluster_name+".", dns.TypeA)
 	in, err := dns.Exchange(m, dnsManager+":53")
 	if err != nil {
-		self.Write_to_log("ERROR", fmt.Sprintf("Error getting the state of dns: %v", err))
+		self.Write_to_log("ERROR", fmt.Sprintf("Error getting the ipv4 state of dns: %v", err))
 		return err
 	}
 
@@ -104,6 +105,15 @@ func (self *LBCluster) get_state_dns(dnsManager string) error {
 			self.Slog.Debug(fmt.Sprintf("%v", t.A))
 			ips = append(ips, t.A)
 		}
+	}
+	m.SetQuestion(cluster_name+".", dns.TypeAAAA)
+	in, err = dns.Exchange(m, dnsManager+":53")
+	if err != nil {
+		self.Write_to_log("ERROR", fmt.Sprintf("Error getting the ipv6 state of dns: %v", err))
+		return err
+	}
+
+	for _, a := range in.Answer {	
 		if t, ok := a.(*dns.AAAA); ok {
 			self.Slog.Debug(fmt.Sprintf("%v", t))
 			self.Slog.Debug(fmt.Sprintf("%v", t.AAAA))
