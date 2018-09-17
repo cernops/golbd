@@ -39,7 +39,7 @@ func (self *LBCluster) update_dns(keyName, tsigKey, dnsManager string, hosts_to_
 	pbhDns := strings.Join(self.Previous_best_hosts_dns, " ")
 	cbh := strings.Join(self.Current_best_hosts, " ")
 	if pbhDns == cbh {
-		self.Write_to_log("WARNING", fmt.Sprintf("DNS not update keyName %v cbh == pbhDns == %v", keyName, cbh))
+		self.Write_to_log("INFO", fmt.Sprintf("DNS not update keyName %v cbh == pbhDns == %v", keyName, cbh))
 		return nil
 	}
 	cluster_name := self.Cluster_name

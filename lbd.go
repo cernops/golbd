@@ -327,7 +327,7 @@ func main() {
 	lg.Info("Clusters loaded")
 	//var wg sync.WaitGroup
 	for {
-		lg.Info("Starting the loop")
+		lg.Debug("Starting the loop")
 		if sig_term {
 			break
 		}
@@ -377,19 +377,19 @@ func main() {
 					my_channel <- my_host
 				}(host_value)
 			}
-			lg.Info("Let's start gathering the results")
+			lg.Debug("Let's start gathering the results")
 			for i := 0; i < len(hosts_to_check); i++ {
 				my_new_host := <-my_channel
 				hosts_to_check[my_new_host.Host_name] = my_new_host
 			}
 
-			lg.Info("All the hosts have been tested")
+			lg.Debug("All the hosts have been tested")
 
 			update_dns = should_update_dns(config, hostname, &lg)
 
 			/* Finally, let's go through the aliases, selecting the best hosts*/
 			for _, pc := range clusters_to_update {
-				pc.Write_to_log("INFO", "READY TO UPDATE THE CLUSTER")
+				pc.Write_to_log("DEBUG", "READY TO UPDATE THE CLUSTER")
 				pc.Find_best_hosts(hosts_to_check)
 				if update_dns {
 					pc.Write_to_log("DEBUG", "Should update dns is true")

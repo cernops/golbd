@@ -249,6 +249,6 @@ func (self *LBCluster) evaluate_hosts(hosts_to_check map[string]lbhost.LBHost) {
 	for currenthost := range self.Host_metric_table {
 		host_tested := hosts_to_check[currenthost]
 		self.Host_metric_table[currenthost] = host_tested.Get_load_for_alias(self.Cluster_name)
-		self.Write_to_log("INFO", fmt.Sprintf("node: %s It has a load of %d", currenthost, self.Host_metric_table[currenthost]))
+		self.Write_to_log("DEBUG", fmt.Sprintf("node: %s It has a load of %d", currenthost, self.Host_metric_table[currenthost]))
 	}
 }
