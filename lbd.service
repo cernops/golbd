@@ -5,6 +5,7 @@ After=local-fs.target network-online.target
 Requires=local-fs.target network-online.target
 
 [Service]
+LimitNOFILE=65536
 EnvironmentFile=-/etc/sysconfig/lbd
 ExecStart=/usr/bin/lbd $GOLBD_OPTIONS
 ExecReload=/bin/kill -HUP $MAINPID
