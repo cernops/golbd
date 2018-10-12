@@ -50,7 +50,7 @@ func (self *LBHost) Snmp_req() {
 		transport := my_transport.Transport
 		node_ip := my_transport.IP.String()
 		/* There is no need to put square brackets around the ipv6 addresses*/
-		self.Write_to_log("INFO", "Checking the host "+node_ip+" with "+transport)
+		self.Write_to_log("DEBUG", "Checking the host "+node_ip+" with "+transport)
 		snmp, err := snmplib.NewSNMPv3(node_ip, self.Loadbalancing_username, "MD5", self.Loadbalancing_password, "NOPRIV", self.Loadbalancing_password,
 			time.Duration(TIMEOUT)*time.Second, 2)
 		if err != nil {
@@ -145,6 +145,7 @@ func (self *LBHost) Get_load_for_alias(cluster_name string) int {
 		if (pduInteger > 0 && pduInteger < my_load) || (my_load < 0) {
 			my_load = pduInteger
 		}
+		self.Write_to_log("DEBUG", fmt.Sprintf("Possible load is %v", pduInteger))
 
 	}
 	self.Write_to_log("DEBUG", fmt.Sprintf("THE LOAD IS %v, ", my_load))
