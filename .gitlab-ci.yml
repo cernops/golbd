@@ -49,7 +49,7 @@ build_rpm:
   stage: build_rpm
   script:
     - mkdir SOURCES
-    - ln -s ../../ version
+    - ln -s ../../../ version
     - yum -y install golang git gcc
     - export GOPATH=/go
     - go get github.com/tools/godep
