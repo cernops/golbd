@@ -27,17 +27,16 @@ before_script:
 
 
 .install_godep: &install_godep
-  script:
-    - yum -y install golang git gcc
-    - export GOPATH=/go
-    - go get github.com/tools/godep
-    - /go/bin/godep restore
+  - yum -y install golang git gcc
+  - export GOPATH=/go
+  - go get github.com/tools/godep
+  - /go/bin/godep restore
 
 
 build-my-project:
-  <<: *install_godep
   stage: build
   script:
+    - *install_godep
     - /go/bin/godep go build
     - /go/bin/godep go build -race
 
@@ -52,16 +51,16 @@ fmt-my-project:
 
 
 test-my-project:
-  <<: *install_godep
   stage: test
   script:
+    - *install_godep
     - /go/bin/godep go test -v -cover ./...
     - /go/bin/godep go test -race
 
 build_rpm:
-  <<: *install_godep
   stage: build_rpm
   script:
+    - *install_godep
     - mkdir SOURCES version
     - ln -s /go/src/github.com/ version/
     - ls -al version/
