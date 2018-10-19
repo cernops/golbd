@@ -26,17 +26,18 @@ before_script:
   - printf "[koji]\nserver = https://kojihub.cern.ch/kojihub\nweburl = https://koji.cern.ch/koji\ntopurl = https://koji.cern.ch/kojifiles\nkrb_canon_host = no\nkrb_rdns = False" > .koji
 
 
-.install_godep: &install_godep |
-  yum -y install golang git gcc
-  export GOPATH=/go
-  go get github.com/tools/godep
-  /go/bin/godep restore
+.install_godep:
+  script: &install_godep
+    - yum -y install golang git gcc
+    - export GOPATH=/go
+    - go get github.com/tools/godep
+    - /go/bin/godep restore
 
 
 build-my-project:
   stage: build
   script:
-    - *install_godep
+    <<: *install_godep
     - /go/bin/godep go build
     - /go/bin/godep go build -race
 
@@ -53,7 +54,7 @@ fmt-my-project:
 test-my-project:
   stage: test
   script:
-    - *install_godep
+    <<: *install_godep
     - /go/bin/godep go test -v -cover ./...
     - /go/bin/godep go test -race
 
@@ -62,7 +63,7 @@ build_rpm:
   script:
     - mkdir SOURCES
     - ln -s ../../../ version
-    - *install_godep
+    <<: *install_godep
     - ls -al /go
     - ls -al /go/src
     - ls -altd .
