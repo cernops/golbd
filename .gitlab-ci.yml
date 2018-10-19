@@ -27,15 +27,15 @@ before_script:
 
 
 .install_godep: &install_godep |
- - export GOPATH=/go
- - go get github.com/tools/godep
- - /go/bin/godep restore
+  yum -y install golang git gcc
+  export GOPATH=/go
+  go get github.com/tools/godep
+  /go/bin/godep restore
 
 
 build-my-project:
   stage: build
   script:
-    - yum -y install golang git gcc
     - *install_godep
     - /go/bin/godep go build
     - /go/bin/godep go build -race
@@ -43,7 +43,6 @@ build-my-project:
 test-my-project:
   stage: test
   script:
-    - yum -y install golang git gcc
     - *install_godep
     - /go/bin/godep go test -v -cover ./...
     - /go/bin/godep go test -race
@@ -53,10 +52,10 @@ build_rpm:
   script:
     - mkdir SOURCES
     - ln -s ../../../ version
-    - yum -y install golang git gcc
-    - export GOPATH=/go
-    - go get github.com/tools/godep
-    - /go/bin/godep restore
+    - *install_godep
+    - ls -al /go
+    - ls -al /go/src
+    - pwd
     - tar zcvf SOURCES/$PKG.tgz  --exclude SOURCES --exclude .git --exclude .koji --exclude .gitlab-ci.yml --transform "s||$PKG/|" . version/github.com/
     - rpmbuild -bs --define "_topdir $(pwd)" -D "dist ${DIST:-.ai7}" $SPEC
   artifacts:
