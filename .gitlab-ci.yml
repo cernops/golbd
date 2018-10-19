@@ -13,16 +13,10 @@ stages:
 before_script:
   - yum -y install --exclude python2-libcomps  krb5-workstation koji rpm-build rpmdevtools
   - pwd
-  - ls -al 
+  - ls -al
   - mkdir -p /go/src/gitlab.cern.ch/lb-experts
   - if [ -d /builds ] ;  then  ln -s  /builds/lb-experts/golbd /go/src/gitlab.cern.ch/lb-experts/golbd; else  ln -s  /lb-experts/golbd /go/src/gitlab.cern.ch/lb-experts/golbd ;  fi
 
-#  - ln -s  /builds/lb-experts/golbd/vendor/github.com/reguero/ /go/src/github.com/
-#  - ls -al /go/src/github.com/
-#  - ls -al /go/src/github.com/reguero/
-#  - ls -al /go/src/github.com/reguero/go-snmplib
-#  - echo "AND IN VENDOR"
-#  - ls -alR vendor
   - cd /go/src/gitlab.cern.ch/lb-experts/golbd
   - export SPEC=$(ls *spec)
   - export PKG=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}\n" | head -n 1)
@@ -49,13 +43,14 @@ test-my-project:
     - go get github.com/tools/godep
     - /go/bin/godep restore
     - /go/bin/godep go test -v -cover ./...
-    - /go/bin/godep go test -race 
+    - /go/bin/godep go test -race
 
 build_rpm:
   stage: build_rpm
   script:
     - mkdir SOURCES
-    - tar zcvf SOURCES/$PKG.tgz  --exclude SOURCES --exclude .git --exclude .koji --exclude .gitlab-ci.yml --transform "s||$PKG/|" .
+    - ln -s ../../ version
+    - tar zcvf SOURCES/$PKG.tgz  --exclude SOURCES --exclude .git --exclude .koji --exclude .gitlab-ci.yml --transform "s||$PKG/|" . version/github.com/
     - rpmbuild -bs --define "_topdir $(pwd)" -D "dist ${DIST:-.ai7}" $SPEC
   artifacts:
     paths:
