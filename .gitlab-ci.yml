@@ -53,9 +53,8 @@ build_rpm:
     - *install_godep
     - mkdir SOURCES version
     - ln -s /go/src/github.com/ version/
-    - ls -al version/
-    - pwd
-    - tar zcvf SOURCES/$PKG.tgz  --exclude SOURCES --exclude .git --exclude .koji --exclude .gitlab-ci.yml --transform "s||$PKG/|" . version/github.com/
+    - ls -al version/github.com/
+    - tar zcvf SOURCES/$PKG.tgz  --exclude SOURCES --exclude .git --exclude .koji --exclude .gitlab-ci.yml --transform "s||$PKG/|" . version/github.com/*
     - rpmbuild -bs --define "_topdir $(pwd)" -D "dist ${DIST:-.ai7}" $SPEC
   artifacts:
     paths:
