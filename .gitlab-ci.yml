@@ -52,12 +52,8 @@ build_rpm:
   <<: *install_godep
   stage: build_rpm
   script:
-    - mkdir SOURCES
-    - ln -s ../../../ version
-    - ls -al /go
-    - ls -al /go/src
-    - ls -altd .
-    - ls -atld version
+    - mkdir SOURCES version
+    - ln -s /go/src/github.com/ version/
     - ls -al version/
     - pwd
     - tar zcvf SOURCES/$PKG.tgz  --exclude SOURCES --exclude .git --exclude .koji --exclude .gitlab-ci.yml --transform "s||$PKG/|" . version/github.com/
