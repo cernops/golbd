@@ -27,10 +27,10 @@ before_script:
 
 
 .install_godep: &install_godep
-  - yum -y install golang git gcc
-  - export GOPATH=/go
-  - go get github.com/tools/godep
-  - /go/bin/godep restore
+  yum -y install golang git gcc
+  export GOPATH=/go
+  go get github.com/tools/godep
+  /go/bin/godep restore
 
 
 build-my-project:
