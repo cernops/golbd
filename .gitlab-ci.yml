@@ -27,9 +27,9 @@ before_script:
 
 
 .install_godep: &install_godep |
-  export GOPATH=/go
-  go get github.com/tools/godep
-  /go/bin/godep restore
+ - export GOPATH=/go
+ - go get github.com/tools/godep
+ - /go/bin/godep restore
 
 
 build-my-project:
