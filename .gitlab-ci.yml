@@ -60,6 +60,10 @@ build_rpm:
   script:
     - mkdir SOURCES
     - ln -s ../../ version
+    - yum -y install golang git gcc
+    - export GOPATH=/go
+    - go get github.com/tools/godep
+    - /go/bin/godep restore
     - tar zcvf SOURCES/$PKG.tgz  --exclude SOURCES --exclude .git --exclude .koji --exclude .gitlab-ci.yml --transform "s||$PKG/|" . version/github.com/
     - rpmbuild -bs --define "_topdir $(pwd)" -D "dist ${DIST:-.ai7}" $SPEC
   artifacts:
