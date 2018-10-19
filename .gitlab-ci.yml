@@ -26,7 +26,7 @@ before_script:
   - printf "[koji]\nserver = https://kojihub.cern.ch/kojihub\nweburl = https://koji.cern.ch/koji\ntopurl = https://koji.cern.ch/kojifiles\nkrb_canon_host = no\nkrb_rdns = False" > .koji
 
 
-.install_godep: &install_godep
+.install_godep: &install_godep |
   yum -y install golang git gcc
   export GOPATH=/go
   go get github.com/tools/godep
