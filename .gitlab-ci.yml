@@ -52,9 +52,10 @@ build_rpm:
   script:
     - *install_godep
     - mkdir SOURCES version
-    - ln -s /go/src/github.com/ version/
-    - ls -al version/github.com/
-    - tar zcvf SOURCES/$PKG.tgz  --exclude SOURCES --exclude .git --exclude .koji --exclude .gitlab-ci.yml --transform "s||$PKG/|" . ./version/github.com/*
+    - tar cvf SOURCES/$PKG.tg  --exclude SOURCES --exclude .git --exclude .koji --exclude .gitlab-ci.yml --transform "s||$PKG/|" .
+    - tar rvf SOURCES/$PKG.tg  --transform "s|go/src|$PKG/vendor/|"  /go/src/github.com/
+    - gzip -c SOURCES/$PKG.tg > SOURCES/$PKG.tgz
+    - rm -rf SOURCES/$PKG.tg
     - rpmbuild -bs --define "_topdir $(pwd)" -D "dist ${DIST:-.ai7}" $SPEC
   artifacts:
     paths:
