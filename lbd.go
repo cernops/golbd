@@ -99,12 +99,12 @@ func loadClusters(config *Config, lg *lbcluster.Log) []lbcluster.LBCluster {
 }
 
 func loadConfig(configFile string, lg *lbcluster.Log) (*Config, error) {
-	var config Config
-	var p lbcluster.Params
-	var mc map[string][]string
-	mc = make(map[string][]string)
-	var mp map[string]lbcluster.Params
-	mp = make(map[string]lbcluster.Params)
+	var (
+		config Config
+		p      lbcluster.Params
+		mc     = make(map[string][]string)
+		mp     = make(map[string]lbcluster.Params)
+	)
 
 	lines, err := readLines(configFile)
 	if err != nil {
