@@ -2,13 +2,12 @@ package lbcluster
 
 import (
 	"fmt"
-	//"github.com/k-sone/snmpgo"
-	"github.com/reguero/go-snmplib"
 	"net"
 	"regexp"
 	"strconv"
-	//"strings"
 	"time"
+
+	"github.com/reguero/go-snmplib"
 )
 
 //This one has only internal methods. They should not be called from outside the lbcluster
@@ -52,7 +51,7 @@ func (self *LBCluster) snmp_req(host string, result chan<- RetSnmp) {
 		time.Duration(TIMEOUT)*time.Second, 2)
 	if err != nil {
 		// Failed to create snmpgo.SNMP object
-		result <- RetSnmp{metric, host, fmt.Sprint("contacted node: %v error creating the snmp object: %v", host, err)}
+		result <- RetSnmp{metric, host, fmt.Sprintf("contacted node: %v error creating the snmp object: %v", host, err)}
 		return
 	}
 	defer snmp.Close()
