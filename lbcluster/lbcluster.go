@@ -247,10 +247,9 @@ func (self *LBCluster) apply_metric() {
 	return
 }
 
-
 /* The following functions are for the roger state and its timeout
 
-*/
+ */
 func NewTimeoutClient(connectTimeout time.Duration, readWriteTimeout time.Duration) *http.Client {
 
 	return &http.Client{
@@ -270,7 +269,6 @@ func timeoutDialer(cTimeout time.Duration, rwTimeout time.Duration) func(net, ad
 		return conn, nil
 	}
 }
-
 
 func (self *LBCluster) checkRogerState(host string) string {
 
@@ -305,5 +303,3 @@ func (self *LBCluster) checkRogerState(host string) string {
 	return logmessage
 
 }
-
-

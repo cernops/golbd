@@ -79,9 +79,9 @@ func loadClusters(config *Config, lg *lbcluster.Log) []lbcluster.LBCluster {
 				Current_best_hosts:      []string{"unknown"},
 				Previous_best_hosts:     []string{"unknown"},
 				Previous_best_hosts_dns: []string{"unknown"},
-				Slog:                 lg,
-				Statistics_filename:  logfilePath + "/golbstatistics." + k,
-				Per_cluster_filename: logfilePath + "/cluster/" + k + ".log"}
+				Slog:                    lg,
+				Statistics_filename:     logfilePath + "/golbstatistics." + k,
+				Per_cluster_filename:    logfilePath + "/cluster/" + k + ".log"}
 			hm = make(map[string]int)
 			for _, h := range v {
 				hm[h] = lbcluster.WorstValue + 1
