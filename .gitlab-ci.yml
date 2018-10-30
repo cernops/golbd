@@ -46,8 +46,8 @@ fmt-my-project:
   script:
     - yum -y install golang git gcc
     - export GOPATH=/go
-      #- MOD_FILES=`find . -name "*.go"  -exec go fmt {} \;`
-      #- echo "The following files are not formatted correctly: $MOD_FILES"
+    - MOD_FILES=$(find . -name "*.go"  -exec go fmt {} \;)
+    - echo "The following files are not formatted correctly: $MOD_FILES"
       #- if [ "$MOD_FILES" != "" ]; then false; fi
 
 
