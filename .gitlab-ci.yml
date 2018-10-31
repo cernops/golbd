@@ -48,7 +48,7 @@ fmt-my-project:
     - export GOPATH=/go
     - MOD_FILES=$(find . -name "*.go"  -exec go fmt {} \;)
     - echo "FILES MODIFIED $MOD_FILES"
-      #- if [ "$MOD_FILES" != "" ]; then false; fi
+    - if [ "$MOD_FILES" != "" ]; then false; fi
 
 
 test-my-project:
