@@ -106,7 +106,7 @@ func (self *LBHost) Snmp_req() {
 
 func (self *LBHost) Write_to_log(level string, msg string) error {
 	var err error
-	if level == "DEBUG" && ! self.Debugflag {
+	if level == "DEBUG" && !self.Debugflag {
 		//The debug messages should not appear
 		return nil
 	}
@@ -165,46 +165,46 @@ func (self *LBHost) Get_working_IPs() ([]net.IP, error) {
 	return my_ips, nil
 }
 
-func (self *LBHost) get_Ips() ([]net.IP, error){
-	
+func (self *LBHost) get_Ips() ([]net.IP, error) {
+
 	var ips []net.IP
 
-    var err error
+	var err error
 
 	re := regexp.MustCompile(".*no such host")
 
-    net.DefaultResolver.StrictErrors = true
-    
-    for  i:= 0; i<3; i++ { 
-         self.Write_to_log("INFO", "Getting the ip addresses")
+	net.DefaultResolver.StrictErrors = true
+
+	for i := 0; i < 3; i++ {
+		self.Write_to_log("INFO", "Getting the ip addresses")
 		ips, err = net.LookupIP(self.Host_name)
-		if err ==nil{
+		if err == nil {
 			return ips, nil
 		}
-		
+
 		self.Write_to_log("WARNING", fmt.Sprintf("LookupIP: %v has incorrect or missing IP address (%v) ", self.Host_name, err))
-		
-		submatch := re.FindStringSubmatch(err.Error())		
-		if (submatch != nil){
+
+		submatch := re.FindStringSubmatch(err.Error())
+		if submatch != nil {
 			self.Write_to_log("INFO", "There is no need to retry this error")
 			return nil, err
 		}
 	}
 
-   	self.Write_to_log("ERROR", "After several retries, we couldn't get the ips!. Let's try with partial results")
-   	net.DefaultResolver.StrictErrors = false
-   	ips, err = net.LookupIP(self.Host_name)
-	if err == nil{
+	self.Write_to_log("ERROR", "After several retries, we couldn't get the ips!. Let's try with partial results")
+	net.DefaultResolver.StrictErrors = false
+	ips, err = net.LookupIP(self.Host_name)
+	if err == nil {
 		self.Write_to_log("ERROR", fmt.Sprintf("It didn't work :(. This node will be ignored during this evaluation: %v", err))
-    }
-    return ips, err 
+	}
+	return ips, err
 }
 
 func (self *LBHost) find_transports() {
 	self.Write_to_log("DEBUG", "Let's find the ips behind this host")
-    self.Write_to_log("INFO", "Changing the dns resolver")
-    
-    ips, _ := self.get_Ips() 
+	self.Write_to_log("INFO", "Changing the dns resolver")
+
+	ips, _ := self.get_Ips()
 	for _, ip := range ips {
 		transport := "udp"
 		// If there is an IPv6 address use udp6 transport
