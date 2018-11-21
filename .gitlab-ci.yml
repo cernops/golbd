@@ -41,6 +41,16 @@ build-my-project:
     - /go/bin/godep go build
     - /go/bin/godep go build -race
 
+fmt-my-project:
+  stage: build
+  script:
+    - yum -y install golang git gcc
+    - export GOPATH=/go
+    - MOD_FILES=$(find . -name "*.go"  -exec go fmt {} \;)
+    - echo "FILES MODIFIED $MOD_FILES"
+    - if [ "$MOD_FILES" != "" ]; then false; fi
+
+
 test-my-project:
   stage: test
   script:

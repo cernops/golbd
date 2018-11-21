@@ -90,7 +90,7 @@ func (self *LBCluster) get_state_dns(dnsManager string) error {
 		cluster_name = cluster_name + ".cern.ch"
 	}
 	m := new(dns.Msg)
-	m.SetEdns0(4096, false)	
+	m.SetEdns0(4096, false)
 	m.SetQuestion(cluster_name+".", dns.TypeA)
 	in, err := dns.Exchange(m, dnsManager+":53")
 	if err != nil {
@@ -113,7 +113,7 @@ func (self *LBCluster) get_state_dns(dnsManager string) error {
 		return err
 	}
 
-	for _, a := range in.Answer {	
+	for _, a := range in.Answer {
 		if t, ok := a.(*dns.AAAA); ok {
 			self.Slog.Debug(fmt.Sprintf("%v", t))
 			self.Slog.Debug(fmt.Sprintf("%v", t.AAAA))
