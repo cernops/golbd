@@ -22,7 +22,7 @@ URL:		https://%{import_path}
 Source:		%{name}-%{version}.tgz
 BuildRequires:	systemd
 BuildRequires:	golang >= 1.5
-ExclusiveArch:	x86_64 
+ExclusiveArch:	x86_64
 
 %description
 %{summary}
@@ -45,16 +45,16 @@ The lowest loaded machine names are updated on the DNS servers via the DynDNS me
 %build
 mkdir -p src/%{provider_full}
 ln -s ../../../ src/%{provider_full}/%{repo}
-ln -s src/gitlab.cern.ch . 
-(cd src/; ln -s ../vendor/github.com  .)
-echo "What do we have"
-ls -al src/github.com/reguero/go-snmplib
-ls -lR vendor/github.com
-echo "AND UNDER SRC"
-ls -lR src/github.com
-
-which go
-ls -lR src/github.com/
+ln -s src/gitlab.cern.ch .
+#(cd src/; ln -s ../vendor/github.com  .)
+#echo "What do we have"
+#ls -al src/github.com/reguero/go-snmplib
+#ls -lR vendor/github.com
+#echo "AND UNDER SRC"
+#ls -lR src/github.com
+#
+#which go
+#ls -lR src/github.com/
 GOPATH=$(pwd):%{gopath} go build %{import_path}
 
 %install
