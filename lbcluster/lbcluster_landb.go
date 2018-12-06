@@ -47,7 +47,7 @@ func (self *LBCluster) update_dns(keyName, tsigKey, dnsManager string, hosts_to_
 		cluster_name = cluster_name + ".cern.ch"
 	}
 	ttl := "60"
-	if self.Parameters.Ttl != 0 {
+	if self.Parameters.Ttl > 60 {
 		ttl = fmt.Sprintf("%d", self.Parameters.Ttl)
 	}
 	//best_hosts_len := len(self.Current_best_hosts)
