@@ -46,12 +46,16 @@ func (self *LBCluster) update_dns(keyName, tsigKey, dnsManager string, hosts_to_
 	if !strings.HasSuffix(cluster_name, ".cern.ch") {
 		cluster_name = cluster_name + ".cern.ch"
 	}
+	ttl := "60"
+	if self.Parameters.Ttl != 0 {
+		ttl = fmt.Sprintf("%d", self.Parameters.Ttl)
+	}
 	//best_hosts_len := len(self.Current_best_hosts)
 	m := new(dns.Msg)
 	m.SetUpdate(cluster_name + ".")
 	m.Id = 1234
-	rr_removeA, _ := dns.NewRR(cluster_name + ". 60 IN A 127.0.0.1")
-	rr_removeAAAA, _ := dns.NewRR(cluster_name + ". 60 IN AAAA ::1")
+	rr_removeA, _ := dns.NewRR(cluster_name + ". " + ttl + " IN A 127.0.0.1")
+	rr_removeAAAA, _ := dns.NewRR(cluster_name + ". " + ttl + " IN AAAA ::1")
 	m.RemoveRRset([]dns.RR{rr_removeA})
 	m.RemoveRRset([]dns.RR{rr_removeAAAA})
 
@@ -65,9 +69,9 @@ func (self *LBCluster) update_dns(keyName, tsigKey, dnsManager string, hosts_to_
 		for _, ip := range ips {
 			var rr_insert dns.RR
 			if ip.To4() != nil {
-				rr_insert, _ = dns.NewRR(cluster_name + ". 60 IN A " + ip.String())
+				rr_insert, _ = dns.NewRR(cluster_name + ". " + ttl + " IN A " + ip.String())
 			} else if ip.To16() != nil {
-				rr_insert, _ = dns.NewRR(cluster_name + ". 60 IN AAAA " + ip.String())
+				rr_insert, _ = dns.NewRR(cluster_name + ". " + ttl + " IN AAAA " + ip.String())
 			}
 			m.Insert([]dns.RR{rr_insert})
 		}
