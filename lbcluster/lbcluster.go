@@ -41,6 +41,7 @@ type Params struct {
 	Metric           string
 	Polling_interval int
 	Statistics       string
+	Ttl              int
 }
 
 // Shuffle pseudo-randomizes the order of elements.
