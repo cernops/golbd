@@ -202,7 +202,6 @@ func (self *LBHost) get_Ips() ([]net.IP, error) {
 
 func (self *LBHost) find_transports() {
 	self.Write_to_log("DEBUG", "Let's find the ips behind this host")
-	self.Write_to_log("INFO", "Changing the dns resolver")
 
 	ips, _ := self.get_Ips()
 	for _, ip := range ips {

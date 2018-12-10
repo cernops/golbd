@@ -12,7 +12,7 @@
 %global debug_package	%{nil}
 
 Name:		%{repo}
-Version:	0.1
+Version:	0.2
 Release:	17
 #psaiz: Removing the dist from the release %{?dist}
 Summary:	CERN DNS Load Balancer Daemon
