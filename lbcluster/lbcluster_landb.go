@@ -2,12 +2,13 @@ package lbcluster
 
 import (
 	"fmt"
-	"github.com/miekg/dns"
-	"gitlab.cern.ch/lb-experts/golbd/lbhost"
 	"net"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/miekg/dns"
+	"gitlab.cern.ch/lb-experts/golbd/lbhost"
 )
 
 /* This is the only public function here. It retrieves the status of the dns,
@@ -17,6 +18,7 @@ func (self *LBCluster) Refresh_dns(dnsManager, keyPrefix, internalKey, externalK
 	e := self.get_state_dns(dnsManager)
 	if e != nil {
 		self.Write_to_log("WARNING", fmt.Sprintf("Get_state_dns Error: %v", e.Error()))
+		return
 	}
 	e = self.update_dns(keyPrefix+"internal.", internalKey, dnsManager, hosts_to_check)
 	if e != nil {
@@ -42,6 +44,7 @@ func (self *LBCluster) update_dns(keyName, tsigKey, dnsManager string, hosts_to_
 		self.Write_to_log("INFO", fmt.Sprintf("DNS not update keyName %v cbh == pbhDns == %v", keyName, cbh))
 		return nil
 	}
+	self.Write_to_log("INFO", fmt.Sprintf("Updating the DNS with %v (previous state was %v)", cbh, pbhDns))
 	cluster_name := self.Cluster_name
 	if !strings.HasSuffix(cluster_name, ".cern.ch") {
 		cluster_name = cluster_name + ".cern.ch"
@@ -132,6 +135,9 @@ func (self *LBCluster) get_state_dns(dnsManager string) error {
 	//fmt.Println(ips)
 	var name string
 	var host_list []string
+
+	net.DefaultResolver.StrictErrors = true
+
 	for _, ip := range ips {
 		names, err := net.LookupAddr(ip.String())
 		if err != nil {
@@ -152,6 +158,8 @@ func (self *LBCluster) get_state_dns(dnsManager string) error {
 			host_list = append(host_list, name)
 		}
 	}
+	net.DefaultResolver.StrictErrors = false
+
 	removeDuplicates(&host_list)
 	self.Previous_best_hosts_dns = host_list
 	prevBesthostsDns := make([]string, len(self.Previous_best_hosts_dns))

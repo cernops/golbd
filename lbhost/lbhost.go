@@ -181,9 +181,7 @@ func (self *LBHost) get_Ips() ([]net.IP, error) {
 		if err == nil {
 			return ips, nil
 		}
-
 		self.Write_to_log("WARNING", fmt.Sprintf("LookupIP: %v has incorrect or missing IP address (%v) ", self.Host_name, err))
-
 		submatch := re.FindStringSubmatch(err.Error())
 		if submatch != nil {
 			self.Write_to_log("INFO", "There is no need to retry this error")
