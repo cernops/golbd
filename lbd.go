@@ -72,8 +72,6 @@ func loadClusters(config *Config, lg *lbcluster.Log) []lbcluster.LBCluster {
 			continue
 		}
 		if par, ok := config.Parameters[k]; ok {
-			logfileDirs := strings.Split(*logFileFlag, "/")
-			logfilePath := strings.Join(logfileDirs[:len(logfileDirs)-1], "/")
 			lbc = lbcluster.LBCluster{Cluster_name: k, Loadbalancing_username: "loadbalancing",
 				Loadbalancing_password: config.SnmpPassword, Parameters: par,
 				Current_best_hosts:      []string{"unknown"},
