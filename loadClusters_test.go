@@ -33,17 +33,9 @@ func TestLoadClusters(t *testing.T) {
 			Current_best_hosts:      []string{"unknown"},
 			Previous_best_hosts:     []string{"unknown"},
 			Previous_best_hosts_dns: []string{"unknown"},
-<<<<<<< HEAD
 			Slog:          &lg,
 			Current_index: 0},
 		lbcluster.LBCluster{Cluster_name: "test02.cern.ch",
-=======
-			Statistics_filename:     "./golbstatistics.test01.cern.ch",
-			Per_cluster_filename:    "./cluster/test01.cern.ch.log",
-			Slog:                    &lg,
-			Current_index:           0},
-		{Cluster_name: "test02.cern.ch",
->>>>>>> master
 			Loadbalancing_username: "loadbalancing",
 			Loadbalancing_password: "zzz123",
 			Host_metric_table:      map[string]int{"lxplus013.cern.ch": 100000, "lxplus038.cern.ch": 100000, "lxplus025.cern.ch": 100000},
