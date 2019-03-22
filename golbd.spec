@@ -13,7 +13,7 @@
 
 Name:		%{repo}
 Version:	0.1
-Release:	18
+Release:	19
 #psaiz: Removing the dist from the release %{?dist}
 Summary:	CERN DNS Load Balancer Daemon
 License:	ASL 2.0
@@ -110,6 +110,9 @@ fi
 
 
 %changelog
+* Fri Mar 22 2018 Pablo Saiz <pablo.saiz@cern.ch>           - 0.1.19
+- Sort the name of the machines alphabetically before the DNS update
+- Set the flag to avoid partial responses in hostname resolution
 * Fri Oct 12 2018 Pablo Saiz <pablo.saiz@cern.ch>           - 0.1.16
 - Strict errors and retries in the LookupIP
 - Buffer of get state of DNS and different queries for IPv4 and IPv6
