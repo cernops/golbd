@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"gitlab.cern.ch/lb-experts/golbd/lbcluster"
-	"gitlab.cern.ch/lb-experts/golbd/lbhost"
 	"io"
 	"io/ioutil"
 	"log/syslog"
@@ -19,6 +17,9 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"gitlab.cern.ch/lb-experts/golbd/lbcluster"
+	"gitlab.cern.ch/lb-experts/golbd/lbhost"
 )
 
 var versionFlag = flag.Bool("version", false, "print lbd version and exit")
@@ -71,16 +72,12 @@ func loadClusters(config *Config, lg *lbcluster.Log) []lbcluster.LBCluster {
 			continue
 		}
 		if par, ok := config.Parameters[k]; ok {
-			logfileDirs := strings.Split(*logFileFlag, "/")
-			logfilePath := strings.Join(logfileDirs[:len(logfileDirs)-1], "/")
 			lbc = lbcluster.LBCluster{Cluster_name: k, Loadbalancing_username: "loadbalancing",
 				Loadbalancing_password: config.SnmpPassword, Parameters: par,
 				Current_best_hosts:      []string{"unknown"},
 				Previous_best_hosts:     []string{"unknown"},
 				Previous_best_hosts_dns: []string{"unknown"},
-				Slog:                 lg,
-				Statistics_filename:  logfilePath + "/golbstatistics." + k,
-				Per_cluster_filename: logfilePath + "/cluster/" + k + ".log"}
+				Slog: lg}
 			hm := make(map[string]int)
 			for _, h := range v {
 				hm[h] = 100000

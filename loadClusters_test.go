@@ -1,9 +1,10 @@
 package main
 
 import (
-	"gitlab.cern.ch/lb-experts/golbd/lbcluster"
 	"reflect"
 	"testing"
+
+	"gitlab.cern.ch/lb-experts/golbd/lbcluster"
 )
 
 func TestLoadClusters(t *testing.T) {
@@ -32,11 +33,9 @@ func TestLoadClusters(t *testing.T) {
 			Current_best_hosts:      []string{"unknown"},
 			Previous_best_hosts:     []string{"unknown"},
 			Previous_best_hosts_dns: []string{"unknown"},
-			Statistics_filename:     "./golbstatistics.test01.cern.ch",
-			Per_cluster_filename:    "./cluster/test01.cern.ch.log",
-			Slog:                    &lg,
-			Current_index:           0},
-		{Cluster_name: "test02.cern.ch",
+			Slog:          &lg,
+			Current_index: 0},
+		lbcluster.LBCluster{Cluster_name: "test02.cern.ch",
 			Loadbalancing_username: "loadbalancing",
 			Loadbalancing_password: "zzz123",
 			Host_metric_table:      map[string]int{"lxplus013.cern.ch": 100000, "lxplus038.cern.ch": 100000, "lxplus025.cern.ch": 100000},
@@ -45,10 +44,8 @@ func TestLoadClusters(t *testing.T) {
 			Current_best_hosts:      []string{"unknown"},
 			Previous_best_hosts:     []string{"unknown"},
 			Previous_best_hosts_dns: []string{"unknown"},
-			Statistics_filename:     "./golbstatistics.test02.cern.ch",
-			Per_cluster_filename:    "./cluster/test02.cern.ch.log",
-			Slog:                    &lg,
-			Current_index:           0}}
+			Slog:          &lg,
+			Current_index: 0}}
 
 	lbclusters := loadClusters(&config, &lg)
 	// reflect.DeepEqual(lbclusters, expected) occassionally fails as the array order is not always the same
