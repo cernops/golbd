@@ -3,11 +3,12 @@ package lbcluster
 import (
 	"encoding/json"
 	"fmt"
-	"gitlab.cern.ch/lb-experts/golbd/lbhost"
 	"io/ioutil"
 	"math/rand"
 	"net"
 	"net/http"
+
+	"gitlab.cern.ch/lb-experts/golbd/lbhost"
 
 	"sort"
 	"strings"
@@ -28,8 +29,6 @@ type LBCluster struct {
 	Current_best_hosts      []string
 	Previous_best_hosts     []string
 	Previous_best_hosts_dns []string
-	Statistics_filename     string
-	Per_cluster_filename    string
 	Current_index           int
 	Slog                    *Log
 }
