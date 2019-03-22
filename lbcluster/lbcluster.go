@@ -184,6 +184,9 @@ func (self *LBCluster) apply_metric() {
 		self.Current_best_hosts = useful_host_list[:max]
 		self.Slog.Debug(fmt.Sprintf("%v", self.Current_best_hosts))
 	}
+	//Once we have selected the best_hosts, let's sort them
+	sort.Strings(self.Current_best_hosts)
+
 	return
 }
 

@@ -161,19 +161,14 @@ func (self *LBCluster) get_state_dns(dnsManager string) error {
 	net.DefaultResolver.StrictErrors = false
 
 	removeDuplicates(&host_list)
+	// The order in which the DNS returns the hosts does not seem to depend on the order in which
+	// they have been set. Let's sort them to avoid unnecessary udpates
+	sort.Strings(host_list)
 	self.Previous_best_hosts_dns = host_list
-	prevBesthostsDns := make([]string, len(self.Previous_best_hosts_dns))
-	prevBesthosts := make([]string, len(self.Previous_best_hosts))
-	currBesthosts := make([]string, len(self.Current_best_hosts))
-	copy(prevBesthostsDns, self.Previous_best_hosts_dns)
-	copy(prevBesthosts, self.Previous_best_hosts)
-	copy(currBesthosts, self.Current_best_hosts)
-	sort.Strings(prevBesthostsDns)
-	sort.Strings(prevBesthosts)
-	sort.Strings(currBesthosts)
-	pbhDns := strings.Join(prevBesthostsDns, " ")
-	pbh := strings.Join(prevBesthosts, " ")
-	cbh := strings.Join(currBesthosts, " ")
+
+	pbhDns := strings.Join(self.Previous_best_hosts_dns, " ")
+	pbh := strings.Join(self.Previous_best_hosts, " ")
+	cbh := strings.Join(self.Current_best_hosts, " ")
 	if pbh != "unknown" {
 		if pbh != pbhDns {
 			self.Write_to_log("WARNING", "Prev DNS state "+pbhDns+" - Prev local state  "+pbh+" differ")
