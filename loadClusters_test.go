@@ -19,12 +19,12 @@ func TestLoadClusters(t *testing.T) {
 		TsigExternalKey: "yyy123==",
 		SnmpPassword:    "zzz123",
 		DnsManager:      "111.111.0.111",
-		Clusters:        map[string][]string{"test01.cern.ch": []string{"lxplus142.cern.ch", "lxplus177.cern.ch"}, "test02.cern.ch": []string{"lxplus013.cern.ch", "lxplus038.cern.ch", "lxplus025.cern.ch"}},
-		Parameters: map[string]lbcluster.Params{"test01.cern.ch": lbcluster.Params{Behaviour: "mindless", Best_hosts: 2,
+		Clusters:        map[string][]string{"test01.cern.ch": {"lxplus142.cern.ch", "lxplus177.cern.ch"}, "test02.cern.ch": {"lxplus013.cern.ch", "lxplus038.cern.ch", "lxplus025.cern.ch"}},
+		Parameters: map[string]lbcluster.Params{"test01.cern.ch": {Behaviour: "mindless", Best_hosts: 2,
 			External: true, Metric: "cmsfrontier", Polling_interval: 6, Statistics: "long"},
-			"test02.cern.ch": lbcluster.Params{Behaviour: "mindless", Best_hosts: 10, External: false, Metric: "cmsfrontier", Polling_interval: 6, Statistics: "long"}}}
+			"test02.cern.ch": {Behaviour: "mindless", Best_hosts: 10, External: false, Metric: "cmsfrontier", Polling_interval: 6, Statistics: "long"}}}
 	expected := []lbcluster.LBCluster{
-		lbcluster.LBCluster{Cluster_name: "test01.cern.ch",
+		{Cluster_name: "test01.cern.ch",
 			Loadbalancing_username: "loadbalancing",
 			Loadbalancing_password: "zzz123",
 			Host_metric_table:      map[string]int{"lxplus142.cern.ch": 100000, "lxplus177.cern.ch": 100000},
@@ -33,9 +33,17 @@ func TestLoadClusters(t *testing.T) {
 			Current_best_hosts:      []string{"unknown"},
 			Previous_best_hosts:     []string{"unknown"},
 			Previous_best_hosts_dns: []string{"unknown"},
+<<<<<<< HEAD
 			Slog:          &lg,
 			Current_index: 0},
 		lbcluster.LBCluster{Cluster_name: "test02.cern.ch",
+=======
+			Statistics_filename:     "./golbstatistics.test01.cern.ch",
+			Per_cluster_filename:    "./cluster/test01.cern.ch.log",
+			Slog:                    &lg,
+			Current_index:           0},
+		{Cluster_name: "test02.cern.ch",
+>>>>>>> master
 			Loadbalancing_username: "loadbalancing",
 			Loadbalancing_password: "zzz123",
 			Host_metric_table:      map[string]int{"lxplus013.cern.ch": 100000, "lxplus038.cern.ch": 100000, "lxplus025.cern.ch": 100000},

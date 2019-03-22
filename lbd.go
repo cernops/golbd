@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -48,34 +47,19 @@ type Config struct {
 	Parameters      map[string]lbcluster.Params
 }
 
-// Read a whole file into the memory and store it as array of lines
+// readLines reads a whole file into memory and returns a slice of lines.
 func readLines(path string) (lines []string, err error) {
-	var (
-		file   *os.File
-		part   []byte
-		prefix bool
-	)
-	if file, err = os.Open(path); err != nil {
-		return
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
 	}
-	defer file.Close()
+	defer f.Close()
 
-	reader := bufio.NewReader(file)
-	buffer := bytes.NewBuffer(make([]byte, 0))
-	for {
-		if part, prefix, err = reader.ReadLine(); err != nil {
-			break
-		}
-		buffer.Write(part)
-		if !prefix {
-			lines = append(lines, buffer.String())
-			buffer.Reset()
-		}
+	sc := bufio.NewScanner(f)
+	for sc.Scan() {
+		lines = append(lines, sc.Text())
 	}
-	if err == io.EOF {
-		err = nil
-	}
-	return
+	return lines, sc.Err()
 }
 
 func loadClusters(config *Config, lg *lbcluster.Log) []lbcluster.LBCluster {
@@ -114,12 +98,12 @@ func loadClusters(config *Config, lg *lbcluster.Log) []lbcluster.LBCluster {
 }
 
 func loadConfig(configFile string, lg *lbcluster.Log) (*Config, error) {
-	var config Config
-	var p lbcluster.Params
-	var mc map[string][]string
-	mc = make(map[string][]string)
-	var mp map[string]lbcluster.Params
-	mp = make(map[string]lbcluster.Params)
+	var (
+		config Config
+		p      lbcluster.Params
+		mc     = make(map[string][]string)
+		mp     = make(map[string]lbcluster.Params)
+	)
 
 	lines, err := readLines(configFile)
 	if err != nil {
