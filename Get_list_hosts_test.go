@@ -19,8 +19,8 @@ func TestGetListHostsOne(t *testing.T) {
 		Current_best_hosts:      []string{"unknown"},
 		Previous_best_hosts:     []string{"unknown"},
 		Previous_best_hosts_dns: []string{"unknown"},
-		Slog:                    &lg,
-		Current_index:           0}
+		Slog:          &lg,
+		Current_index: 0}
 	expected := map[string]lbhost.LBHost{
 		"lxplus142.cern.ch": lbhost.LBHost{Cluster_name: c.Cluster_name,
 			Host_name:              "lxplus142.cern.ch",
@@ -58,8 +58,8 @@ func TestGetListHostsTwo(t *testing.T) {
 			Current_best_hosts:      []string{"unknown"},
 			Previous_best_hosts:     []string{"unknown"},
 			Previous_best_hosts_dns: []string{"unknown"},
-			Slog:                    &lg,
-			Current_index:           0},
+			Slog:          &lg,
+			Current_index: 0},
 		lbcluster.LBCluster{Cluster_name: "test02.cern.ch",
 			Loadbalancing_username: "loadbalancing",
 			Loadbalancing_password: "zzz123",
@@ -69,8 +69,8 @@ func TestGetListHostsTwo(t *testing.T) {
 			Current_best_hosts:      []string{"unknown"},
 			Previous_best_hosts:     []string{"unknown"},
 			Previous_best_hosts_dns: []string{"unknown"},
-			Slog:                    &lg,
-			Current_index:           0}}
+			Slog:          &lg,
+			Current_index: 0}}
 
 	expected := map[string]lbhost.LBHost{
 		"lxplus142.cern.ch": lbhost.LBHost{Cluster_name: "test01.cern.ch",
