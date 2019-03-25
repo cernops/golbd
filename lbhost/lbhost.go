@@ -192,7 +192,7 @@ func (self *LBHost) get_Ips() ([]net.IP, error) {
 	self.Write_to_log("ERROR", "After several retries, we couldn't get the ips!. Let's try with partial results")
 	net.DefaultResolver.StrictErrors = false
 	ips, err = net.LookupIP(self.Host_name)
-	if err == nil {
+	if err != nil {
 		self.Write_to_log("ERROR", fmt.Sprintf("It didn't work :(. This node will be ignored during this evaluation: %v", err))
 	}
 	return ips, err
