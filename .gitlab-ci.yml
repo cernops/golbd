@@ -19,7 +19,9 @@ before_script:
   - cd /go/src/gitlab.cern.ch/lb-experts/golbd
   - export SPEC=$(ls *spec)
   - export PKG=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}\n" | head -n 1)
+  - if [ "$PKG" == "" ]; then false ; fi
   - export PKG_REL=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
+  - if [ "$PKG_REL" == "" ]; then false; fi
   - echo $LBBUILD_PASSWORD | kinit lbbuild@CERN.CH
   - klist
   - printf "[koji]\nserver = https://kojihub.cern.ch/kojihub\nweburl = https://koji.cern.ch/koji\ntopurl = https://koji.cern.ch/kojifiles\nkrb_canon_host = no\nkrb_rdns = False" > .koji

@@ -110,7 +110,7 @@ fi
 
 
 %changelog
-* Fri Mar 22 2018 Pablo Saiz <pablo.saiz@cern.ch>           - 0.1.19
+* Fri Mar 22 2019 Pablo Saiz <pablo.saiz@cern.ch>           - 0.1.19
 - Sort the name of the machines alphabetically before the DNS update
 - Set the flag to avoid partial responses in hostname resolution
 * Fri Oct 12 2018 Pablo Saiz <pablo.saiz@cern.ch>           - 0.1.16
