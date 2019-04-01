@@ -46,6 +46,7 @@ fmt-my-project:
   script:
     - yum -y install golang git gcc
     - export GOPATH=/go
+    - mkdir /go11
     - curl https://dl.google.com/go/go1.11.2.linux-amd64.tar.gz | tar -zxC /go11
     - MOD_FILES=$(find . -name "*.go"  -exec /go11/go/bin/go fmt {} \;)
     - echo "FILES MODIFIED $MOD_FILES"
