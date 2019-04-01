@@ -1,12 +1,13 @@
 package main
 
 import (
-	"gitlab.cern.ch/lb-experts/golbd/lbcluster"
-	"gitlab.cern.ch/lb-experts/golbd/lbhost"
 	"net"
 	"reflect"
 	"testing"
 	"time"
+
+	"gitlab.cern.ch/lb-experts/golbd/lbcluster"
+	"gitlab.cern.ch/lb-experts/golbd/lbhost"
 )
 
 func TestFindBestHosts(t *testing.T) {
@@ -21,8 +22,8 @@ func TestFindBestHosts(t *testing.T) {
 		Current_best_hosts:      []string{"unknown"},
 		Previous_best_hosts:     []string{"unknown"},
 		Previous_best_hosts_dns: []string{"unknown"},
-		Slog:          &lg,
-		Current_index: 0}
+		Slog:                    &lg,
+		Current_index:           0}
 	hosts_to_check := map[string]lbhost.LBHost{
 		"lxplus132.cern.ch": lbhost.LBHost{Cluster_name: c.Cluster_name,
 			Host_name: "lxplus132.cern.ch",
