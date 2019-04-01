@@ -63,7 +63,7 @@ func readLines(path string) (lines []string, err error) {
 	return lines, sc.Err()
 }
 
-func loadClusters(config Config, lg *lbcluster.Log) ([]lbcluster.LBCluster, error) {
+func loadClusters(config *Config, lg *lbcluster.Log) ([]lbcluster.LBCluster, error) {
 	var lbc lbcluster.LBCluster
 	var lbcs []lbcluster.LBCluster
 
@@ -171,7 +171,7 @@ func loadConfig(configFile string, lg *lbcluster.Log) (*Config, []lbcluster.LBCl
 	config.Parameters = mp
 	config.Clusters = mc
 
-	lbclusters, err := loadClusters(config, lg)
+	lbclusters, err := loadClusters(&config, lg)
 	if err != nil {
 		fmt.Println("Error getting the clusters")
 		return nil, nil, err
