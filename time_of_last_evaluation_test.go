@@ -1,9 +1,10 @@
 package main
 
 import (
-	"gitlab.cern.ch/lb-experts/golbd/lbcluster"
 	"testing"
 	"time"
+
+	"gitlab.cern.ch/lb-experts/golbd/lbcluster"
 )
 
 func TestTimeOfLastEvaluation(t *testing.T) {
@@ -18,8 +19,8 @@ func TestTimeOfLastEvaluation(t *testing.T) {
 		Current_best_hosts:      []string{"unknown"},
 		Previous_best_hosts:     []string{"unknown"},
 		Previous_best_hosts_dns: []string{"unknown"},
-		Slog:          &lg,
-		Current_index: 0}
+		Slog:                    &lg,
+		Current_index:           0}
 
 	c.Time_of_last_evaluation = time.Now().Add(time.Duration(-c.Parameters.Polling_interval+2) * time.Second)
 	if c.Time_to_refresh() {
