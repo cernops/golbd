@@ -33,6 +33,7 @@ var stdoutFlag = flag.Bool("stdout", false, "send log to stdtout")
 
 const itCSgroupDNSserver string = "cfmgr.cern.ch"
 
+// Config this is the configuration of the lbd
 type Config struct {
 	Master          string
 	HeartbeatFile   string
@@ -42,7 +43,7 @@ type Config struct {
 	TsigInternalKey string
 	TsigExternalKey string
 	SnmpPassword    string
-	DnsManager      string
+	DNSManager      string
 	Clusters        map[string][]string
 	Parameters      map[string]lbcluster.Params
 }
@@ -62,7 +63,7 @@ func readLines(path string) (lines []string, err error) {
 	return lines, sc.Err()
 }
 
-func loadClusters(config *Config, lg *lbcluster.Log) []lbcluster.LBCluster {
+func loadClusters(config Config, lg *lbcluster.Log) ([]lbcluster.LBCluster, error) {
 	var lbc lbcluster.LBCluster
 	var lbcs []lbcluster.LBCluster
 
@@ -77,7 +78,7 @@ func loadClusters(config *Config, lg *lbcluster.Log) []lbcluster.LBCluster {
 				Current_best_hosts:      []string{"unknown"},
 				Previous_best_hosts:     []string{"unknown"},
 				Previous_best_hosts_dns: []string{"unknown"},
-				Slog: lg}
+				Slog:                    lg}
 			hm := make(map[string]int)
 			for _, h := range v {
 				hm[h] = 100000
@@ -91,11 +92,11 @@ func loadClusters(config *Config, lg *lbcluster.Log) []lbcluster.LBCluster {
 		}
 	}
 
-	return lbcs
+	return lbcs, nil
 
 }
 
-func loadConfig(configFile string, lg *lbcluster.Log) (*Config, error) {
+func loadConfig(configFile string, lg *lbcluster.Log) (*Config, []lbcluster.LBCluster, error) {
 	var (
 		config Config
 		p      lbcluster.Params
@@ -105,7 +106,7 @@ func loadConfig(configFile string, lg *lbcluster.Log) (*Config, error) {
 
 	lines, err := readLines(configFile)
 	if err != nil {
-		return &config, err
+		return nil, nil, err
 	}
 	for _, line := range lines {
 		if strings.HasPrefix(line, "#") || (line == "") {
@@ -129,7 +130,7 @@ func loadConfig(configFile string, lg *lbcluster.Log) (*Config, error) {
 			case "snmpd_password":
 				config.SnmpPassword = words[2]
 			case "dns_manager":
-				config.DnsManager = words[2]
+				config.DNSManager = words[2]
 			}
 		} else if words[2] == "=" {
 			jsonStream := "{"
@@ -169,15 +170,23 @@ func loadConfig(configFile string, lg *lbcluster.Log) (*Config, error) {
 	}
 	config.Parameters = mp
 	config.Clusters = mc
-	return &config, nil
+
+	lbclusters, err := loadClusters(config, lg)
+	if err != nil {
+		fmt.Println("Error getting the clusters")
+		return nil, nil, err
+	}
+	lg.Info("Clusters loaded")
+
+	return &config, lbclusters, nil
 
 }
 
-func should_update_dns(config *Config, hostname string, lg *lbcluster.Log) bool {
+func shouldUpdateDNS(config *Config, hostname string, lg *lbcluster.Log) bool {
 	if hostname == config.Master {
 		return true
 	}
-	master_heartbeat := "I am sick"
+	masterHeartbeat := "I am sick"
 	connectTimeout := (10 * time.Second)
 	readWriteTimeout := (20 * time.Second)
 	httpClient := lbcluster.NewTimeoutClient(connectTimeout, readWriteTimeout)
@@ -185,62 +194,62 @@ func should_update_dns(config *Config, hostname string, lg *lbcluster.Log) bool 
 	if err != nil {
 		lg.Warning(fmt.Sprintf("problem fetching heartbeat file from the primary master %v: %v", config.Master, err))
 		return true
-	} else {
-		defer response.Body.Close()
-		contents, err := ioutil.ReadAll(response.Body)
-		if err != nil {
-			lg.Warning(fmt.Sprintf("%s", err))
-		}
-		lg.Debug(fmt.Sprintf("%s", contents))
-		master_heartbeat = strings.TrimSpace(string(contents))
-		lg.Info("primary master heartbeat: " + master_heartbeat)
-		r, _ := regexp.Compile(config.Master + ` : (\d+) : I am alive`)
-		if r.MatchString(master_heartbeat) {
-			matches := r.FindStringSubmatch(master_heartbeat)
-			lg.Debug(fmt.Sprintf(matches[1]))
-			if mastersecs, err := strconv.ParseInt(matches[1], 10, 64); err == nil {
-				now := time.Now()
-				localsecs := now.Unix()
-				diff := localsecs - mastersecs
-				lg.Info(fmt.Sprintf("primary master heartbeat time difference: %v seconds", diff))
-				if diff > 600 {
-					return true
-				}
-			}
-		} else {
-			// Upload - heartbeat has unexpected values
-			return true
-		}
-		// Do not upload, heartbeat was OK
-		return false
 	}
+	defer response.Body.Close()
+	contents, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		lg.Warning(fmt.Sprintf("%s", err))
+	}
+	lg.Debug(fmt.Sprintf("%s", contents))
+	masterHeartbeat = strings.TrimSpace(string(contents))
+	lg.Info("primary master heartbeat: " + masterHeartbeat)
+	r, _ := regexp.Compile(config.Master + ` : (\d+) : I am alive`)
+	if r.MatchString(masterHeartbeat) {
+		matches := r.FindStringSubmatch(masterHeartbeat)
+		lg.Debug(fmt.Sprintf(matches[1]))
+		if mastersecs, err := strconv.ParseInt(matches[1], 10, 64); err == nil {
+			now := time.Now()
+			localsecs := now.Unix()
+			diff := localsecs - mastersecs
+			lg.Info(fmt.Sprintf("primary master heartbeat time difference: %v seconds", diff))
+			if diff > 600 {
+				return true
+			}
+		}
+	} else {
+		// Upload - heartbeat has unexpected values
+		return true
+	}
+	// Do not upload, heartbeat was OK
+	return false
+
 }
 
-func update_heartbeat(config *Config, hostname string, lg *lbcluster.Log) error {
+func updateHeartbeat(config *Config, hostname string, lg *lbcluster.Log) error {
 	if hostname != config.Master {
 		return nil
 	}
-	heartbeat_file := config.HeartbeatPath + "/" + config.HeartbeatFile + "temp"
-	heartbeat_file_real := config.HeartbeatPath + "/" + config.HeartbeatFile
+	heartbeatFile := config.HeartbeatPath + "/" + config.HeartbeatFile + "temp"
+	heartbeatFileReal := config.HeartbeatPath + "/" + config.HeartbeatFile
 
 	config.HeartbeatMu.Lock()
 	defer config.HeartbeatMu.Unlock()
 
-	f, err := os.OpenFile(heartbeat_file, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+	f, err := os.OpenFile(heartbeatFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
-		lg.Error(fmt.Sprintf("can not open %v for writing: %v", heartbeat_file, err))
+		lg.Error(fmt.Sprintf("can not open %v for writing: %v", heartbeatFile, err))
 		return err
 	}
 	now := time.Now()
 	secs := now.Unix()
 	_, err = fmt.Fprintf(f, "%v : %v : I am alive\n", hostname, secs)
-	lg.Info("updating: heartbeat file " + heartbeat_file)
+	lg.Info("updating: heartbeat file " + heartbeatFile)
 	if err != nil {
-		lg.Info(fmt.Sprintf("can not write to %v: %v", heartbeat_file, err))
+		lg.Info(fmt.Sprintf("can not write to %v: %v", heartbeatFile, err))
 	}
 	f.Close()
-	if err = os.Rename(heartbeat_file, heartbeat_file_real); err != nil {
-		lg.Error(fmt.Sprintf("can not rename %v to %v: %v", heartbeat_file, heartbeat_file_real, err))
+	if err = os.Rename(heartbeatFile, heartbeatFileReal); err != nil {
+		lg.Error(fmt.Sprintf("can not rename %v to %v: %v", heartbeatFile, heartbeatFileReal, err))
 		return err
 	}
 	return nil
@@ -265,6 +274,39 @@ func installSignalHandler(sighup, sigterm *bool, lg *lbcluster.Log) {
 	}()
 }
 
+/* Using this one (instead of fsnotify)
+to check also if the file has been moved*/
+func watchFile(filePath string, chanModified chan int) error {
+	initialStat, err := os.Stat(filePath)
+	if err != nil {
+		return err
+	}
+
+	for {
+		stat, err := os.Stat(filePath)
+		if err != nil {
+			return err
+		}
+
+		if stat.Size() != initialStat.Size() || stat.ModTime() != initialStat.ModTime() {
+			chanModified <- 1
+			initialStat = stat
+		}
+
+		time.Sleep(1 * time.Second)
+	}
+
+	return nil
+}
+
+func sleep(seconds time.Duration, chanModified chan int) error {
+	for {
+		chanModified <- 2
+		time.Sleep(seconds * time.Second)
+	}
+	return nil
+}
+
 func main() {
 	flag.Parse()
 	if *versionFlag {
@@ -278,120 +320,94 @@ func main() {
 		lg.Info("Starting lbd")
 	}
 
-	var sig_hup, sig_term bool
-	installSignalHandler(&sig_hup, &sig_term, &lg)
+	//	var sig_hup, sig_term bool
+	// installSignalHandler(&sig_hup, &sig_term, &lg)
 
+	config, lbclusters, err := loadConfig(*configFileFlag, &lg)
+	if err != nil {
+		lg.Warning("loadConfig Error: ")
+		lg.Warning(err.Error())
+		os.Exit(1)
+	}
+	lg.Info("Clusters loaded")
+
+	doneChan := make(chan int)
+	go watchFile(*configFileFlag, doneChan)
+	go sleep(10, doneChan)
+
+	for {
+		myValue := <-doneChan
+		if myValue == 1 {
+			lg.Info("Config Changed")
+			config, lbclusters, err = loadConfig(*configFileFlag, &lg)
+			if err != nil {
+				lg.Error(fmt.Sprintf("Error getting the clusters (something wrong in %v", configFileFlag))
+			}
+		} else if myValue == 2 {
+			checkAliases(config, lg, lbclusters)
+		} else {
+			lg.Error("Got an unexpected value")
+		}
+	}
+	lg.Error("The lbd is not supposed to stop")
+
+}
+func checkAliases(config *Config, lg lbcluster.Log, lbclusters []lbcluster.LBCluster) {
 	hostname, e := os.Hostname()
 	if e == nil {
 		lg.Info("Hostname: " + hostname)
 	}
 
-	config, e := loadConfig(*configFileFlag, &lg)
-	if e != nil {
-		lg.Warning("loadConfig Error: ")
-		lg.Warning(e.Error())
-		os.Exit(1)
-	} else {
-		lg.Debug(fmt.Sprintf("config %v", config))
-	}
-
-	if *debugFlag {
-		for k, v := range config.Parameters {
-			lg.Debug(fmt.Sprintf("params %v %v", k, v))
-		}
-		for k, v := range config.Clusters {
-			lg.Debug(fmt.Sprintf("clusters %v %v", k, v))
-		}
-	}
-	lg.Info("Loading clusters")
-	lbclusters := loadClusters(config, &lg)
-	lg.Info("Clusters loaded")
 	//var wg sync.WaitGroup
-	for {
-		lg.Debug("Starting the loop")
-		if sig_term {
-			break
-		}
-		if sig_hup {
-			config, e = loadConfig(*configFileFlag, &lg)
-			if e != nil {
-				lg.Warning("loadConfig Error: ")
-				lg.Warning(e.Error())
-				os.Exit(1)
-			} else {
-				lg.Debug(fmt.Sprintf("%v", config))
-			}
-
-			if *debugFlag {
-				for k, v := range config.Parameters {
-					lg.Debug(fmt.Sprintf("params %v %v", k, v))
-				}
-				for k, v := range config.Clusters {
-					lg.Debug(fmt.Sprintf("clusters %v %v", k, v))
-				}
-			}
-			lbclusters = loadClusters(config, &lg)
-
-			sig_hup = false
-		}
-
-		update_dns := true
-		lg.Info("Checking if any of the " + strconv.Itoa(len(lbclusters)) + " clusters needs updating")
-		hosts_to_check := make(map[string]lbhost.LBHost)
-		var clusters_to_update []*lbcluster.LBCluster
-		/* First, let's identify the hosts that have to be checked */
-		for i := range lbclusters {
-			pc := &lbclusters[i]
-			pc.Write_to_log("DEBUG", "DO WE HAVE TO UPDATE?")
-			if pc.Time_to_refresh() {
-				pc.Write_to_log("INFO", "Time to refresh the cluster")
-				pc.Get_list_hosts(hosts_to_check)
-				clusters_to_update = append(clusters_to_update, pc)
-			}
-		}
-		if len(hosts_to_check) != 0 {
-			my_channel := make(chan lbhost.LBHost)
-			/* Now, let's go through the hosts, issuing the snmp call */
-			for _, host_value := range hosts_to_check {
-				go func(my_host lbhost.LBHost) {
-					my_host.Snmp_req()
-					my_channel <- my_host
-				}(host_value)
-			}
-			lg.Debug("Let's start gathering the results")
-			for i := 0; i < len(hosts_to_check); i++ {
-				my_new_host := <-my_channel
-				hosts_to_check[my_new_host.Host_name] = my_new_host
-			}
-
-			lg.Debug("All the hosts have been tested")
-
-			update_dns = should_update_dns(config, hostname, &lg)
-
-			/* Finally, let's go through the aliases, selecting the best hosts*/
-			for _, pc := range clusters_to_update {
-				pc.Write_to_log("DEBUG", "READY TO UPDATE THE CLUSTER")
-				pc.Find_best_hosts(hosts_to_check)
-				if update_dns {
-					pc.Write_to_log("DEBUG", "Should update dns is true")
-					pc.Refresh_dns(config.DnsManager, config.TsigKeyPrefix, config.TsigInternalKey, config.TsigExternalKey, hosts_to_check)
-				} else {
-					pc.Write_to_log("DEBUG", "should_update_dns false")
-				}
-
-			}
-
-		}
-
-		if update_dns {
-			update_heartbeat(config, hostname, &lg)
-		}
-
-		lg.Debug("iteration done!")
-		if !sig_term {
-			time.Sleep(10 * time.Second)
+	updateDNS := true
+	lg.Info("Checking if any of the " + strconv.Itoa(len(lbclusters)) + " clusters needs updating")
+	hostsToCheck := make(map[string]lbhost.LBHost)
+	var clustersToUpdate []*lbcluster.LBCluster
+	/* First, let's identify the hosts that have to be checked */
+	for i := range lbclusters {
+		pc := &lbclusters[i]
+		pc.Write_to_log("DEBUG", "DO WE HAVE TO UPDATE?")
+		if pc.Time_to_refresh() {
+			pc.Write_to_log("INFO", "Time to refresh the cluster")
+			pc.Get_list_hosts(hostsToCheck)
+			clustersToUpdate = append(clustersToUpdate, pc)
 		}
 	}
-	lg.Info("all done!")
-	os.Exit(0)
+	if len(hostsToCheck) != 0 {
+		myChannel := make(chan lbhost.LBHost)
+		/* Now, let's go through the hosts, issuing the snmp call */
+		for _, hostValue := range hostsToCheck {
+			go func(myHost lbhost.LBHost) {
+				myHost.Snmp_req()
+				myChannel <- myHost
+			}(hostValue)
+		}
+		lg.Debug("Let's start gathering the results")
+		for i := 0; i < len(hostsToCheck); i++ {
+			myNewHost := <-myChannel
+			hostsToCheck[myNewHost.Host_name] = myNewHost
+		}
+
+		lg.Debug("All the hosts have been tested")
+
+		updateDNS = shouldUpdateDNS(config, hostname, &lg)
+
+		/* Finally, let's go through the aliases, selecting the best hosts*/
+		for _, pc := range clustersToUpdate {
+			pc.Write_to_log("DEBUG", "READY TO UPDATE THE CLUSTER")
+			pc.Find_best_hosts(hostsToCheck)
+			if updateDNS {
+				pc.Write_to_log("DEBUG", "Should update dns is true")
+				pc.Refresh_dns(config.DNSManager, config.TsigKeyPrefix, config.TsigInternalKey, config.TsigExternalKey, hostsToCheck)
+			} else {
+				pc.Write_to_log("DEBUG", "should_update_dns false")
+			}
+		}
+	}
+
+	if updateDNS {
+		updateHeartbeat(config, hostname, &lg)
+	}
+
+	lg.Debug("iteration done!")
 }

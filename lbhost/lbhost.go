@@ -55,7 +55,7 @@ func (self *LBHost) Snmp_req() {
 			time.Duration(TIMEOUT)*time.Second, 2)
 		if err != nil {
 			// Failed to create snmpgo.SNMP object
-			my_transport.Response_error = fmt.Sprint("contacted node: error creating the snmp object: %v", err)
+			my_transport.Response_error = fmt.Sprintf("contacted node: error creating the snmp object: %v", err)
 		} else {
 			defer snmp.Close()
 			err = snmp.Discover()
