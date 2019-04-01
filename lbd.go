@@ -284,19 +284,14 @@ func watchFile(filePath string, chanModified chan int) error {
 
 	for {
 		stat, err := os.Stat(filePath)
-		if err != nil {
-			return err
+		if err == nil {
+			if stat.Size() != initialStat.Size() || stat.ModTime() != initialStat.ModTime() {
+				chanModified <- 1
+				initialStat = stat
+			}
 		}
-
-		if stat.Size() != initialStat.Size() || stat.ModTime() != initialStat.ModTime() {
-			chanModified <- 1
-			initialStat = stat
-		}
-
 		time.Sleep(1 * time.Second)
 	}
-
-	return nil
 }
 
 func sleep(seconds time.Duration, chanModified chan int) error {
