@@ -77,7 +77,7 @@ func loadClusters(config *Config, lg *lbcluster.Log) []lbcluster.LBCluster {
 				Current_best_hosts:      []string{"unknown"},
 				Previous_best_hosts:     []string{"unknown"},
 				Previous_best_hosts_dns: []string{"unknown"},
-				Slog: lg}
+				Slog:                    lg}
 			hm := make(map[string]int)
 			for _, h := range v {
 				hm[h] = 100000
