@@ -33,8 +33,8 @@ func TestLoadClusters(t *testing.T) {
 			Current_best_hosts:      []string{"unknown"},
 			Previous_best_hosts:     []string{"unknown"},
 			Previous_best_hosts_dns: []string{"unknown"},
-			Slog:          &lg,
-			Current_index: 0},
+			Slog:                    &lg,
+			Current_index:           0},
 		lbcluster.LBCluster{Cluster_name: "test02.cern.ch",
 			Loadbalancing_username: "loadbalancing",
 			Loadbalancing_password: "zzz123",
@@ -44,8 +44,8 @@ func TestLoadClusters(t *testing.T) {
 			Current_best_hosts:      []string{"unknown"},
 			Previous_best_hosts:     []string{"unknown"},
 			Previous_best_hosts_dns: []string{"unknown"},
-			Slog:          &lg,
-			Current_index: 0}}
+			Slog:                    &lg,
+			Current_index:           0}}
 
 	lbclusters := loadClusters(&config, &lg)
 	// reflect.DeepEqual(lbclusters, expected) occassionally fails as the array order is not always the same
