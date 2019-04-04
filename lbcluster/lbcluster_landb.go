@@ -144,6 +144,7 @@ func (lbc *LBCluster) get_state_dns(dnsManager string) error {
 			lbc.Write_to_log("ERROR", fmt.Sprintf("Error getting the state of the dns %v", err))
 			if _, ok := err.(*net.DNSError); ok {
 				lbc.Write_to_log("INFO", "The host does not exist anymore... let's continue")
+				err = nil
 			} else {
 				lbc.Write_to_log("INFO", "Different error")
 				return err
