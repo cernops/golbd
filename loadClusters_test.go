@@ -18,7 +18,7 @@ func TestLoadClusters(t *testing.T) {
 		TsigInternalKey: "xxx123==",
 		TsigExternalKey: "yyy123==",
 		SnmpPassword:    "zzz123",
-		DnsManager:      "111.111.0.111",
+		DNSManager:      "111.111.0.111",
 		Clusters:        map[string][]string{"test01.cern.ch": {"lxplus142.cern.ch", "lxplus177.cern.ch"}, "test02.cern.ch": {"lxplus013.cern.ch", "lxplus038.cern.ch", "lxplus025.cern.ch"}},
 		Parameters: map[string]lbcluster.Params{"test01.cern.ch": {Behaviour: "mindless", Best_hosts: 2,
 			External: true, Metric: "cmsfrontier", Polling_interval: 6, Statistics: "long"},
@@ -47,7 +47,7 @@ func TestLoadClusters(t *testing.T) {
 			Slog:                    &lg,
 			Current_index:           0}}
 
-	lbclusters := loadClusters(&config, &lg)
+	lbclusters, _ := loadClusters(&config, &lg)
 	// reflect.DeepEqual(lbclusters, expected) occassionally fails as the array order is not always the same
 	// so comparing element par element
 	i := 0
