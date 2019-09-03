@@ -15,7 +15,7 @@ func TestFindBestHosts(t *testing.T) {
 
 	c := lbcluster.LBCluster{Cluster_name: "test01.cern.ch",
 		Loadbalancing_username: "loadbalancing",
-		Loadbalancing_password: "OidLvSu8amNMRz258Udy74tO60p47n0RA4RzaT3j2hhnJkEQg9",
+		Loadbalancing_password: "XXXX",
 		Host_metric_table:      map[string]int{"lxplus132.cern.ch": 100000, "lxplus041.cern.ch": 100000, "lxplus130.cern.ch": 100000, "monit-kafkax-17be060b0d.cern.ch": 100000},
 		Parameters:             lbcluster.Params{Behaviour: "mindless", Best_hosts: 2, External: true, Metric: "cmsfrontier", Polling_interval: 300, Statistics: "long"},
 		//Time_of_last_evaluation time.Time
