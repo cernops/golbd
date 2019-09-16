@@ -4,29 +4,26 @@ import (
 	"net"
 	"reflect"
 	"testing"
-
-	"gitlab.cern.ch/lb-experts/golbd/lbhost"
 )
 
 //Function TestGetLoadHosts tests the function Get_load_for_alias
 func TestGetLoadHosts(t *testing.T) {
 
-	hosts := []lbhost.LBHost{
-		{Cluster_name: "test01.cern.ch",
+	hosts := []LBHost{
+		LBHost{Cluster_name: "test01.cern.ch",
 			Host_name: "lxplus132.cern.ch",
-			Host_transports: []lbhost.LBHostTransportResult{
-				lbhost.LBHostTransportResult{Transport: "udp", Response_int: 7, Response_string: "", IP: net.ParseIP("188.184.108.98"), Response_error: ""},
+			Host_transports: []LBHostTransportResult{
+				LBHostTransportResult{Transport: "udp", Response_int: 7, Response_string: "", IP: net.ParseIP("188.184.108.98"), Response_error: ""},
 			},
 			Loadbalancing_username: "loadbalancing",
 			Loadbalancing_password: "XXXX",
 			LogFile:                "",
 			Debugflag:              false,
-		},
-		lbhost.LBHost{
+		}, LBHost{
 			Cluster_name: "blabla.cern.ch",
 			Host_name:    "lxplus013.cern.ch",
-			Host_transports: []lbhost.LBHostTransportResult{
-				lbhost.LBHostTransportResult{Transport: "udp", Response_int: 0, Response_string: "blabla.cern.ch=179,blablabla2.cern.ch=4", IP: net.ParseIP("188.184.108.98"), Response_error: ""},
+			Host_transports: []LBHostTransportResult{
+				LBHostTransportResult{Transport: "udp", Response_int: 0, Response_string: "blabla.cern.ch=179,blablabla2.cern.ch=4", IP: net.ParseIP("188.184.108.98"), Response_error: ""},
 			},
 			Loadbalancing_username: "loadbalancing",
 			Loadbalancing_password: "XXXX",
