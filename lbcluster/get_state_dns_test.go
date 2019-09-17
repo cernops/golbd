@@ -16,8 +16,8 @@ func TestGetStateDNS(t *testing.T) {
 	//Definition of expected hosts IP for aiermis, valid in the time when the test was written
 	ExpectedIPAiermis := []net.IP{
 		//IPv4 , for some unknown reason requires to be formatted in 4 Bytes (.To4())
-		net.ParseIP("188.184.104.111").To4(),
-		net.ParseIP("2001:1458:d00:2d::100:58").To16(),
+		net.ParseIP("188.184.104.111"),
+		net.ParseIP("2001:1458:d00:2d::100:58"),
 	}
 
 	//Non-existing clusters
