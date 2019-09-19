@@ -10,9 +10,9 @@ import (
 	"gitlab.cern.ch/lb-experts/golbd/lbhost"
 )
 
-func getTestCluster() lbcluster.LBCluster {
+func getTestCluster(name string) lbcluster.LBCluster {
 	lg := lbcluster.Log{Syslog: false, Stdout: true, Debugflag: false}
-	return lbcluster.LBCluster{Cluster_name: "test01.cern.ch",
+	return lbcluster.LBCluster{Cluster_name: name,
 		Loadbalancing_username: "loadbalancing",
 		Loadbalancing_password: "zzz123",
 		Host_metric_table:      map[string]int{"lxplus132.cern.ch": 100000, "lxplus041.cern.ch": 100000, "lxplus130.cern.ch": 100000, "monit-kafkax-17be060b0d.cern.ch": 100000},
@@ -83,7 +83,33 @@ func getHostsToCheck(c lbcluster.LBCluster) map[string]lbhost.LBHost {
 
 	return hostsToCheck
 }
+func getTestClusterVariableMetric() lbcluster.LBCluster {
+	lg := lbcluster.Log{Syslog: false, Stdout: true, Debugflag: false}
+	return lbcluster.LBCluster{Cluster_name: "test03.cern.ch",
+		Loadbalancing_username: "loadbalancing",
+		Loadbalancing_password: "zzz123",
+		Host_metric_table:      map[string]int{"monit-kafkax-17be060b0d.cern.ch": 816, "lxplus132.cern.ch": 2, "lxplus041.cern.ch": 3, "lxplus130.cern.ch": 27},
+		Parameters:             lbcluster.Params{Behaviour: "mindless", Best_hosts: 2, External: true, Metric: "cmsfrontier", Polling_interval: 300, Statistics: "long"},
+		//Time_of_last_evaluation time.Time
+		Current_best_hosts:      []string{"unknown"},
+		Previous_best_hosts:     []string{"unknown"},
+		Previous_best_hosts_dns: []string{"unknown"},
+		Slog:                    &lg,
+		Current_index:           0}
+}
+func getHost(hostname string, responseInt int, responseString string) lbhost.LBHost {
 
+	return lbhost.LBHost{Cluster_name: "test01.cern.ch",
+		Host_name: hostname,
+		Host_transports: []lbhost.LBHostTransportResult{
+			lbhost.LBHostTransportResult{Transport: "udp", Response_int: responseInt, Response_string: responseString, IP: net.ParseIP("188.184.108.98"), Response_error: ""}},
+		Loadbalancing_username: "loadbalancing",
+		Loadbalancing_password: "XXXX",
+		LogFile:                "",
+		Debugflag:              false,
+	}
+
+}
 func TestLoadClusters(t *testing.T) {
 	lg := lbcluster.Log{Syslog: false, Stdout: true, Debugflag: false}
 
@@ -97,10 +123,10 @@ func TestLoadClusters(t *testing.T) {
 		SnmpPassword:    "zzz123",
 		DNSManager:      "111.111.0.111",
 		Clusters:        map[string][]string{"test01.cern.ch": {"lxplus132.cern.ch", "lxplus041.cern.ch", "lxplus130.cern.ch", "monit-kafkax-17be060b0d.cern.ch"}, "test02.cern.ch": {"lxplus013.cern.ch", "lxplus038.cern.ch", "lxplus025.cern.ch"}},
-		Parameters: map[string]lbcluster.Params{"test01.cern.ch": {Behaviour: "mindless", Best_hosts: 2,
+		Parameters: map[string]lbcluster.Params{"test01.cern.ch": lbcluster.Params{Behaviour: "mindless", Best_hosts: 2,
 			External: true, Metric: "cmsfrontier", Polling_interval: 6, Statistics: "long"},
-			"test02.cern.ch": {Behaviour: "mindless", Best_hosts: 10, External: false, Metric: "cmsfrontier", Polling_interval: 6, Statistics: "long"}}}
-	expected := []lbcluster.LBCluster{getTestCluster(),
+			"test02.cern.ch": lbcluster.Params{Behaviour: "mindless", Best_hosts: 10, External: false, Metric: "cmsfrontier", Polling_interval: 6, Statistics: "long"}}}
+	expected := []lbcluster.LBCluster{getTestCluster("test01.cern.ch"),
 		getSecondTestCluster()}
 
 	lbclusters, _ := lbconfig.LoadClusters(&config, &lg)

@@ -8,7 +8,7 @@ import (
 
 func TestFindBestHosts(t *testing.T) {
 
-	c := getTestCluster()
+	c := getTestCluster("test01.cern.ch")
 
 	hosts_to_check := getHostsToCheck(c)
 

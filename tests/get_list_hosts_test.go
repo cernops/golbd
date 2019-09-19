@@ -9,7 +9,7 @@ import (
 )
 
 func TestGetListHostsOne(t *testing.T) {
-	c := getTestCluster()
+	c := getTestCluster("test01.cern.ch")
 
 	expected := map[string]lbhost.LBHost{
 		"lxplus041.cern.ch": lbhost.LBHost{Cluster_name: c.Cluster_name,

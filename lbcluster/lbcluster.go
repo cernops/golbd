@@ -106,7 +106,7 @@ func (self *LBCluster) Get_list_hosts(current_list map[string]lbhost.LBHost) {
 }
 func (self *LBCluster) Find_best_hosts(hosts_to_check map[string]lbhost.LBHost) {
 	self.Previous_best_hosts = self.Current_best_hosts
-	self.evaluate_hosts(hosts_to_check)
+	self.Evaluate_hosts(hosts_to_check)
 	allMetrics := make(map[string]bool)
 	allMetrics["minimum"] = true
 	allMetrics["cmsfrontier"] = true
@@ -117,7 +117,7 @@ func (self *LBCluster) Find_best_hosts(hosts_to_check map[string]lbhost.LBHost) 
 		self.Write_to_log("ERROR", "wrong parameter(metric) in definition of cluster "+self.Parameters.Metric)
 		return
 	}
-	self.apply_metric()
+	self.Apply_metric()
 	self.Time_of_last_evaluation = time.Now()
 	nodes := strings.Join(self.Current_best_hosts, " ")
 	if len(self.Current_best_hosts) == 0 {
@@ -128,7 +128,7 @@ func (self *LBCluster) Find_best_hosts(hosts_to_check map[string]lbhost.LBHost) 
 
 // Internal functions
 /* This is the core of the lbcluster: based on the metrics, select the best hosts */
-func (self *LBCluster) apply_metric() {
+func (self *LBCluster) Apply_metric() {
 	self.Write_to_log("INFO", "Got metric = "+self.Parameters.Metric)
 	pl := make(PairList, len(self.Host_metric_table))
 	i := 0
@@ -247,7 +247,7 @@ func (self *LBCluster) checkRogerState(host string) string {
 
 }
 
-func (self *LBCluster) evaluate_hosts(hosts_to_check map[string]lbhost.LBHost) {
+func (self *LBCluster) Evaluate_hosts(hosts_to_check map[string]lbhost.LBHost) {
 
 	for currenthost := range self.Host_metric_table {
 		host_tested := hosts_to_check[currenthost]

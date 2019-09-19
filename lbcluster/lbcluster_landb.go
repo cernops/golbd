@@ -15,7 +15,7 @@ import (
 and then updates it with the new hosts */
 func (lbc *LBCluster) Refresh_dns(dnsManager, keyPrefix, internalKey, externalKey string, hosts_to_check map[string]lbhost.LBHost) {
 
-	_, e := lbc.get_state_dns(dnsManager)
+	_, e := lbc.Get_state_dns(dnsManager)
 	if e != nil {
 		lbc.Write_to_log("WARNING", fmt.Sprintf("Get_state_dns Error: %v", e.Error()))
 		return
@@ -91,7 +91,7 @@ func (lbc *LBCluster) update_dns(keyName, tsigKey, dnsManager string, hosts_to_c
 	return err
 }
 
-func (lbc *LBCluster) get_state_dns(dnsManager string) ([]net.IP, error) {
+func (lbc *LBCluster) Get_state_dns(dnsManager string) ([]net.IP, error) {
 	cluster_name := lbc.Cluster_name
 	var ips []net.IP
 	if !strings.HasSuffix(cluster_name, ".cern.ch") {
