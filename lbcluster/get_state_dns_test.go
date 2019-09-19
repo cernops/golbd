@@ -1,7 +1,6 @@
 package lbcluster
 
 import (
-	"net"
 	"reflect"
 	"testing"
 )
@@ -12,13 +11,9 @@ func TestGetStateDNS(t *testing.T) {
 	//DNS IP
 	dnsManager := "137.138.16.5"
 	//Empty slice for comparisson purposes
-	var ipsEmpty []net.IP
+	ipsEmpty := []string{}
 	//Definition of expected hosts IP for aiermis, valid in the time when the test was written
-	ExpectedIPAiermis := []net.IP{
-		//IPv4 , for some unknown reason requires to be formatted in 4 Bytes (.To4())
-		net.ParseIP("188.184.104.111"),
-		net.ParseIP("2001:1458:d00:2d::100:58"),
-	}
+	ExpectedIPAiermis := []string{"188.184.104.111", "2001:1458:d00:2d::100:58"}
 
 	//Non-existing clusters
 
@@ -83,14 +78,18 @@ func TestGetStateDNS(t *testing.T) {
 	//receiving the output for every alias and storing the results into a map
 	received := make(map[string][]interface{})
 	for _, c := range Clusters {
+		iprecString := []string{}
 		iprec, err := c.get_state_dns(dnsManager)
-
-		received[c.Cluster_name] = []interface{}{iprec, err}
+		for _, ip := range iprec {
+			iprecString = append(iprecString, ip.String())
+		}
+		//Casting to string. The DeepEqual of  IP is a bit  tricky, since it can
+		received[c.Cluster_name] = []interface{}{iprecString, err}
 	}
 	//DeepEqual comparison between the map with expected values and the one with the outputs
 	for _, c := range Clusters {
 		if !reflect.DeepEqual(received[c.Cluster_name], expected[c.Cluster_name]) {
-			t.Errorf("\ngot\n%v\nexpected\n%v", received[c.Cluster_name], expected[c.Cluster_name])
+			t.Errorf("\ngot\n%T and %v\nexpected\n%T and %v", received[c.Cluster_name][0], received[c.Cluster_name][0], expected[c.Cluster_name][0], expected[c.Cluster_name][0])
 		}
 	}
 

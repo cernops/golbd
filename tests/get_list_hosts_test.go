@@ -1,4 +1,4 @@
-package main
+package main_test
 
 import (
 	"reflect"
@@ -9,29 +9,32 @@ import (
 )
 
 func TestGetListHostsOne(t *testing.T) {
-	lg := lbcluster.Log{Syslog: false, Stdout: true, Debugflag: false}
+	c := getTestCluster()
 
-	c := lbcluster.LBCluster{Cluster_name: "test01.cern.ch",
-		Loadbalancing_username: "loadbalancing",
-		Loadbalancing_password: "zzz123",
-		Host_metric_table:      map[string]int{"lxplus142.cern.ch": 100000, "lxplus177.cern.ch": 100000},
-		Parameters:             lbcluster.Params{Behaviour: "mindless", Best_hosts: 2, External: true, Metric: "cmsfrontier", Polling_interval: 300, Statistics: "long"},
-		//Time_of_last_evaluation time.Time
-		Current_best_hosts:      []string{"unknown"},
-		Previous_best_hosts:     []string{"unknown"},
-		Previous_best_hosts_dns: []string{"unknown"},
-		Slog:                    &lg,
-		Current_index:           0}
 	expected := map[string]lbhost.LBHost{
-		"lxplus142.cern.ch": lbhost.LBHost{Cluster_name: c.Cluster_name,
-			Host_name:              "lxplus142.cern.ch",
+		"lxplus041.cern.ch": lbhost.LBHost{Cluster_name: c.Cluster_name,
+			Host_name:              "lxplus041.cern.ch",
 			Loadbalancing_username: c.Loadbalancing_username,
 			Loadbalancing_password: c.Loadbalancing_password,
 			LogFile:                c.Slog.TofilePath,
 			Debugflag:              c.Slog.Debugflag,
 		},
-		"lxplus177.cern.ch": lbhost.LBHost{Cluster_name: c.Cluster_name,
-			Host_name:              "lxplus177.cern.ch",
+		"monit-kafkax-17be060b0d.cern.ch": lbhost.LBHost{Cluster_name: c.Cluster_name,
+			Host_name:              "monit-kafkax-17be060b0d.cern.ch",
+			Loadbalancing_username: c.Loadbalancing_username,
+			Loadbalancing_password: c.Loadbalancing_password,
+			LogFile:                c.Slog.TofilePath,
+			Debugflag:              c.Slog.Debugflag,
+		},
+		"lxplus132.cern.ch": lbhost.LBHost{Cluster_name: c.Cluster_name,
+			Host_name:              "lxplus132.cern.ch",
+			Loadbalancing_username: c.Loadbalancing_username,
+			Loadbalancing_password: c.Loadbalancing_password,
+			LogFile:                c.Slog.TofilePath,
+			Debugflag:              c.Slog.Debugflag,
+		},
+		"lxplus130.cern.ch": lbhost.LBHost{Cluster_name: c.Cluster_name,
+			Host_name:              "lxplus130.cern.ch",
 			Loadbalancing_username: c.Loadbalancing_username,
 			Loadbalancing_password: c.Loadbalancing_password,
 			LogFile:                c.Slog.TofilePath,

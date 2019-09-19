@@ -1,30 +1,46 @@
-package main
+package main_test
 
 import (
 	"net"
 	"reflect"
 	"testing"
-	"time"
 
 	"gitlab.cern.ch/lb-experts/golbd/lbcluster"
+	"gitlab.cern.ch/lb-experts/golbd/lbconfig"
 	"gitlab.cern.ch/lb-experts/golbd/lbhost"
 )
 
-func TestFindBestHosts(t *testing.T) {
+func getTestCluster() lbcluster.LBCluster {
 	lg := lbcluster.Log{Syslog: false, Stdout: true, Debugflag: false}
-
-	c := lbcluster.LBCluster{Cluster_name: "test01.cern.ch",
+	return lbcluster.LBCluster{Cluster_name: "test01.cern.ch",
 		Loadbalancing_username: "loadbalancing",
-		Loadbalancing_password: "XXXX",
+		Loadbalancing_password: "zzz123",
 		Host_metric_table:      map[string]int{"lxplus132.cern.ch": 100000, "lxplus041.cern.ch": 100000, "lxplus130.cern.ch": 100000, "monit-kafkax-17be060b0d.cern.ch": 100000},
-		Parameters:             lbcluster.Params{Behaviour: "mindless", Best_hosts: 2, External: true, Metric: "cmsfrontier", Polling_interval: 300, Statistics: "long"},
+		Parameters:             lbcluster.Params{Behaviour: "mindless", Best_hosts: 2, External: true, Metric: "cmsfrontier", Polling_interval: 6, Statistics: "long"},
 		//Time_of_last_evaluation time.Time
 		Current_best_hosts:      []string{"unknown"},
 		Previous_best_hosts:     []string{"unknown"},
 		Previous_best_hosts_dns: []string{"unknown"},
 		Slog:                    &lg,
 		Current_index:           0}
-	hosts_to_check := map[string]lbhost.LBHost{
+}
+
+func getSecondTestCluster() lbcluster.LBCluster {
+	lg := lbcluster.Log{Syslog: false, Stdout: true, Debugflag: false}
+	return lbcluster.LBCluster{Cluster_name: "test02.cern.ch",
+		Loadbalancing_username: "loadbalancing",
+		Loadbalancing_password: "zzz123",
+		Host_metric_table:      map[string]int{"lxplus013.cern.ch": 100000, "lxplus038.cern.ch": 100000, "lxplus025.cern.ch": 100000},
+		Parameters:             lbcluster.Params{Behaviour: "mindless", Best_hosts: 10, External: false, Metric: "cmsfrontier", Polling_interval: 6, Statistics: "long"},
+		//Time_of_last_evaluation time.Time
+		Current_best_hosts:      []string{"unknown"},
+		Previous_best_hosts:     []string{"unknown"},
+		Previous_best_hosts_dns: []string{"unknown"},
+		Slog:                    &lg,
+		Current_index:           0}
+}
+func getHostsToCheck(c lbcluster.LBCluster) map[string]lbhost.LBHost {
+	hostsToCheck := map[string]lbhost.LBHost{
 		"lxplus132.cern.ch": lbhost.LBHost{Cluster_name: c.Cluster_name,
 			Host_name: "lxplus132.cern.ch",
 			Host_transports: []lbhost.LBHostTransportResult{
@@ -64,21 +80,47 @@ func TestFindBestHosts(t *testing.T) {
 			Debugflag:              c.Slog.Debugflag,
 		},
 	}
-	expected_host_metric_table := map[string]int{"monit-kafkax-17be060b0d.cern.ch": 816, "lxplus132.cern.ch": 2, "lxplus041.cern.ch": 3, "lxplus130.cern.ch": 27}
-	expected_previous_best_hosts := c.Current_best_hosts
-	expected_current_best_hosts := []string{"lxplus041.cern.ch", "lxplus132.cern.ch"}
 
-	c.Find_best_hosts(hosts_to_check)
-	if !reflect.DeepEqual(c.Host_metric_table, expected_host_metric_table) {
-		t.Errorf("e.Find_best_hosts: c.Host_metric_table: got\n%v\nexpected\n%v", c.Host_metric_table, expected_host_metric_table)
+	return hostsToCheck
+}
+
+func TestLoadClusters(t *testing.T) {
+	lg := lbcluster.Log{Syslog: false, Stdout: true, Debugflag: false}
+
+	config := lbconfig.Config{Master: "lbdxyz.cern.ch",
+		HeartbeatFile: "heartbeat",
+		HeartbeatPath: "/work/go/src/github.com/cernops/golbd",
+		//HeartbeatMu:     sync.Mutex{0, 0},
+		TsigKeyPrefix:   "abcd-",
+		TsigInternalKey: "xxx123==",
+		TsigExternalKey: "yyy123==",
+		SnmpPassword:    "zzz123",
+		DNSManager:      "111.111.0.111",
+		Clusters:        map[string][]string{"test01.cern.ch": {"lxplus132.cern.ch", "lxplus041.cern.ch", "lxplus130.cern.ch", "monit-kafkax-17be060b0d.cern.ch"}, "test02.cern.ch": {"lxplus013.cern.ch", "lxplus038.cern.ch", "lxplus025.cern.ch"}},
+		Parameters: map[string]lbcluster.Params{"test01.cern.ch": {Behaviour: "mindless", Best_hosts: 2,
+			External: true, Metric: "cmsfrontier", Polling_interval: 6, Statistics: "long"},
+			"test02.cern.ch": {Behaviour: "mindless", Best_hosts: 10, External: false, Metric: "cmsfrontier", Polling_interval: 6, Statistics: "long"}}}
+	expected := []lbcluster.LBCluster{getTestCluster(),
+		getSecondTestCluster()}
+
+	lbclusters, _ := lbconfig.LoadClusters(&config, &lg)
+	// reflect.DeepEqual(lbclusters, expected) occassionally fails as the array order is not always the same
+	// so comparing element par element
+	i := 0
+	for _, e := range expected {
+		for _, c := range lbclusters {
+			if c.Cluster_name == e.Cluster_name {
+				if !reflect.DeepEqual(c, e) {
+					t.Errorf("loadClusters: got\n%v\nexpected\n%v", lbclusters, expected)
+				} else {
+					i = i + 1
+				}
+				continue
+			}
+		}
 	}
-	if !reflect.DeepEqual(c.Previous_best_hosts, expected_previous_best_hosts) {
-		t.Errorf("e.Find_best_hosts: c.Previous_best_hosts: got\n%v\nexpected\n%v", c.Previous_best_hosts, expected_previous_best_hosts)
-	}
-	if !reflect.DeepEqual(c.Current_best_hosts, expected_current_best_hosts) {
-		t.Errorf("e.Find_best_hosts: c.Current_best_hosts: got\n%v\nexpected\n%v", c.Current_best_hosts, expected_current_best_hosts)
-	}
-	if c.Time_of_last_evaluation.Add(time.Duration(2) * time.Second).Before(time.Now()) {
-		t.Errorf("e.Find_best_hosts: c.Time_of_last_evaluation: got\n%v\ncurrent time\n%v", c.Time_of_last_evaluation, time.Now())
+	if (i != len(expected)) || (i != len(lbclusters)) {
+		t.Errorf("loadClusters: wrong number of clusters, got\n%v\nexpected\n%v (and %v", len(lbclusters), len(expected), i)
+
 	}
 }

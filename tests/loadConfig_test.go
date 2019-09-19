@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"gitlab.cern.ch/lb-experts/golbd/lbcluster"
+	"gitlab.cern.ch/lb-experts/golbd/lbconfig"
 )
 
 func TestLoadConfig(t *testing.T) {
@@ -20,7 +21,7 @@ func TestLoadConfig(t *testing.T) {
 
 	// The expected output
 	expected :=
-		Config{
+		lbconfig.Config{
 			Master:        "lbdxyz.cern.ch",
 			HeartbeatFile: "heartbeat",
 			HeartbeatPath: "/work/go/src/github.com/cernops/golbd",
@@ -30,6 +31,7 @@ func TestLoadConfig(t *testing.T) {
 			TsigExternalKey: "yyy123==",
 			SnmpPassword:    "zzz123",
 			DNSManager:      "137.138.28.176",
+			ConfigFile:      "testloadconfig",
 			Clusters: map[string][]string{
 				"aiermis.cern.ch": {"ermis19.cern.ch", "ermis20.cern.ch"},
 				"uermis.cern.ch":  {"ermis21.cern.ch", "ermis22.cern.ch"}},
@@ -38,13 +40,13 @@ func TestLoadConfig(t *testing.T) {
 				"uermis.cern.ch":  {Behaviour: "mindless", Best_hosts: 1, External: false, Metric: "cmsfrontier", Polling_interval: 300, Statistics: "long", Ttl: 222}}}
 
 	//retrieving the actual output
-	configExisting, _, e := loadConfig(loadconfig.Name(), &lg)
+	configExisting, _, e := lbconfig.LoadConfig(loadconfig.Name(), &lg)
 
 	if e != nil {
 		t.Errorf("loadConfig Error: %v", e.Error())
 	} else {
 		if !reflect.DeepEqual(configExisting, &expected) {
-			t.Errorf("loadConfig: got %v expected %v", configExisting, &expected)
+			t.Errorf("loadConfig: got\n %v expected\n %v", configExisting, &expected)
 		}
 
 	}
