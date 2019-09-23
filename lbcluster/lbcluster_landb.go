@@ -15,7 +15,7 @@ import (
 and then updates it with the new hosts */
 func (lbc *LBCluster) Refresh_dns(dnsManager, keyPrefix, internalKey, externalKey string, hosts_to_check map[string]lbhost.LBHost) {
 
-	e := lbc.get_state_dns(dnsManager)
+	_, e := lbc.Get_state_dns(dnsManager)
 	if e != nil {
 		lbc.Write_to_log("WARNING", fmt.Sprintf("Get_state_dns Error: %v", e.Error()))
 		return
@@ -91,8 +91,9 @@ func (lbc *LBCluster) update_dns(keyName, tsigKey, dnsManager string, hosts_to_c
 	return err
 }
 
-func (lbc *LBCluster) get_state_dns(dnsManager string) error {
+func (lbc *LBCluster) Get_state_dns(dnsManager string) ([]net.IP, error) {
 	cluster_name := lbc.Cluster_name
+	var ips []net.IP
 	if !strings.HasSuffix(cluster_name, ".cern.ch") {
 		cluster_name = cluster_name + ".cern.ch"
 	}
@@ -102,10 +103,9 @@ func (lbc *LBCluster) get_state_dns(dnsManager string) error {
 	in, err := dns.Exchange(m, dnsManager+":53")
 	if err != nil {
 		lbc.Write_to_log("ERROR", fmt.Sprintf("Error getting the ipv4 state of dns: %v", err))
-		return err
+		return nil, err
 	}
-
-	var ips []net.IP
+	//fmt.Println(in)
 	for _, a := range in.Answer {
 		if t, ok := a.(*dns.A); ok {
 			lbc.Slog.Debug(fmt.Sprintf("%v", t))
@@ -117,7 +117,7 @@ func (lbc *LBCluster) get_state_dns(dnsManager string) error {
 	in, err = dns.Exchange(m, dnsManager+":53")
 	if err != nil {
 		lbc.Write_to_log("ERROR", fmt.Sprintf("Error getting the ipv6 state of dns: %v", err))
-		return err
+		return ips, err
 	}
 
 	for _, a := range in.Answer {
@@ -127,6 +127,11 @@ func (lbc *LBCluster) get_state_dns(dnsManager string) error {
 			ips = append(ips, t.AAAA)
 		}
 	}
+	// Check if there is any host behind the alias
+	if len(ips) == 0 {
+		return ips, nil
+	}
+
 	//addrs, err := net.LookupHost(cluster_name)
 	//ips, err := net.LookupIP(cluster_name)
 	//if err != nil {
@@ -147,9 +152,10 @@ func (lbc *LBCluster) get_state_dns(dnsManager string) error {
 				err = nil
 			} else {
 				lbc.Write_to_log("INFO", "Different error")
-				return err
+				return ips, err
 			}
 		}
+
 		if len(names) > 0 {
 			if len(names) == 1 {
 				name = strings.TrimRight(names[0], ".")
@@ -157,7 +163,7 @@ func (lbc *LBCluster) get_state_dns(dnsManager string) error {
 				name, err = net.LookupCNAME(names[0])
 				if err != nil {
 					lbc.Write_to_log("ERROR", fmt.Sprintf("Error getting the state of the dns %v", err))
-					return err
+					return ips, err
 				}
 				name = strings.TrimRight(name, ".")
 			}
@@ -184,7 +190,7 @@ func (lbc *LBCluster) get_state_dns(dnsManager string) error {
 		lbc.Write_to_log("WARNING", "Current best hosts are unknown - Taking Previous DNS state  "+pbhDns)
 		lbc.Current_best_hosts = lbc.Previous_best_hosts_dns
 	}
-	return err
+	return ips, err
 }
 
 // Internal functions

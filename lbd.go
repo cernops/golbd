@@ -1,11 +1,8 @@
 package main
 
 import (
-	"bufio"
-	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log/syslog"
 	"math/rand"
@@ -14,11 +11,11 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 
 	"gitlab.cern.ch/lb-experts/golbd/lbcluster"
+	"gitlab.cern.ch/lb-experts/golbd/lbconfig"
 	"gitlab.cern.ch/lb-experts/golbd/lbhost"
 )
 
@@ -33,156 +30,7 @@ var stdoutFlag = flag.Bool("stdout", false, "send log to stdtout")
 
 const itCSgroupDNSserver string = "cfmgr.cern.ch"
 
-// Config this is the configuration of the lbd
-type Config struct {
-	Master          string
-	HeartbeatFile   string
-	HeartbeatPath   string
-	HeartbeatMu     sync.Mutex
-	TsigKeyPrefix   string
-	TsigInternalKey string
-	TsigExternalKey string
-	SnmpPassword    string
-	DNSManager      string
-	Clusters        map[string][]string
-	Parameters      map[string]lbcluster.Params
-}
-
-// readLines reads a whole file into memory and returns a slice of lines.
-func readLines(path string) (lines []string, err error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	sc := bufio.NewScanner(f)
-	for sc.Scan() {
-		lines = append(lines, sc.Text())
-	}
-	return lines, sc.Err()
-}
-
-func loadClusters(config *Config, lg *lbcluster.Log) ([]lbcluster.LBCluster, error) {
-	var lbc lbcluster.LBCluster
-	var lbcs []lbcluster.LBCluster
-
-	for k, v := range config.Clusters {
-		if len(v) == 0 {
-			lg.Warning("cluster: " + k + " ignored as it has no members defined in the configuration file " + *configFileFlag)
-			continue
-		}
-		if par, ok := config.Parameters[k]; ok {
-			lbc = lbcluster.LBCluster{Cluster_name: k, Loadbalancing_username: "loadbalancing",
-				Loadbalancing_password: config.SnmpPassword, Parameters: par,
-				Current_best_hosts:      []string{"unknown"},
-				Previous_best_hosts:     []string{"unknown"},
-				Previous_best_hosts_dns: []string{"unknown"},
-				Slog:                    lg}
-			hm := make(map[string]int)
-			for _, h := range v {
-				hm[h] = 100000
-			}
-			lbc.Host_metric_table = hm
-			lbcs = append(lbcs, lbc)
-			lbc.Write_to_log("INFO", "(re-)loaded cluster ")
-
-		} else {
-			lg.Warning("cluster: " + k + " missing parameters for cluster; ignoring the cluster, please check the configuration file " + *configFileFlag)
-		}
-	}
-
-	return lbcs, nil
-
-}
-
-func loadConfig(configFile string, lg *lbcluster.Log) (*Config, []lbcluster.LBCluster, error) {
-	var (
-		config Config
-		p      lbcluster.Params
-		mc     = make(map[string][]string)
-		mp     = make(map[string]lbcluster.Params)
-	)
-
-	lines, err := readLines(configFile)
-	if err != nil {
-		return nil, nil, err
-	}
-	for _, line := range lines {
-		if strings.HasPrefix(line, "#") || (line == "") {
-			continue
-		}
-		words := strings.Split(line, " ")
-		if words[1] == "=" {
-			switch words[0] {
-			case "master":
-				config.Master = words[2]
-			case "heartbeat_path":
-				config.HeartbeatPath = words[2]
-			case "heartbeat_file":
-				config.HeartbeatFile = words[2]
-			case "tsig_key_prefix":
-				config.TsigKeyPrefix = words[2]
-			case "tsig_internal_key":
-				config.TsigInternalKey = words[2]
-			case "tsig_external_key":
-				config.TsigExternalKey = words[2]
-			case "snmpd_password":
-				config.SnmpPassword = words[2]
-			case "dns_manager":
-				config.DNSManager = words[2]
-			}
-		} else if words[2] == "=" {
-			jsonStream := "{"
-			if words[0] == "parameters" {
-				for i, param := range words[3:] {
-					keyval := strings.Split(param, "#")
-					if keyval[1] == "no" {
-						jsonStream = jsonStream + strconv.Quote(strings.Title(keyval[0])) + ": false"
-					} else if keyval[1] == "yes" {
-						jsonStream = jsonStream + strconv.Quote(strings.Title(keyval[0])) + ": true"
-					} else if _, err := strconv.Atoi(keyval[1]); err == nil {
-						jsonStream = jsonStream + strconv.Quote(strings.Title(keyval[0])) + ": " + keyval[1]
-					} else {
-						jsonStream = jsonStream + strconv.Quote(strings.Title(keyval[0])) + ": " + strconv.Quote(keyval[1])
-					}
-					if i < (len(words[3:]) - 1) {
-						jsonStream = jsonStream + ", "
-					}
-				}
-				jsonStream = jsonStream + "}"
-				dec := json.NewDecoder(strings.NewReader(jsonStream))
-				if err := dec.Decode(&p); err == io.EOF {
-					break
-				} else if err != nil {
-					//log.Fatal(err)
-					lg.Warning(fmt.Sprintf("%v", err))
-					os.Exit(1)
-				}
-				mp[words[1]] = p
-
-			} else if words[0] == "clusters" {
-				mc[words[1]] = words[3:]
-				lg.Debug(words[1])
-				lg.Debug(fmt.Sprintf("%v", words[3:]))
-			}
-		}
-	}
-	config.Parameters = mp
-	config.Clusters = mc
-
-	lbclusters, err := loadClusters(&config, lg)
-	if err != nil {
-		fmt.Println("Error getting the clusters")
-		return nil, nil, err
-	}
-	lg.Info("Clusters loaded")
-
-	return &config, lbclusters, nil
-
-}
-
-func shouldUpdateDNS(config *Config, hostname string, lg *lbcluster.Log) bool {
+func shouldUpdateDNS(config *lbconfig.Config, hostname string, lg *lbcluster.Log) bool {
 	if hostname == config.Master {
 		return true
 	}
@@ -225,7 +73,7 @@ func shouldUpdateDNS(config *Config, hostname string, lg *lbcluster.Log) bool {
 
 }
 
-func updateHeartbeat(config *Config, hostname string, lg *lbcluster.Log) error {
+func updateHeartbeat(config *lbconfig.Config, hostname string, lg *lbcluster.Log) error {
 	if hostname != config.Master {
 		return nil
 	}
@@ -318,7 +166,7 @@ func main() {
 	//	var sig_hup, sig_term bool
 	// installSignalHandler(&sig_hup, &sig_term, &lg)
 
-	config, lbclusters, err := loadConfig(*configFileFlag, &lg)
+	config, lbclusters, err := lbconfig.LoadConfig(*configFileFlag, &lg)
 	if err != nil {
 		lg.Warning("loadConfig Error: ")
 		lg.Warning(err.Error())
@@ -334,7 +182,7 @@ func main() {
 		myValue := <-doneChan
 		if myValue == 1 {
 			lg.Info("Config Changed")
-			config, lbclusters, err = loadConfig(*configFileFlag, &lg)
+			config, lbclusters, err = lbconfig.LoadConfig(*configFileFlag, &lg)
 			if err != nil {
 				lg.Error(fmt.Sprintf("Error getting the clusters (something wrong in %v", configFileFlag))
 			}
@@ -347,7 +195,7 @@ func main() {
 	lg.Error("The lbd is not supposed to stop")
 
 }
-func checkAliases(config *Config, lg lbcluster.Log, lbclusters []lbcluster.LBCluster) {
+func checkAliases(config *lbconfig.Config, lg lbcluster.Log, lbclusters []lbcluster.LBCluster) {
 	hostname, e := os.Hostname()
 	if e == nil {
 		lg.Info("Hostname: " + hostname)
