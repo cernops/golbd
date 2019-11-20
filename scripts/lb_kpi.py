@@ -105,6 +105,7 @@ def get_data(logger, args):
             }
         result = my_es.search("monit_prod_loadbalancer_logs_server*",
                               body={"size": 0,
+                                    "query": {"range": {"metadata.timestamp": {"gte": "now-2h"}}},
                                     "aggs": {"tenant": {
                                         "terms": {"field": "data.partition_name"},
                                         "aggs": {"nodes": {"cardinality": {"field": "data.node"}}}
