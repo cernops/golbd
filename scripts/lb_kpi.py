@@ -66,24 +66,6 @@ def send(document):
                          headers={"Content-Type": "application/json; charset=UTF-8"})
 
 
-def get_time_range(logger, args):
-    """ return the queries that have to be done"""
-
-    # By default, return only the previous hour
-    now = datetime.utcnow().replace(second=0, microsecond=0, minute=0)
-    last_hour = now + timedelta(hours=-1)
-
-    if args.start_date:
-        logger.info("Using %s as the starting date", args.start_date)
-        last_hour = args.start_date
-
-    if args.end_date:
-        logger.info("Using %s as the end date", args.end_date)
-        last_hour = args.end_date
-
-    return "time > '%s' and time < '%s' " % (last_hour, now)
-
-
 def get_data(logger, args):
     """ Gets the KPI for the selected period"""
     logger.info("Ready to get the data for %s", args)
@@ -151,8 +133,6 @@ def get_data(logger, args):
 
     except KeyError, my_ex:
         logger.error("Error connecting to elasticsearch: %s", my_ex)
-
-    #time_query = get_time_range(logger, args)
 
     return my_data
 
