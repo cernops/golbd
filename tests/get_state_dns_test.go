@@ -11,10 +11,6 @@ import (
 func TestGetStateDNS(t *testing.T) {
 	//DNS IP
 	dnsManager := "137.138.16.5"
-	//Empty slice for comparisson purposes
-	ipsEmpty := []string{}
-	//Definition of expected hosts IP for aiermis, valid in the time when the test was written
-	ExpectedIPAiermis := []string{"188.184.104.111", "2001:1458:d00:2d::100:58"}
 
 	Clusters := []lbcluster.LBCluster{
 		//Non-existing clusters
@@ -26,16 +22,17 @@ func TestGetStateDNS(t *testing.T) {
 	}
 	//Expected response for every alias ( slice of IP and error message if any)
 	expected := map[string][]interface{}{
-		"testme007.cern.ch": {ipsEmpty, nil},
-		"testme007":         {ipsEmpty, nil},
-		"kkouros.cern.ch":   {ipsEmpty, nil},
-		"aiermis.cern.ch":   {ExpectedIPAiermis, nil},
+		"testme007.cern.ch": {[]string{}, nil},
+		"testme007":         {[]string{}, nil},
+		"kkouros.cern.ch":   {[]string{}, nil},
+		"aiermis.cern.ch":   {[]string{"188.184.104.111", "2001:1458:d00:2d::100:58"}, nil},
 	}
 	//receiving the output for every alias and storing the results into a map
 	received := make(map[string][]interface{})
 	iprecString := []string{}
 	for _, c := range Clusters {
-		iprec, err := c.Get_state_dns(dnsManager)
+		err := c.GetStateDNS(dnsManager)
+		iprec := c.Previous_best_ips_dns
 		for _, ip := range iprec {
 			iprecString = append(iprecString, ip.String())
 		}

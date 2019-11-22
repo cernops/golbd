@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+//Log struct for the log
 type Log struct {
 	Writer     syslog.Writer
 	Syslog     bool
@@ -18,6 +19,7 @@ type Log struct {
 	logMu      sync.Mutex
 }
 
+//Logger struct for the Logger interface
 type Logger interface {
 	Info(s string) error
 	Warning(s string) error
@@ -25,25 +27,27 @@ type Logger interface {
 	Error(s string) error
 }
 
-func (self *LBCluster) Write_to_log(level string, msg string) error {
+//Write_to_log put something in the log file
+func (lbc *LBCluster) Write_to_log(level string, msg string) error {
 
-	my_message := "cluster: " + self.Cluster_name + " " + msg
+	myMessage := "cluster: " + lbc.Cluster_name + " " + msg
 
 	if level == "INFO" {
-		self.Slog.Info(my_message)
+		lbc.Slog.Info(myMessage)
 	} else if level == "DEBUG" {
-		self.Slog.Debug(my_message)
+		lbc.Slog.Debug(myMessage)
 	} else if level == "WARNING" {
-		self.Slog.Warning(my_message)
+		lbc.Slog.Warning(myMessage)
 	} else if level == "ERROR" {
-		self.Slog.Error(my_message)
+		lbc.Slog.Error(myMessage)
 	} else {
-		self.Slog.Error("LEVEL " + level + " NOT UNDERSTOOD, ASSUMING ERROR " + my_message)
+		lbc.Slog.Error("LEVEL " + level + " NOT UNDERSTOOD, ASSUMING ERROR " + myMessage)
 	}
 
 	return nil
 }
 
+//Info write as Info
 func (l *Log) Info(s string) error {
 	var err error
 	if l.Syslog {
@@ -56,6 +60,7 @@ func (l *Log) Info(s string) error {
 
 }
 
+//Warning write as Warning
 func (l *Log) Warning(s string) error {
 	var err error
 	if l.Syslog {
@@ -68,6 +73,7 @@ func (l *Log) Warning(s string) error {
 
 }
 
+//Debug write as Debug
 func (l *Log) Debug(s string) error {
 	var err error
 	if l.Debugflag {
@@ -82,6 +88,7 @@ func (l *Log) Debug(s string) error {
 
 }
 
+//Error write as Error
 func (l *Log) Error(s string) error {
 	var err error
 	if l.Syslog {
