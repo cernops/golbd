@@ -1,29 +1,51 @@
 package main_test
 
 import (
+	"fmt"
+	"net"
 	"reflect"
 	"testing"
 )
 
 func TestEvaluateMetric(t *testing.T) {
-	c := getTestClusterVariableMetric()
-	expected_host_metric_table := c.Host_metric_table
-	expected_previous_best_hosts := c.Previous_best_hosts
-	expected_current_best_hosts := []string{"lxplus041.cern.ch", "lxplus132.cern.ch"}
+
+	c := getTestCluster("test01.cern.ch")
+
+	c.EvaluateHosts(getHostsToCheck(c))
+
 	expected_time_of_last_evaluation := c.Time_of_last_evaluation
 
-	c.Apply_metric()
-	if !reflect.DeepEqual(c.Host_metric_table, expected_host_metric_table) {
-		t.Errorf("e.apply_metric: c.Host_metric_table: got\n%v\nexpected\n%v", c.Host_metric_table, expected_host_metric_table)
+	var myTests map[int][]net.IP
+	myTests = make(map[int][]net.IP)
+
+	//Getting the best two nodes
+	myTests[2] = []net.IP{net.ParseIP("2001:1458:d00:2c::100:a6"),
+		net.ParseIP("188.184.108.98"),
+		net.ParseIP("2001:1458:d00:32::100:51"),
+		net.ParseIP("188.184.116.81"),
 	}
-	if !reflect.DeepEqual(c.Previous_best_hosts, expected_previous_best_hosts) {
-		t.Errorf("e.apply_metric: c.Previous_best_hosts: got\n%v\nexpected\n%v", c.Previous_best_hosts, expected_previous_best_hosts)
+	// Only the ips of the best node
+	myTests[1] = []net.IP{net.ParseIP("2001:1458:d00:2c::100:a6"),
+		net.ParseIP("188.184.108.98")}
+
+	//With -1, we should get all the nodes
+	myTests[-1] = []net.IP{net.ParseIP("2001:1458:d00:2c::100:a6"),
+		net.ParseIP("188.184.108.98"),
+		net.ParseIP("2001:1458:d00:32::100:51"),
+		net.ParseIP("188.184.116.81"),
+		net.ParseIP("188.184.108.100"),
 	}
-	if !reflect.DeepEqual(c.Current_best_hosts, expected_current_best_hosts) {
-		t.Errorf("e.apply_metric: c.Current_best_hosts: got\n%v\nexpected\n%v", c.Current_best_hosts, expected_current_best_hosts)
+
+	for best, ips := range myTests {
+		fmt.Printf("Checking if with %v best host it works", best)
+		c.Parameters.Best_hosts = best
+		c.ApplyMetric()
+		compareIPs(t, c.Current_best_ips, ips)
+		//		if !reflect.DeepEqual(c.Current_best_ips, ips) {
+		//			t.Errorf("e.apply_metric: Best:%v c.Current_best_ips: got\n %v\nexpected\n%v", best, c.Current_best_ips, ips)
+		//}
 	}
 	if !reflect.DeepEqual(c.Time_of_last_evaluation, expected_time_of_last_evaluation) {
 		t.Errorf("e.apply_metric: c.Time_of_last_evaluation: got\n%v\nexpected\n%v", c.Time_of_last_evaluation, expected_time_of_last_evaluation)
 	}
-
 }

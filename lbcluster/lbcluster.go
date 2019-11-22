@@ -1,6 +1,7 @@
 package lbcluster
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -11,28 +12,33 @@ import (
 	"gitlab.cern.ch/lb-experts/golbd/lbhost"
 
 	"sort"
-	"strings"
 	"time"
 )
 
+//WorstValue worst possible load
 const WorstValue int = 99999
+
+//TIMEOUT snmp timeout
 const TIMEOUT int = 10
+
+//OID snmp object to get
 const OID string = ".1.3.6.1.4.1.96.255.1"
 
+//LBCluster struct of an lbcluster alias
 type LBCluster struct {
 	Cluster_name            string
 	Loadbalancing_username  string
 	Loadbalancing_password  string
-	Host_metric_table       map[string]int
+	Host_metric_table       map[string]Node
 	Parameters              Params
 	Time_of_last_evaluation time.Time
-	Current_best_hosts      []string
-	Previous_best_hosts     []string
-	Previous_best_hosts_dns []string
+	Current_best_ips        []net.IP
+	Previous_best_ips_dns   []net.IP
 	Current_index           int
 	Slog                    *Log
 }
 
+//Params of the alias
 type Params struct {
 	Behaviour        string
 	Best_hosts       int
@@ -68,131 +74,156 @@ func Shuffle(n int, swap func(i, j int)) {
 	}
 }
 
-type Pair struct {
-	Key   string
-	Value int
+//Node Struct to keep the ips and load of a node for an alias
+type Node struct {
+	Load int
+	IPs  []net.IP
 }
 
-type PairList []Pair
+//NodeList struct for the list
+type NodeList []Node
 
-func (p PairList) Len() int           { return len(p) }
-func (p PairList) Less(i, j int) bool { return p[i].Value < p[j].Value }
-func (p PairList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+func (p NodeList) Len() int           { return len(p) }
+func (p NodeList) Less(i, j int) bool { return p[i].Load < p[j].Load }
+func (p NodeList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
-func (self *LBCluster) Time_to_refresh() bool {
-	// self.Write_to_log(fmt.Sprintf("Time_of_last_evaluation = %v now = %v Time_of_last_evaluation + polling_int = %v result = %v Cluster_name = %v\n", self.Time_of_last_evaluation, time.Now(), self.Time_of_last_evaluation.Add(time.Duration(self.Parameters.Polling_interval)*time.Second), self.Time_of_last_evaluation.Add(time.Duration(self.Parameters.Polling_interval)*time.Second).After(time.Now()), self.Cluster_name))
-	return self.Time_of_last_evaluation.Add(time.Duration(self.Parameters.Polling_interval) * time.Second).Before(time.Now())
+//Time_to_refresh Checks if the cluster needs refreshing
+func (lbc *LBCluster) Time_to_refresh() bool {
+	return lbc.Time_of_last_evaluation.Add(time.Duration(lbc.Parameters.Polling_interval) * time.Second).Before(time.Now())
 }
-func (self *LBCluster) Get_list_hosts(current_list map[string]lbhost.LBHost) {
-	self.Write_to_log("DEBUG", "Getting the list of hosts for the alias")
-	for host, _ := range self.Host_metric_table {
-		my_host, ok := current_list[host]
+
+//Get_list_hosts Get the hosts for an alias
+func (lbc *LBCluster) Get_list_hosts(current_list map[string]lbhost.LBHost) {
+	lbc.Write_to_log("DEBUG", "Getting the list of hosts for the alias")
+	for host := range lbc.Host_metric_table {
+		myHost, ok := current_list[host]
 		if ok {
-			my_host.Cluster_name = my_host.Cluster_name + "," + self.Cluster_name
+			myHost.Cluster_name = myHost.Cluster_name + "," + lbc.Cluster_name
 		} else {
-			my_host = lbhost.LBHost{
-				Cluster_name:           self.Cluster_name,
+			myHost = lbhost.LBHost{
+				Cluster_name:           lbc.Cluster_name,
 				Host_name:              host,
-				Loadbalancing_username: self.Loadbalancing_username,
-				Loadbalancing_password: self.Loadbalancing_password,
-				LogFile:                self.Slog.TofilePath,
-				Debugflag:              self.Slog.Debugflag,
+				Loadbalancing_username: lbc.Loadbalancing_username,
+				Loadbalancing_password: lbc.Loadbalancing_password,
+				LogFile:                lbc.Slog.TofilePath,
+				Debugflag:              lbc.Slog.Debugflag,
 			}
 		}
-		current_list[host] = my_host
-
+		current_list[host] = myHost
 	}
-
 }
-func (self *LBCluster) Find_best_hosts(hosts_to_check map[string]lbhost.LBHost) {
-	self.Previous_best_hosts = self.Current_best_hosts
-	self.Evaluate_hosts(hosts_to_check)
+
+func (lbc *LBCluster) concatenateIps(myIps []net.IP) string {
+	temp := ""
+	sort.Slice(myIps, func(i, j int) bool {
+		return bytes.Compare(myIps[i], myIps[j]) < 0
+	})
+	for _, ip := range myIps {
+		temp += ip.String() + " "
+	}
+	return temp
+}
+
+//Find_best_hosts Looks for the best hosts for a cluster
+func (lbc *LBCluster) FindBestHosts(hosts_to_check map[string]lbhost.LBHost) {
+
+	lbc.EvaluateHosts(hosts_to_check)
 	allMetrics := make(map[string]bool)
 	allMetrics["minimum"] = true
 	allMetrics["cmsfrontier"] = true
 	allMetrics["minino"] = true
 
-	_, ok := allMetrics[self.Parameters.Metric]
+	_, ok := allMetrics[lbc.Parameters.Metric]
 	if !ok {
-		self.Write_to_log("ERROR", "wrong parameter(metric) in definition of cluster "+self.Parameters.Metric)
+		lbc.Write_to_log("ERROR", "wrong parameter(metric) in definition of cluster "+lbc.Parameters.Metric)
 		return
 	}
-	self.Apply_metric()
-	self.Time_of_last_evaluation = time.Now()
-	nodes := strings.Join(self.Current_best_hosts, " ")
-	if len(self.Current_best_hosts) == 0 {
+	lbc.ApplyMetric()
+	lbc.Time_of_last_evaluation = time.Now()
+	nodes := lbc.concatenateIps(lbc.Current_best_ips)
+	if len(lbc.Current_best_ips) == 0 {
 		nodes = "NONE"
 	}
-	self.Write_to_log("INFO", "best hosts are: "+nodes)
+	lbc.Write_to_log("INFO", "best hosts are: "+nodes)
 }
 
-// Internal functions
-/* This is the core of the lbcluster: based on the metrics, select the best hosts */
-func (self *LBCluster) Apply_metric() {
-	self.Write_to_log("INFO", "Got metric = "+self.Parameters.Metric)
-	pl := make(PairList, len(self.Host_metric_table))
+// ApplyMetric This is the core of the lbcluster: based on the metrics, select the best hosts
+func (lbc *LBCluster) ApplyMetric() {
+	lbc.Write_to_log("INFO", "Got metric = "+lbc.Parameters.Metric)
+	pl := make(NodeList, len(lbc.Host_metric_table))
 	i := 0
-	for k, v := range self.Host_metric_table {
-		pl[i] = Pair{k, v}
+	for _, v := range lbc.Host_metric_table {
+		pl[i] = v
 		i++
 	}
 	//Let's shuffle the hosts before sorting them, in case some hosts have the same value
 	Shuffle(len(pl), func(i, j int) { pl[i], pl[j] = pl[j], pl[i] })
 	sort.Sort(pl)
-	self.Write_to_log("DEBUG", fmt.Sprintf("%v", pl))
-	var sorted_host_list []string
-	var useful_host_list []string
+	lbc.Write_to_log("DEBUG", fmt.Sprintf("%v", pl))
+	var sorted_host_list []Node
+	var useful_host_list []Node
 	for _, v := range pl {
-		if (v.Value > 0) && (v.Value <= WorstValue) {
-			useful_host_list = append(useful_host_list, v.Key)
+		if (v.Load > 0) && (v.Load <= WorstValue) {
+			useful_host_list = append(useful_host_list, v)
 		}
-		sorted_host_list = append(sorted_host_list, v.Key)
+		sorted_host_list = append(sorted_host_list, v)
 	}
-	self.Write_to_log("DEBUG", fmt.Sprintf("%v", useful_host_list))
+	lbc.Write_to_log("DEBUG", fmt.Sprintf("%v", useful_host_list))
 	useful_hosts := len(useful_host_list)
-	list_length := len(pl)
-	max := self.Parameters.Best_hosts
+	listLength := len(pl)
+	max := lbc.Parameters.Best_hosts
 	if max == -1 {
-		max = list_length
+		max = listLength
 	}
-	if max > list_length {
-		self.Write_to_log("WARNING", fmt.Sprintf("impossible to return %v hosts from the list of %v hosts (%v). Check the configuration of cluster. Returning %v hosts.", max, list_length, sorted_host_list, list_length))
-		max = list_length
+	if max > listLength {
+		lbc.Write_to_log("WARNING", fmt.Sprintf("impossible to return %v hosts from the list of %v hosts (%v). Check the configuration of cluster. Returning %v hosts.", max, listLength, sorted_host_list, listLength))
+		max = listLength
 	}
-	if list_length == 0 {
-		self.Write_to_log("ERROR", "cluster has no hosts defined ! Check the configuration.")
-		self.Current_best_hosts = []string{"unknown"}
+	lbc.Current_best_ips = []net.IP{}
+	if listLength == 0 {
+		lbc.Write_to_log("ERROR", "cluster has no hosts defined ! Check the configuration.")
 	} else if useful_hosts == 0 {
-		if self.Parameters.Metric == "minimum" {
-			self.Write_to_log("WARNING", fmt.Sprintf("no usable hosts found for cluster! Returning random %v hosts.", max))
+		putRandomHosts := false
+		if lbc.Parameters.Metric == "minimum" {
+			lbc.Write_to_log("WARNING", fmt.Sprintf("no usable hosts found for cluster! Returning random %v hosts.", max))
+			putRandomHosts = true
+		} else if (lbc.Parameters.Metric == "minino") || (lbc.Parameters.Metric == "cmsweb") {
+			lbc.Write_to_log("WARNING", "no usable hosts found for cluster! Returning no hosts.")
+		} else if lbc.Parameters.Metric == "cmsfrontier" {
+			lbc.Write_to_log("WARNING", "no usable hosts found for cluster!, using the previous_best_hosts")
+			if len(lbc.Previous_best_ips_dns) != 0 {
+				//If there was something in the DNS, keep that
+				lbc.Current_best_ips = lbc.Previous_best_ips_dns
+			} else {
+				//Otherwise, let's put random hosts
+				putRandomHosts = true
+			}
+		}
+		if putRandomHosts {
 			Shuffle(len(sorted_host_list), func(i, j int) {
 				sorted_host_list[i], sorted_host_list[j] = sorted_host_list[j], sorted_host_list[i]
 			})
-			self.Current_best_hosts = sorted_host_list[:max]
-		} else if (self.Parameters.Metric == "minino") || (self.Parameters.Metric == "cmsweb") {
-			self.Write_to_log("WARNING", "no usable hosts found for cluster! Returning no hosts.")
-			self.Current_best_hosts = useful_host_list
-		} else if self.Parameters.Metric == "cmsfrontier" {
-			self.Write_to_log("WARNING", "no usable hosts found for cluster!, using the previous_best_hosts")
-			self.Current_best_hosts = self.Previous_best_hosts
+			for i := 0; i < max; i++ {
+				lbc.Current_best_ips = append(lbc.Current_best_ips, sorted_host_list[i].IPs...)
+			}
 		}
 	} else {
 		if useful_hosts < max {
-			self.Write_to_log("WARNING", fmt.Sprintf("only %v useable hosts found in cluster", useful_hosts))
+			lbc.Write_to_log("WARNING", fmt.Sprintf("only %v useable hosts found in cluster", useful_hosts))
 			max = useful_hosts
 		}
-		self.Current_best_hosts = useful_host_list[:max]
-		self.Slog.Debug(fmt.Sprintf("%v", self.Current_best_hosts))
+		for i := 0; i < max; i++ {
+			lbc.Current_best_ips = append(lbc.Current_best_ips, useful_host_list[i].IPs...)
+		}
 	}
-	//Once we have selected the best_hosts, let's sort them
-	sort.Strings(self.Current_best_hosts)
-
+	sort.Slice(lbc.Current_best_ips, func(i, j int) bool {
+		return bytes.Compare(lbc.Current_best_ips[i], lbc.Current_best_ips[j]) < 0
+	})
 	return
 }
 
-/* The following functions are for the roger state and its timeout
-
- */
+//NewTimeoutClient checks the timeout
+/* The following functions are for the roger state and its timeout */
 func NewTimeoutClient(connectTimeout time.Duration, readWriteTimeout time.Duration) *http.Client {
 
 	return &http.Client{
@@ -213,7 +244,7 @@ func timeoutDialer(cTimeout time.Duration, rwTimeout time.Duration) func(net, ad
 	}
 }
 
-func (self *LBCluster) checkRogerState(host string) string {
+func (lbc *LBCluster) checkRogerState(host string) string {
 
 	logmessage := ""
 
@@ -247,11 +278,16 @@ func (self *LBCluster) checkRogerState(host string) string {
 
 }
 
-func (self *LBCluster) Evaluate_hosts(hosts_to_check map[string]lbhost.LBHost) {
+//EvaluateHosts gets the load from the all the nodes
+func (lbc *LBCluster) EvaluateHosts(hostsToCheck map[string]lbhost.LBHost) {
 
-	for currenthost := range self.Host_metric_table {
-		host_tested := hosts_to_check[currenthost]
-		self.Host_metric_table[currenthost] = host_tested.Get_load_for_alias(self.Cluster_name)
-		self.Write_to_log("DEBUG", fmt.Sprintf("node: %s It has a load of %d", currenthost, self.Host_metric_table[currenthost]))
+	for currenthost := range lbc.Host_metric_table {
+		host := hostsToCheck[currenthost]
+		ips, err := host.Get_working_IPs()
+		if err != nil {
+			ips, err = host.Get_Ips()
+		}
+		lbc.Host_metric_table[currenthost] = Node{host.Get_load_for_alias(lbc.Cluster_name), ips}
+		lbc.Write_to_log("DEBUG", fmt.Sprintf("node: %s It has a load of %d", currenthost, lbc.Host_metric_table[currenthost].Load))
 	}
 }

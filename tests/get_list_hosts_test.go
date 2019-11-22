@@ -1,6 +1,7 @@
 package main_test
 
 import (
+	"net"
 	"reflect"
 	"testing"
 
@@ -56,25 +57,24 @@ func TestGetListHostsTwo(t *testing.T) {
 		{Cluster_name: "test01.cern.ch",
 			Loadbalancing_username: "loadbalancing",
 			Loadbalancing_password: "zzz123",
-			Host_metric_table:      map[string]int{"lxplus142.cern.ch": 100000, "lxplus177.cern.ch": 100000},
+			Host_metric_table:      map[string]lbcluster.Node{"lxplus142.cern.ch": lbcluster.Node{}, "lxplus177.cern.ch": lbcluster.Node{}},
 			Parameters:             lbcluster.Params{Behaviour: "mindless", Best_hosts: 2, External: true, Metric: "cmsfrontier", Polling_interval: 6, Statistics: "long"},
 			//Time_of_last_evaluation time.Time
-			Current_best_hosts:      []string{"unknown"},
-			Previous_best_hosts:     []string{"unknown"},
-			Previous_best_hosts_dns: []string{"unknown"},
-			Slog:                    &lg,
-			Current_index:           0},
+			Current_best_ips: []net.IP{},
+
+			Previous_best_ips_dns: []net.IP{},
+			Slog:                  &lg,
+			Current_index:         0},
 		lbcluster.LBCluster{Cluster_name: "test02.cern.ch",
 			Loadbalancing_username: "loadbalancing",
 			Loadbalancing_password: "zzz123",
-			Host_metric_table:      map[string]int{"lxplus013.cern.ch": 100000, "lxplus177.cern.ch": 100000, "lxplus025.cern.ch": 100000},
+			Host_metric_table:      map[string]lbcluster.Node{"lxplus013.cern.ch": lbcluster.Node{}, "lxplus177.cern.ch": lbcluster.Node{}, "lxplus025.cern.ch": lbcluster.Node{}},
 			Parameters:             lbcluster.Params{Behaviour: "mindless", Best_hosts: 10, External: false, Metric: "cmsfrontier", Polling_interval: 6, Statistics: "long"},
 			//Time_of_last_evaluation time.Time
-			Current_best_hosts:      []string{"unknown"},
-			Previous_best_hosts:     []string{"unknown"},
-			Previous_best_hosts_dns: []string{"unknown"},
-			Slog:                    &lg,
-			Current_index:           0}}
+			Current_best_ips:      []net.IP{},
+			Previous_best_ips_dns: []net.IP{},
+			Slog:                  &lg,
+			Current_index:         0}}
 
 	expected := map[string]lbhost.LBHost{
 		"lxplus142.cern.ch": lbhost.LBHost{Cluster_name: "test01.cern.ch",

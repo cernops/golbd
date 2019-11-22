@@ -15,14 +15,17 @@ func getTestCluster(name string) lbcluster.LBCluster {
 	return lbcluster.LBCluster{Cluster_name: name,
 		Loadbalancing_username: "loadbalancing",
 		Loadbalancing_password: "zzz123",
-		Host_metric_table:      map[string]int{"lxplus132.cern.ch": 100000, "lxplus041.cern.ch": 100000, "lxplus130.cern.ch": 100000, "monit-kafkax-17be060b0d.cern.ch": 100000},
-		Parameters:             lbcluster.Params{Behaviour: "mindless", Best_hosts: 2, External: true, Metric: "cmsfrontier", Polling_interval: 6, Statistics: "long"},
+		Host_metric_table: map[string]lbcluster.Node{
+			"lxplus132.cern.ch":               lbcluster.Node{Load: 100000, IPs: []net.IP{}},
+			"lxplus041.cern.ch":               lbcluster.Node{Load: 100000, IPs: []net.IP{}},
+			"lxplus130.cern.ch":               lbcluster.Node{Load: 100000, IPs: []net.IP{}},
+			"monit-kafkax-17be060b0d.cern.ch": lbcluster.Node{Load: 100000, IPs: []net.IP{}}},
+		Parameters: lbcluster.Params{Behaviour: "mindless", Best_hosts: 2, External: true, Metric: "cmsfrontier", Polling_interval: 6, Statistics: "long"},
 		//Time_of_last_evaluation time.Time
-		Current_best_hosts:      []string{"unknown"},
-		Previous_best_hosts:     []string{"unknown"},
-		Previous_best_hosts_dns: []string{"unknown"},
-		Slog:                    &lg,
-		Current_index:           0}
+		Current_best_ips:      []net.IP{},
+		Previous_best_ips_dns: []net.IP{},
+		Slog:                  &lg,
+		Current_index:         0}
 }
 
 func getSecondTestCluster() lbcluster.LBCluster {
@@ -30,14 +33,16 @@ func getSecondTestCluster() lbcluster.LBCluster {
 	return lbcluster.LBCluster{Cluster_name: "test02.cern.ch",
 		Loadbalancing_username: "loadbalancing",
 		Loadbalancing_password: "zzz123",
-		Host_metric_table:      map[string]int{"lxplus013.cern.ch": 100000, "lxplus038.cern.ch": 100000, "lxplus025.cern.ch": 100000},
-		Parameters:             lbcluster.Params{Behaviour: "mindless", Best_hosts: 10, External: false, Metric: "cmsfrontier", Polling_interval: 6, Statistics: "long"},
+		Host_metric_table: map[string]lbcluster.Node{
+			"lxplus013.cern.ch": lbcluster.Node{Load: 100000, IPs: []net.IP{}},
+			"lxplus038.cern.ch": lbcluster.Node{Load: 100000, IPs: []net.IP{}},
+			"lxplus025.cern.ch": lbcluster.Node{Load: 100000, IPs: []net.IP{}}},
+		Parameters: lbcluster.Params{Behaviour: "mindless", Best_hosts: 10, External: false, Metric: "cmsfrontier", Polling_interval: 6, Statistics: "long"},
 		//Time_of_last_evaluation time.Time
-		Current_best_hosts:      []string{"unknown"},
-		Previous_best_hosts:     []string{"unknown"},
-		Previous_best_hosts_dns: []string{"unknown"},
-		Slog:                    &lg,
-		Current_index:           0}
+		Current_best_ips:      []net.IP{},
+		Previous_best_ips_dns: []net.IP{},
+		Slog:                  &lg,
+		Current_index:         0}
 }
 func getHostsToCheck(c lbcluster.LBCluster) map[string]lbhost.LBHost {
 	hostsToCheck := map[string]lbhost.LBHost{
@@ -82,20 +87,6 @@ func getHostsToCheck(c lbcluster.LBCluster) map[string]lbhost.LBHost {
 	}
 
 	return hostsToCheck
-}
-func getTestClusterVariableMetric() lbcluster.LBCluster {
-	lg := lbcluster.Log{Syslog: false, Stdout: true, Debugflag: false}
-	return lbcluster.LBCluster{Cluster_name: "test03.cern.ch",
-		Loadbalancing_username: "loadbalancing",
-		Loadbalancing_password: "zzz123",
-		Host_metric_table:      map[string]int{"monit-kafkax-17be060b0d.cern.ch": 816, "lxplus132.cern.ch": 2, "lxplus041.cern.ch": 3, "lxplus130.cern.ch": 27},
-		Parameters:             lbcluster.Params{Behaviour: "mindless", Best_hosts: 2, External: true, Metric: "cmsfrontier", Polling_interval: 300, Statistics: "long"},
-		//Time_of_last_evaluation time.Time
-		Current_best_hosts:      []string{"unknown"},
-		Previous_best_hosts:     []string{"unknown"},
-		Previous_best_hosts_dns: []string{"unknown"},
-		Slog:                    &lg,
-		Current_index:           0}
 }
 func getHost(hostname string, responseInt int, responseString string) lbhost.LBHost {
 

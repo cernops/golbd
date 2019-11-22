@@ -165,7 +165,7 @@ func (self *LBHost) Get_working_IPs() ([]net.IP, error) {
 	return my_ips, nil
 }
 
-func (self *LBHost) get_Ips() ([]net.IP, error) {
+func (self *LBHost) Get_Ips() ([]net.IP, error) {
 
 	var ips []net.IP
 
@@ -201,7 +201,7 @@ func (self *LBHost) get_Ips() ([]net.IP, error) {
 func (self *LBHost) find_transports() {
 	self.Write_to_log("DEBUG", "Let's find the ips behind this host")
 
-	ips, _ := self.get_Ips()
+	ips, _ := self.Get_Ips()
 	for _, ip := range ips {
 		transport := "udp"
 		// If there is an IPv6 address use udp6 transport

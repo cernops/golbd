@@ -12,8 +12,8 @@
 %global debug_package	%{nil}
 
 Name:		%{repo}
-Version:	0.1
-Release:	20
+Version:	0.2
+Release:	1
 #psaiz: Removing the dist from the release %{?dist}
 Summary:	CERN DNS Load Balancer Daemon
 License:	ASL 2.0
@@ -110,6 +110,8 @@ fi
 
 
 %changelog
+* Thu Sep 12 2019 Pablo Saiz <pablo.saiz@cern.ch>           - 0.2.1
+- Change the logic of the updates to use ips instead of hostnames
 * Fri Mar 22 2019 Pablo Saiz <pablo.saiz@cern.ch>           - 0.1.19
 - Sort the name of the machines alphabetically before the DNS update
 - Set the flag to avoid partial responses in hostname resolution
