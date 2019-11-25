@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
+	"strings"
 
 	"gitlab.cern.ch/lb-experts/golbd/lbhost"
 
@@ -114,14 +115,14 @@ func (lbc *LBCluster) Get_list_hosts(current_list map[string]lbhost.LBHost) {
 }
 
 func (lbc *LBCluster) concatenateIps(myIps []net.IP) string {
-	temp := ""
-	sort.Slice(myIps, func(i, j int) bool {
-		return bytes.Compare(myIps[i], myIps[j]) < 0
-	})
+	ip_string := make([]string, 0, len(myIps))
+
 	for _, ip := range myIps {
-		temp += ip.String() + " "
+		ip_string = append(ip_string, ip.String())
 	}
-	return temp
+
+	sort.Strings(ip_string)
+	return strings.Join(ip_string, " ")
 }
 
 //Find_best_hosts Looks for the best hosts for a cluster
