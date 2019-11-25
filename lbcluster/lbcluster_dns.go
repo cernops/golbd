@@ -1,10 +1,8 @@
 package lbcluster
 
 import (
-	"bytes"
 	"fmt"
 	"net"
-	"sort"
 	"time"
 
 	"github.com/miekg/dns"
@@ -120,8 +118,5 @@ func (lbc *LBCluster) GetStateDNS(dnsManager string) error {
 	lbc.Write_to_log("INFO", fmt.Sprintf("Let's keep the list of ips : %v", ips))
 	lbc.Previous_best_ips_dns = ips
 
-	sort.Slice(lbc.Previous_best_ips_dns, func(i, j int) bool {
-		return bytes.Compare(lbc.Previous_best_ips_dns[i], lbc.Previous_best_ips_dns[j]) < 0
-	})
 	return nil
 }
