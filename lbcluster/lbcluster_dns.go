@@ -123,5 +123,7 @@ func (lbc *LBCluster) GetStateDNS(dnsManager string) error {
 	sort.Slice(lbc.Previous_best_ips_dns, func(i, j int) bool {
 		return bytes.Compare(lbc.Previous_best_ips_dns[i], lbc.Previous_best_ips_dns[j]) < 0
 	})
+	lbc.Write_to_log("INFO", fmt.Sprintf("SORTING THE PREVIOUS DNS: %v", lbc.Previous_best_ips_dns))
+
 	return nil
 }

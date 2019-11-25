@@ -219,6 +219,8 @@ func (lbc *LBCluster) ApplyMetric() {
 	sort.Slice(lbc.Current_best_ips, func(i, j int) bool {
 		return bytes.Compare(lbc.Current_best_ips[i], lbc.Current_best_ips[j]) < 0
 	})
+	lbc.Write_to_log("INFO", fmt.Sprintf("SORTING THE CURRENT BEST IPS: %v", lbc.Current_best_ips))
+
 	return
 }
 
