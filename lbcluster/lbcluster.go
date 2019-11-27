@@ -1,7 +1,6 @@
 package lbcluster
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -126,7 +125,7 @@ func (lbc *LBCluster) concatenateIps(myIps []net.IP) string {
 }
 
 //Find_best_hosts Looks for the best hosts for a cluster
-func (lbc *LBCluster) FindBestHosts(hosts_to_check map[string]lbhost.LBHost) {
+func (lbc *LBCluster) FindBestHosts(hosts_to_check map[string]lbhost.LBHost) bool {
 
 	lbc.EvaluateHosts(hosts_to_check)
 	allMetrics := make(map[string]bool)
@@ -137,19 +136,22 @@ func (lbc *LBCluster) FindBestHosts(hosts_to_check map[string]lbhost.LBHost) {
 	_, ok := allMetrics[lbc.Parameters.Metric]
 	if !ok {
 		lbc.Write_to_log("ERROR", "wrong parameter(metric) in definition of cluster "+lbc.Parameters.Metric)
-		return
+		return false
 	}
-	lbc.ApplyMetric()
+	if !lbc.ApplyMetric() {
+		return false
+	}
 	lbc.Time_of_last_evaluation = time.Now()
 	nodes := lbc.concatenateIps(lbc.Current_best_ips)
 	if len(lbc.Current_best_ips) == 0 {
 		nodes = "NONE"
 	}
 	lbc.Write_to_log("INFO", "best hosts are: "+nodes)
+	return true
 }
 
 // ApplyMetric This is the core of the lbcluster: based on the metrics, select the best hosts
-func (lbc *LBCluster) ApplyMetric() {
+func (lbc *LBCluster) ApplyMetric() bool {
 	lbc.Write_to_log("INFO", "Got metric = "+lbc.Parameters.Metric)
 	pl := make(NodeList, len(lbc.Host_metric_table))
 	i := 0
@@ -184,29 +186,22 @@ func (lbc *LBCluster) ApplyMetric() {
 	if listLength == 0 {
 		lbc.Write_to_log("ERROR", "cluster has no hosts defined ! Check the configuration.")
 	} else if useful_hosts == 0 {
-		putRandomHosts := false
+
 		if lbc.Parameters.Metric == "minimum" {
 			lbc.Write_to_log("WARNING", fmt.Sprintf("no usable hosts found for cluster! Returning random %v hosts.", max))
-			putRandomHosts = true
-		} else if (lbc.Parameters.Metric == "minino") || (lbc.Parameters.Metric == "cmsweb") {
-			lbc.Write_to_log("WARNING", "no usable hosts found for cluster! Returning no hosts.")
-		} else if lbc.Parameters.Metric == "cmsfrontier" {
-			lbc.Write_to_log("WARNING", "no usable hosts found for cluster!, using the previous_best_hosts")
-			if len(lbc.Previous_best_ips_dns) != 0 {
-				//If there was something in the DNS, keep that
-				lbc.Current_best_ips = lbc.Previous_best_ips_dns
-			} else {
-				//Otherwise, let's put random hosts
-				putRandomHosts = true
-			}
-		}
-		if putRandomHosts {
 			Shuffle(len(sorted_host_list), func(i, j int) {
 				sorted_host_list[i], sorted_host_list[j] = sorted_host_list[j], sorted_host_list[i]
 			})
 			for i := 0; i < max; i++ {
 				lbc.Current_best_ips = append(lbc.Current_best_ips, sorted_host_list[i].IPs...)
 			}
+			lbc.Write_to_log("Warning", fmt.Sprintf("We have put random hosts behind the alias: %v", lbc.Current_best_ips))
+
+		} else if (lbc.Parameters.Metric == "minino") || (lbc.Parameters.Metric == "cmsweb") {
+			lbc.Write_to_log("WARNING", "no usable hosts found for cluster! Returning no hosts.")
+		} else if lbc.Parameters.Metric == "cmsfrontier" {
+			lbc.Write_to_log("WARNING", "no usable hosts found for cluster! Skipping the DNS update")
+			return false
 		}
 	} else {
 		if useful_hosts < max {
@@ -217,11 +212,8 @@ func (lbc *LBCluster) ApplyMetric() {
 			lbc.Current_best_ips = append(lbc.Current_best_ips, useful_host_list[i].IPs...)
 		}
 	}
-	sort.Slice(lbc.Current_best_ips, func(i, j int) bool {
-		return bytes.Compare(lbc.Current_best_ips[i], lbc.Current_best_ips[j]) < 0
-	})
 
-	return
+	return true
 }
 
 //NewTimeoutClient checks the timeout
