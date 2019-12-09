@@ -80,7 +80,7 @@ def get_data(logger, args):
 
     availabilitydesc = """<h3>DNS Load Balancing</h3><p>%s LB aliases defined</p>
 <h4>Please follow the link below to see the LB Alias logs</h4><p>
-<a href=\"https://aiermis.cern.ch/lbweb/logsform\">https://aiermis.cern.ch/lbweb/logsform</a></p> JSON2
+<a href=\"https://aiermis.cern.ch/lbweb/logsform\">https://aiermis.cern.ch/lbweb/logsform</a></p>
 """ % number_of_clusters
 
     sls_state = 'unavailable'
