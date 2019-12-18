@@ -25,7 +25,7 @@ func TestFindBestHosts(t *testing.T) {
 
 	expected_host_metric_table := getExpectedHostMetric()
 
-	expected_current_best_ips := []net.IP{net.ParseIP("188.184.108.98"), net.ParseIP("188.184.116.81"), net.ParseIP("2001:1458:d00:2c::100:a6"), net.ParseIP("2001:1458:d00:32::100:51")}
+	expected_current_best_ips := []net.IP{net.ParseIP("2001:1458:d00:2c::100:a6"), net.ParseIP("188.184.108.98"), net.ParseIP("2001:1458:d00:32::100:51"), net.ParseIP("188.184.116.81")}
 
 	c.FindBestHosts(hosts_to_check)
 	if !reflect.DeepEqual(c.Host_metric_table, expected_host_metric_table) {
