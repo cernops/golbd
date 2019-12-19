@@ -238,12 +238,15 @@ func checkAliases(config *lbconfig.Config, lg lbcluster.Log, lbclusters []lbclus
 		/* Finally, let's go through the aliases, selecting the best hosts*/
 		for _, pc := range clustersToUpdate {
 			pc.Write_to_log("DEBUG", "READY TO UPDATE THE CLUSTER")
-			pc.FindBestHosts(hostsToCheck)
-			if updateDNS {
-				pc.Write_to_log("DEBUG", "Should update dns is true")
-				pc.RefreshDNS(config.DNSManager, config.TsigKeyPrefix, config.TsigInternalKey, config.TsigExternalKey)
+			if pc.FindBestHosts(hostsToCheck) {
+				if updateDNS {
+					pc.Write_to_log("DEBUG", "Should update dns is true")
+					pc.RefreshDNS(config.DNSManager, config.TsigKeyPrefix, config.TsigInternalKey, config.TsigExternalKey)
+				} else {
+					pc.Write_to_log("DEBUG", "should_update_dns false")
+				}
 			} else {
-				pc.Write_to_log("DEBUG", "should_update_dns false")
+				pc.Write_to_log("DEBUG", "FindBestHosts false")
 			}
 		}
 	}

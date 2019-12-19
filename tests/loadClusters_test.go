@@ -88,6 +88,50 @@ func getHostsToCheck(c lbcluster.LBCluster) map[string]lbhost.LBHost {
 
 	return hostsToCheck
 }
+func getBadHostsToCheck(c lbcluster.LBCluster) map[string]lbhost.LBHost {
+	badHostsToCheck := map[string]lbhost.LBHost{
+		"lxplus132.cern.ch": lbhost.LBHost{Cluster_name: c.Cluster_name,
+			Host_name: "lxplus132.cern.ch",
+			Host_transports: []lbhost.LBHostTransportResult{
+				lbhost.LBHostTransportResult{Transport: "udp6", Response_int: -2, Response_string: "", IP: net.ParseIP("2001:1458:d00:2c::100:a6"), Response_error: ""},
+				lbhost.LBHostTransportResult{Transport: "udp", Response_int: -2, Response_string: "", IP: net.ParseIP("188.184.108.98"), Response_error: ""},
+			},
+			Loadbalancing_username: c.Loadbalancing_username,
+			Loadbalancing_password: c.Loadbalancing_password,
+			LogFile:                c.Slog.TofilePath,
+			Debugflag:              c.Slog.Debugflag,
+		},
+		"lxplus041.cern.ch": lbhost.LBHost{Cluster_name: c.Cluster_name,
+			Host_name: "lxplus041.cern.ch",
+			Host_transports: []lbhost.LBHostTransportResult{
+				lbhost.LBHostTransportResult{Transport: "udp6", Response_int: -3, Response_string: "", IP: net.ParseIP("2001:1458:d00:32::100:51"), Response_error: ""},
+				lbhost.LBHostTransportResult{Transport: "udp", Response_int: -3, Response_string: "", IP: net.ParseIP("188.184.116.81"), Response_error: ""},
+			},
+			Loadbalancing_username: c.Loadbalancing_username,
+			Loadbalancing_password: c.Loadbalancing_password,
+			LogFile:                c.Slog.TofilePath,
+			Debugflag:              c.Slog.Debugflag,
+		},
+		"lxplus130.cern.ch": lbhost.LBHost{Cluster_name: c.Cluster_name,
+			Host_name:              "lxplus130.cern.ch",
+			Host_transports:        []lbhost.LBHostTransportResult{lbhost.LBHostTransportResult{Transport: "udp", Response_int: -27, Response_string: "", IP: net.ParseIP("188.184.108.100"), Response_error: ""}},
+			Loadbalancing_username: c.Loadbalancing_username,
+			Loadbalancing_password: c.Loadbalancing_password,
+			LogFile:                c.Slog.TofilePath,
+			Debugflag:              c.Slog.Debugflag,
+		},
+		"monit-kafkax-17be060b0d.cern.ch": lbhost.LBHost{Cluster_name: c.Cluster_name,
+			Host_name:              "monit-kafkax-17be060b0d.cern.ch",
+			Host_transports:        []lbhost.LBHostTransportResult{lbhost.LBHostTransportResult{Transport: "udp", Response_int: 100000, Response_string: "monit-kafkax.cern.ch=816,monit-kafka.cern.ch=816,test01.cern.ch=816", IP: net.ParseIP("188.184.108.100"), Response_error: ""}},
+			Loadbalancing_username: c.Loadbalancing_username,
+			Loadbalancing_password: c.Loadbalancing_password,
+			LogFile:                c.Slog.TofilePath,
+			Debugflag:              c.Slog.Debugflag,
+		},
+	}
+
+	return badHostsToCheck
+}
 func getHost(hostname string, responseInt int, responseString string) lbhost.LBHost {
 
 	return lbhost.LBHost{Cluster_name: "test01.cern.ch",
