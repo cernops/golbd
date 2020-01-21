@@ -72,8 +72,8 @@ def get_data(logger, args):
 
     my_conf = load_config()
 
-    username = my_conf.get("elasticsearch", "user")
-    password = my_conf.get("elasticsearch", "password")
+    username = my_conf.get("elasticsearch", "user_lb")
+    password = my_conf.get("elasticsearch", "password_lb")
 
     epoch = int(1000*(datetime.utcnow() - datetime(1970, 1, 1)).total_seconds())
     my_data = []

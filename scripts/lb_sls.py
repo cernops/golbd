@@ -84,9 +84,9 @@ def get_data(logger, args):
 """ % number_of_clusters
 
     sls_state = 'unavailable'
-    if sls_state > 75:
+    if availability > 75:
         sls_state = 'available'
-    elif sls_state > 40:
+    elif availability > 40:
         sls_state = 'degraded'
 
 
