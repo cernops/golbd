@@ -8,12 +8,11 @@ include:
 
 before_script:
   - yum -y install --exclude python2-libcomps  krb5-workstation koji rpm-build rpmdevtools
-  - pwd
-  - ls -al 
   - mkdir -p /go/src/github.com/cernops/
-  - echo "FROM THE GOLBD"
   - ln -s  /builds/lb-experts/golbd /go/src/github.com/cernops/golbd
   - cd /go/src/github.com/cernops/golbd
   - export SPEC=$(ls *spec)
   - export PKG=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}\n" | head -n 1)
-  - export PKG_REL=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
+  - export PKG_REL7=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
+  - export PKG_REL8=$(rpm -q --define "dist .lb8" --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
+
