@@ -3,7 +3,7 @@ image: gitlab-registry.cern.ch/linuxsupport/cc7-base
 
 include: 
   - project: lb-experts/golbclient
-    ref: master
+    ref: psaiz_devel
     file: .gitlab-ci.yml
 
 before_script:
