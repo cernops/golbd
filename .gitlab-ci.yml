@@ -4,7 +4,7 @@ image: gitlab-registry.cern.ch/linuxsupport/cc7-base
 include: 
   - project: lb-experts/golbclient
     ref: psaiz_devel
-    file: .gitlab-ci.yml
+    file: .gitlab-ci_koji.yml
 
 before_script:
   - yum -y install --exclude python2-libcomps  krb5-workstation koji rpm-build rpmdevtools
