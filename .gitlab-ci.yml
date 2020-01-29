@@ -1,18 +1,56 @@
 ---
-image: gitlab-registry.cern.ch/linuxsupport/cc7-base
 
-include: 
+include:
   - project: lb-experts/golbclient
     ref: psaiz_devel
     file: .gitlab-ci_koji.yml
 
 before_script:
   - yum -y install --exclude python2-libcomps  krb5-workstation koji rpm-build rpmdevtools
-  - mkdir -p /go/src/github.com/cernops/
-  - ln -s  /builds/lb-experts/golbd /go/src/github.com/cernops/golbd
-  - cd /go/src/github.com/cernops/golbd
+  - mkdir -p /go/src/gitlab.cern.ch/lb-experts
+  - if [ -d /builds ] ;  then  export PREFIX=/builds  ;  fi
+  - ln -s $PREFIX/lb-experts/golbd /go/src/gitlab.cern.ch/lb-experts/golbd
+
+  - cd /go/src/gitlab.cern.ch/lb-experts/golbd
   - export SPEC=$(ls *spec)
   - export PKG=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}\n" | head -n 1)
-  - export PKG_REL7=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
-  - export PKG_REL8=$(rpm -q --define "dist .lb8" --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
+  - if [ "$PKG" == "" ]; then false ; fi
+  - export PKG_REL=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
+  - if [ "$PKG_REL" == "" ]; then false; fi
+  - echo $LBBUILD_PASSWORD | kinit lbbuild@CERN.CH
+  - klist
+  - printf "[koji]\nserver = https://kojihub.cern.ch/kojihub\nweburl = https://koji.cern.ch/koji\ntopurl = https://koji.cern.ch/kojifiles\nkrb_canon_host = no\nkrb_rdns = False" > .koji
 
+
+.install_godep: &install_godep |
+  yum -y install golang git gcc
+  export GOPATH=/go
+  go get github.com/tools/godep
+  /go/bin/godep restore
+
+
+build-my-project:
+  stage: build
+  script:
+    - *install_godep
+    - /go/bin/godep go build
+    - /go/bin/godep go build -race
+
+fmt-my-project:
+  stage: build
+  script:
+    - yum -y install golang git gcc
+    - export GOPATH=/go
+    - mkdir /go11
+    - curl https://dl.google.com/go/go1.11.2.linux-amd64.tar.gz | tar -zxC /go11
+    - MOD_FILES=$(find . -name "*.go"  -exec /go11/go/bin/go fmt {} \;)
+    - echo "FILES MODIFIED $MOD_FILES"
+    - if [ "$MOD_FILES" != "" ]; then false; fi
+
+
+test-my-project:
+  stage: test
+  script:
+    - *install_godep
+    - /go/bin/godep go test -v -cover ./...
+    - /go/bin/godep go test -race
