@@ -7,6 +7,10 @@ include:
     file: .gitlab-ci.yml
 
 before_script:
+  - yum -y install --exclude python2-libcomps  krb5-workstation koji rpm-build rpmdevtools
+  - pwd
+  - ls -al 
+  - mkdir -p /go/src/github.com/cernops/
   - echo "FROM THE GOLBD"
   - ln -s  /builds/lb-experts/golbd /go/src/github.com/cernops/golbd
   - cd /go/src/github.com/cernops/golbd
