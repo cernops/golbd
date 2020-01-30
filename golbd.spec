@@ -1,18 +1,19 @@
-%global provider	github
-%global provider_tld	com
-%global project		cernops
+%global provider	gitlab
+%global provider_tld	cern.ch
+%global project		lb-experts
+%global provider_full %{provider}.%{provider_tld}/%{project}
 %global repo		golbd
 # %global commit		8c0c623bca8e33f4a9c1289ca965c19d9c6db2b1
 %global lbd             lbd
 
-%global import_path	%{provider}.%{provider_tld}/%{project}/%{repo}
+%global import_path	%{provider_full}/%{repo}
 %global gopath		%{_datadir}/gocode
 # %global shortcommit	%(c=%{commit}; echo ${c:0:7})
 %global debug_package	%{nil}
 
 Name:		%{repo}
-Version:	0.1
-Release:	9
+Version:	0.2
+Release:  3
 #psaiz: Removing the dist from the release %{?dist}
 Summary:	CERN DNS Load Balancer Daemon
 License:	ASL 2.0
@@ -21,7 +22,7 @@ URL:		https://%{import_path}
 Source:		%{name}-%{version}.tgz
 BuildRequires:	systemd
 BuildRequires:	golang >= 1.5
-ExclusiveArch:	x86_64 
+ExclusiveArch:	x86_64
 
 %description
 %{summary}
@@ -42,14 +43,19 @@ The lowest loaded machine names are updated on the DNS servers via the DynDNS me
 %setup -n %{name}-%{version} -q
 
 %build
-mkdir _build
-
-pushd _build
-  mkdir -p src/%{provider}.%{provider_tld}/%{project}
-  ln -s $(dirs +1 -l) src/%{import_path}
-popd
-
-GOPATH=$(pwd)/_build:%{gopath} go build %{import_path}
+mkdir -p src/%{provider_full}
+ln -s ../../../ src/%{provider_full}/%{repo}
+ln -s src/gitlab.cern.ch .
+#(cd src/; ln -s ../vendor/github.com  .)
+#echo "What do we have"
+#ls -al src/github.com/reguero/go-snmplib
+#ls -lR vendor/github.com
+#echo "AND UNDER SRC"
+#ls -lR src/github.com
+#
+#which go
+#ls -lR src/github.com/
+GOPATH=$(pwd):%{gopath} go build %{import_path}
 
 %install
 # main package binary
@@ -71,7 +77,7 @@ install -d -m0755  %{buildroot}/var/log/lb/old
 install -d -m0755  %{buildroot}/var/log/lb/old/cluster
 
 %check
-GOPATH=$(pwd)/_build:%{gopath} go test github.com/cernops/golbd
+GOPATH=$(pwd)/:%{gopath} go test %{provider_full}/%{repo}
 
 %post
 %systemd_post %{lbd}.service
@@ -104,6 +110,27 @@ fi
 
 
 %changelog
+* Thu Sep 12 2019 Pablo Saiz <pablo.saiz@cern.ch>           - 0.2.1
+- Change the logic of the updates to use ips instead of hostnames
+* Fri Mar 22 2019 Pablo Saiz <pablo.saiz@cern.ch>           - 0.1.19
+- Sort the name of the machines alphabetically before the DNS update
+- Set the flag to avoid partial responses in hostname resolution
+* Fri Oct 12 2018 Pablo Saiz <pablo.saiz@cern.ch>           - 0.1.16
+- Strict errors and retries in the LookupIP
+- Buffer of get state of DNS and different queries for IPv4 and IPv6
+- Change of log levels
+* Mon Sep  3 2018 Pablo Saiz <pablo.saiz@cern.ch>           - 0.1.15
+- Log file in milliseconds
+* Mon Jun 18 2018 Pablo Saiz <Pablo.Saiz@cern.ch>           - 0.1.14
+- Using the ip name to check  the host
+* Wed Jun 06 2018 Pablo Saiz <Pablo.Saiz@cern.ch>           - 0.1.13
+- Making a single call per host (insead of one call per host per alias)
+* Wed Apr 11 2018 Pablo Saiz <Pablo.Saiz@cern.ch>           - 0.1.11
+- Using NoPriv by default
+- Detecting more errors in the snmp module
+* Wed Mar 14 2018 Pablo Saiz <Pablo.Saiz@cern.ch>           - 0.1.10
+- Changing the snmp module
+- Randomizing the list of hosts before sorting them
 * Wed Jan 24 2018 Pablo Saiz <Pablo.Saiz@cern.ch>           - 0.1.9
 - Reducing the number of calls to the heartbeat
 - Changing the logging

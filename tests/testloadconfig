@@ -1,0 +1,34 @@
+#
+# Who is the primary master to upload the data ?
+#  - fully qualified DNS name
+#
+master = lbdxyz.cern.ch
+
+#
+# Heartbeat details
+#
+heartbeat_path = /work/go/src/github.com/cernops/golbd
+heartbeat_file = heartbeat
+
+#
+# TSIG HMAC-MD5 algorithm keys for DNS access
+#
+tsig_key_prefix = abcd-
+tsig_internal_key = xxx123==
+tsig_external_key = yyy123==
+
+#
+# SNMPv3 password for 'loadbalancing' user
+#
+snmpd_password = zzz123
+
+#
+# Which node manages information in DNS servers ?
+#
+dns_manager = 137.138.28.176
+
+parameters aiermis.cern.ch = behaviour#mindless best_hosts#1 external#no metric#cmsfrontier polling_interval#300 statistics#long ttl#60
+parameters uermis.cern.ch = behaviour#mindless best_hosts#1 external#no metric#cmsfrontier polling_interval#300 statistics#long ttl#222
+
+clusters aiermis.cern.ch = ermis19.cern.ch ermis20.cern.ch
+clusters uermis.cern.ch = ermis21.cern.ch ermis22.cern.ch
