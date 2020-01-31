@@ -2,7 +2,6 @@
 
 include:
   - project: lb-experts/golbclient
-    ref: psaiz_devel
     file: .gitlab-ci_koji.yml
 
 before_script:
