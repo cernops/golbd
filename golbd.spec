@@ -13,7 +13,7 @@
 
 Name:		%{repo}
 Version:	0.2
-Release:  3
+Release:  4
 #psaiz: Removing the dist from the release %{?dist}
 Summary:	CERN DNS Load Balancer Daemon
 License:	ASL 2.0
@@ -81,13 +81,13 @@ GOPATH=$(pwd)/:%{gopath} go test %{provider_full}/%{repo}
 
 %post
 %systemd_post %{lbd}.service
-if [ $1 -eq 1 ] ; then 
-        # Initial installation 
-        systemctl start lbd.service >/dev/null 2>&1 || : 
+if [ $1 -eq 1 ] ; then
+        # Initial installation
+        systemctl start lbd.service >/dev/null 2>&1 || :
 fi
-if [ $1 -eq 2 ] ; then 
-        # Initial installation 
-        systemctl try-restart lbd.service >/dev/null 2>&1 || : 
+if [ $1 -eq 2 ] ; then
+        # Initial installation
+        systemctl try-restart lbd.service >/dev/null 2>&1 || :
 fi
 
 
@@ -98,7 +98,7 @@ fi
 %systemd_postun
 
 %files
-%doc LICENSE COPYING README.md 
+%doc LICENSE COPYING README.md
 %attr(755,root,root) %{_bindir}/%{lbd}
 %attr(644,root,root) %{_unitdir}/%{lbd}.service
 %attr(644,root,root) %config(noreplace) %{_sysconfdir}/sysconfig/%{lbd}
@@ -110,6 +110,8 @@ fi
 
 
 %changelog
+* Thu Jan 30 2020 Pablo Saiz <pablo.saiz@cern.ch>           - 0.2.4
+- Fix race condition that leaves aliases without any nodes behind
 * Thu Sep 12 2019 Pablo Saiz <pablo.saiz@cern.ch>           - 0.2.1
 - Change the logic of the updates to use ips instead of hostnames
 * Fri Mar 22 2019 Pablo Saiz <pablo.saiz@cern.ch>           - 0.1.19
