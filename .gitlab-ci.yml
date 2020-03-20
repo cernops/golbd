@@ -14,8 +14,8 @@ before_script:
   - export SPEC=$(ls *spec)
   - export PKG=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}\n" | head -n 1)
   - if [ "$PKG" == "" ]; then false ; fi
-  - export PKG_REL7=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
-  - export PKG_REL8=$(rpm -q --define "dist .lb8" --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
+  - export PKG_REL7=$(rpm -q --define "dist .ai7" --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
+  - export PKG_REL8=$(rpm -q --define "dist .el8" --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
 
 .install_godep: &install_godep |
   yum -y install golang git gcc
@@ -57,8 +57,8 @@ build_rpm:
     - tar rvf SOURCES/$PKG.tg  --transform "s|go/src|$PKG/vendor/|"  /go/src/github.com/
     - gzip -c SOURCES/$PKG.tg > SOURCES/$PKG.tgz
     - rm -rf SOURCES/$PKG.tg
-    - rpmbuild -bs --define "_topdir $(pwd)" -D "dist ai7" $SPEC
-    - rpmbuild -bs --define "_topdir $(pwd)" -D "dist lb8" $SPEC
+    - rpmbuild -bs --define "_topdir $(pwd)" -D "dist .ai7" $SPEC
+    - rpmbuild -bs --define "_topdir $(pwd)" -D "dist .el8" $SPEC
   artifacts:
     paths:
       - SRPMS/
