@@ -13,7 +13,7 @@
 
 Name:		%{repo}
 Version:	0.2
-Release:  4
+Release:  5
 #psaiz: Removing the dist from the release %{?dist}
 Summary:	CERN DNS Load Balancer Daemon
 License:	ASL 2.0
