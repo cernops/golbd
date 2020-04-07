@@ -156,7 +156,7 @@ func (self *LBHost) Get_load_for_alias(cluster_name string) int {
 func (self *LBHost) Get_working_IPs() ([]net.IP, error) {
 	var my_ips []net.IP
 	for _, my_transport := range self.Host_transports {
-		if my_transport.Response_int > 0 {
+		if (my_transport.Response_int > 0) && (my_transport.Response_error == "") {
 			my_ips = append(my_ips, my_transport.IP)
 		}
 
