@@ -138,10 +138,10 @@ func (lbc *LBCluster) FindBestHosts(hosts_to_check map[string]lbhost.LBHost) boo
 		lbc.Write_to_log("ERROR", "wrong parameter(metric) in definition of cluster "+lbc.Parameters.Metric)
 		return false
 	}
+	lbc.Time_of_last_evaluation = time.Now()
 	if !lbc.ApplyMetric() {
 		return false
 	}
-	lbc.Time_of_last_evaluation = time.Now()
 	nodes := lbc.concatenateIps(lbc.Current_best_ips)
 	if len(lbc.Current_best_ips) == 0 {
 		nodes = "NONE"
