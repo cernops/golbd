@@ -113,6 +113,14 @@ func (lbc *LBCluster) Get_list_hosts(current_list map[string]lbhost.LBHost) {
 	}
 }
 
+func (lbc *LBCluster) concatenateNodes(myNodes []Node) string {
+	nodes := make([]string, 0, len(myNodes))
+	for _, node := range myNodes {
+		nodes = append(nodes, lbc.concatenateIps(node.IPs))
+	}
+	return strings.Join(nodes, " ")
+}
+
 func (lbc *LBCluster) concatenateIps(myIps []net.IP) string {
 	ip_string := make([]string, 0, len(myIps))
 
@@ -179,7 +187,8 @@ func (lbc *LBCluster) ApplyMetric() bool {
 		max = listLength
 	}
 	if max > listLength {
-		lbc.Write_to_log("WARNING", fmt.Sprintf("impossible to return %v hosts from the list of %v hosts (%v). Check the configuration of cluster. Returning %v hosts.", max, listLength, sorted_host_list, listLength))
+		lbc.Write_to_log("WARNING", fmt.Sprintf("impossible to return %v hosts from the list of %v hosts (%v). Check the configuration of cluster. Returning %v hosts.",
+			max, listLength, lbc.concatenateNodes(sorted_host_list), listLength))
 		max = listLength
 	}
 	lbc.Current_best_ips = []net.IP{}
