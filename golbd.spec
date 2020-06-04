@@ -13,7 +13,7 @@
 
 Name:		%{repo}
 Version:	0.2
-Release:  7%{?dist}
+Release:  8%{?dist}
 #psaiz: Removing the dist from the release %{?dist}
 Summary:	CERN DNS Load Balancer Daemon
 License:	ASL 2.0
@@ -110,6 +110,8 @@ fi
 
 
 %changelog
+* Thu Jun 04 2020 Ignacio Reguero <ignacio.reguero@cern.ch> - 0.2.8
+- Update the time of last evaluation when no host is found
 * Thu Jan 30 2020 Pablo Saiz <pablo.saiz@cern.ch>           - 0.2.4
 - Fix race condition that leaves aliases without any nodes behind
 * Thu Sep 12 2019 Pablo Saiz <pablo.saiz@cern.ch>           - 0.2.1
