@@ -64,7 +64,7 @@ def get_number_of_clusters(logger):
     """ Checks how many aliases are defined in ermis"""
     logger.info("Getting the number of aliases from kermis")
 
-    return os.popen('/usr/bin/kermis -a all | /usr/bin/jgrep -s alias_name').read().count('\n')
+    return os.popen('/usr/bin/kermis -j -a all | /usr/bin/jgrep -s alias_name').read().count('\n')
 
 
 def get_data(logger, args):
@@ -84,6 +84,11 @@ def get_data(logger, args):
 """ % number_of_clusters
 
     sls_state = 'unavailable'
+
+    if number_of_clusters == 0:
+        sls_state = 'degraded'
+        logger.error('Error getting the number of aliases from kermis')
+
     if availability > 75:
         sls_state = 'available'
     elif availability > 40:
