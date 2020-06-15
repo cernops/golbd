@@ -125,12 +125,12 @@ def get_data(logger, args):
                             'producer': 'loadbalancer',
                             'idb_fields': ["number_of_clusters", "number_of_cnames",
                                            "number_of_nodes"],
-                            'idb_tags': ['partition'],
+                            'idb_tags': ['partition_lb'],
                             'type': 'kpi',
                             'number_of_clusters': tenants[tenant]['number_of_clusters'],
                             'number_of_nodes': tenants[tenant]['number_of_nodes'],
                             'number_of_cnames': tenants[tenant]['number_of_cnames'],
-                            'partition': tenant})
+                            'partition_lb': tenant})
 
     except KeyError, my_ex:
         logger.error("Error connecting to elasticsearch: %s", my_ex)
