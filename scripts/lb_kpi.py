@@ -84,31 +84,33 @@ def get_data(logger, args):
                                 "http_auth": username + ":" + password}],
                               use_ssl=True, verify_certs=True,
                               ca_certs="/etc/pki/tls/certs/ca-bundle.trust.crt")
-        result = my_es.search("monit_prod_loadbalancer_logs_ermis_latest",
+        result = my_es.search("monit_prod_loadbalancer_logs_lbd_config*",
                               body={"size": 0,
+                                    "query": {"bool": {"must": [{"range": {"metadata.timestamp": {"gte": "now-24h"}}},
+                                                                {"exists": {"field": "data.node" }}]}},
                                     "aggs": {"tenant": {
-                                        "terms": {"field": "data.tenant"},
-                                        "aggs": {"clusters":
-                                                 {"cardinality": {
-                                                     "field": "data.cluster"}},
-                                                 "cnames":
-                                                 {"cardinality": {
-                                                     "field": "data.cname_record"}}}}}})
+                                        "terms": {"field": "data.partition_name"},
+                                        "aggs": {"clusters": {"cardinality": {"field": "data.cluster"}},
+                                                 "nodes": {"cardinality":{"field": "data.node"}}
+                                                 }}}})
         logger.info(result['aggregations'])
         tenants = {}
         for data in result['aggregations']['tenant']['buckets']:
             logger.info(data)
             tenants[data['key']] = {
                 'number_of_clusters': data['clusters']['value'],
-                'number_of_cnames': data['cnames']['value'],
-                'number_of_nodes': 0
+                'number_of_cnames': 0,
+                'number_of_nodes': data['nodes']['value'],
             }
-        result = my_es.search("monit_prod_loadbalancer_logs_server*",
+        result = my_es.search("monit_prod_loadbalancer_logs_ermis_latest",
                               body={"size": 0,
-                                    "query": {"range": {"metadata.timestamp": {"gte": "now-2h"}}},
-                                    "aggs": {"tenant": {
-                                        "terms": {"field": "data.partition_name"},
-                                        "aggs": {"nodes": {"cardinality": {"field": "data.node"}}}
+                                "query":  {"bool": {"must": [{"exists": {"field": "data.cname_record"}},
+                                                             {"range": {"metadata.timestamp": {"gte": "now-24h" }}}
+                                         ]}},
+
+                                "aggs": {"tenant": {
+                                        "terms": {"field": "data.tenant"},
+                                        "aggs": {"cnames": {"cardinality": {"field": "data.cname_record"}}}
                                     }}})
 
         for data in result['aggregations']['tenant']['buckets']:
@@ -116,7 +118,7 @@ def get_data(logger, args):
             if not tenants.has_key(data['key']):
                 logger.info("Skipping %s", data['key'])
                 continue
-            tenants[data['key']]['number_of_nodes'] = data['nodes']['value']
+            tenants[data['key']]['number_of_cnames'] = data['cnames']['value']
 
         for tenant in tenants:
             logger.info(tenant)
