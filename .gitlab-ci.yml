@@ -1,21 +1,17 @@
 ---
-
 include:
-  - project: lb-experts/golbclient
-    file: .gitlab-ci_koji.yml
+  - 'https://gitlab.cern.ch/linuxsupport/rpmci/raw/master/rpm-ci.yml'
 
-before_script:
-  - yum -y install --exclude python2-libcomps  krb5-workstation rpm-build rpmdevtools
-  - mkdir -p /go/src/gitlab.cern.ch/lb-experts
-  - if [ -d /builds ] ;  then  export PREFIX=/builds  ;  fi
-  - ln -s $PREFIX/lb-experts/golbd /go/src/gitlab.cern.ch/lb-experts/golbd
+variables:
+  KOJI_TAG: 'lb'
+  KOJI_TAG_7: 'ai7'
 
-  - cd /go/src/gitlab.cern.ch/lb-experts/golbd
-  - export SPEC=$(ls *spec)
-  - export PKG=$(rpm -q --specfile $SPEC --queryformat "%{name}-%{version}\n" | head -n 1)
-  - if [ "$PKG" == "" ]; then false ; fi
-  - export PKG_REL7=$(rpm -q --define "dist .ai7" --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
-  - export PKG_REL8=$(rpm -q --define "dist .el8" --specfile $SPEC --queryformat "%{name}-%{version}-%{release}\n" | head -n 1)
+  BUILD_7: 'True'
+  BUILD_8: 'True'
+
+  DIST_8: .el8
+  DIST_7: .ai7
+
 
 .install_godep: &install_godep |
   yum -y install golang git gcc
@@ -24,14 +20,14 @@ before_script:
   /go/bin/godep restore
 
 build-my-project:
-  stage: build
+  stage: prebuild
   script:
     - *install_godep
     - /go/bin/godep go build
     - /go/bin/godep go build -race
 
 fmt-my-project:
-  stage: build
+  stage: prebuild
   script:
     - yum -y install golang git gcc
     - export GOPATH=/go
@@ -42,25 +38,8 @@ fmt-my-project:
     - if [ "$MOD_FILES" != "" ]; then false; fi
 
 test-my-project:
-  stage: test
+  stage: prebuild
   script:
     - *install_godep
     - /go/bin/godep go test -v -cover ./...
     - /go/bin/godep go test -race
-
-build_rpm:
-  stage: build_rpm
-  script:
-    - *install_godep
-    - mkdir SOURCES version
-    - tar cvf SOURCES/$PKG.tg  --exclude SOURCES --exclude .git --exclude .koji --exclude .gitlab-ci.yml --transform "s||$PKG/|" .
-    - tar rvf SOURCES/$PKG.tg  --transform "s|go/src|$PKG/vendor/|"  /go/src/github.com/
-    - gzip -c SOURCES/$PKG.tg > SOURCES/$PKG.tgz
-    - rm -rf SOURCES/$PKG.tg
-    - rpmbuild -bs --define "_topdir $(pwd)" -D "dist .ai7" $SPEC
-    - rpmbuild -bs --define "_topdir $(pwd)" -D "dist .el8" $SPEC
-  artifacts:
-    paths:
-      - SRPMS/
-    expire_in: 1 week
-
