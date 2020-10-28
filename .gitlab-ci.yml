@@ -20,8 +20,6 @@ variables:
     rm -f /usr/bin/go
     ln -s /go13/go/bin/go /usr/bin/go
     export GOPATH=/go13
-    go get ./...
-
 
 build-my-project:
   stage: prebuild
