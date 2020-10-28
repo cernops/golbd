@@ -13,33 +13,34 @@ variables:
   DIST_7: .ai7
 
 
-.install_godep: &install_godep |
-  yum -y install golang git gcc
-  export GOPATH=/go
-  go get github.com/tools/godep
-  /go/bin/godep restore
+.install_go: &install_go |
+    mkdir -p /go13
+    yum -y install git gcc
+    curl https://dl.google.com/go/go1.13.14.linux-amd64.tar.gz  | tar -zxC /go13
+    rm -f /usr/bin/go
+    ln -s /go13/go/bin/go /usr/bin/go
+    export GOPATH=/go13
+    go get ./...
+
 
 build-my-project:
   stage: prebuild
   script:
-    - *install_godep
-    - /go/bin/godep go build
-    - /go/bin/godep go build -race
+    - *install_go
+    - go build
+    - go build -race
 
 fmt-my-project:
   stage: prebuild
   script:
-    - yum -y install golang git gcc
-    - export GOPATH=/go
-    - mkdir /go11
-    - curl https://dl.google.com/go/go1.11.2.linux-amd64.tar.gz | tar -zxC /go11
-    - MOD_FILES=$(find . -name "*.go"  -exec /go11/go/bin/go fmt {} \;)
+    - *install_go
+    - MOD_FILES=$(find . -name "*.go"  -exec /usr/bin/go fmt {} \;)
     - echo "FILES MODIFIED $MOD_FILES"
     - if [ "$MOD_FILES" != "" ]; then false; fi
 
 test-my-project:
   stage: prebuild
   script:
-    - *install_godep
-    - /go/bin/godep go test -v -cover ./...
-    - /go/bin/godep go test -race
+    - *install_go
+    - go test -v -cover ./...
+    - go test -race
