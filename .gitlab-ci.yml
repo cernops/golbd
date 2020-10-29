@@ -43,3 +43,13 @@ test-my-project:
     - *install_go
     - go test -v -cover ./...
     - go test -race
+
+build_srpm7:
+  before_script:
+     - yum install -y golang
+     - yum-builddep -y *.spec
+
+build_rpm7:
+  before_script:
+     - yum install -y golang
+     - yum-builddep -y *.spec
