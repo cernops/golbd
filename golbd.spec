@@ -1,28 +1,25 @@
-%global provider	gitlab
-%global provider_tld	cern.ch
-%global project		lb-experts
-%global provider_full %{provider}.%{provider_tld}/%{project}
-%global repo		golbd
-# %global commit		8c0c623bca8e33f4a9c1289ca965c19d9c6db2b1
+%global provider        gitlab
+%global provider_tld    cern.ch
+%global project         lb-experts
+%global provider_full   %{provider}.%{provider_tld}/%{project}
+%global repo            golbd
 %global lbd             lbd
 
-%global import_path	%{provider_full}/%{repo}
-%global gopath		%{_datadir}/gocode
-# %global shortcommit	%(c=%{commit}; echo ${c:0:7})
-%global debug_package	%{nil}
+%global import_path     %{provider_full}/%{repo}
+%global gopath          %{_datadir}/gocode
+%global debug_package   %{nil}
 
-Name:		%{repo}
-Version:	0.2
-Release:  8%{?dist}
+Name:           %{repo}
+Version:        0.2
+Release:        8%{?dist}
 #psaiz: Removing the dist from the release %{?dist}
-Summary:	CERN DNS Load Balancer Daemon
-License:	ASL 2.0
-URL:		https://%{import_path}
-# Source:		https://%{import_path}/archive/%{commit}/%{repo}-%{shortcommit}.tar.gz
-Source:		%{name}-%{version}.tgz
-BuildRequires:	systemd
-BuildRequires:	golang >= 1.5
-ExclusiveArch:	x86_64
+Summary:        CERN DNS Load Balancer Daemon
+License:        ASL 2.0
+URL:            https://%{import_path}
+Source:         %{name}-%{version}.tgz
+BuildRequires:  systemd
+BuildRequires:  golang >= 1.5
+ExclusiveArch:  x86_64
 
 %description
 %{summary}
