@@ -13,9 +13,10 @@ installgo:
 	export GOPATH=/go13
 	go get ./... || true
 
-srpm: installgo 
+srpm:
 	echo "Creating the source rpm"
 	mkdir -p SOURCES version
+	go mod init
 	go mod vendor
 	tar zcf SOURCES/$(PKG).tgz  --exclude SOURCES --exclude .git --exclude .koji --exclude .gitlab-ci.yml --exclude go.mod --exclude go.sum --transform "s||$(PKG)/|" .
 	rpmbuild -bs --define 'dist $(DIST)' --define "_topdir $(PWD)/build" --define '_sourcedir $(PWD)/SOURCES' $(SPECFILE)
