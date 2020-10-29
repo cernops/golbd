@@ -11,7 +11,7 @@ installgo:
 	rm -f /usr/bin/go
 	ln -s /go13/go/bin/go /usr/bin/go
 	export GOPATH=/go13
-	go get ./...
+	go get ./... || true
 
 srpm: installgo 
 	echo "Creating the source rpm"
