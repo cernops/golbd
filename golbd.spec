@@ -107,7 +107,7 @@ fi
 %attr(755,root,root) %{_bindir}/%{lbd}
 %attr(644,root,root) %{_unitdir}/%{lbd}.service
 %attr(644,root,root) %config(noreplace) %{_sysconfdir}/sysconfig/%{lbd}
-%attr(640,root,root) %{_sysconfdir}/logrotate.d/%{lbd}
+%attr(640,root,root) %{_sysconfdir}/logrotate.d/%{repo}
 %attr(755,root,root) /var/log/lb
 %attr(755,root,root) /var/log/lb/cluster
 %attr(755,root,root) /var/log/lb/old
