@@ -25,14 +25,23 @@ ExclusiveArch:  x86_64
 
 This is a concurrent implementation of the CERN DNS LBD.
 
-The load balancing daemon dynamically handles the list of machines behind a given DNS alias to allow scaling and improve availability.
+The load balancing daemon dynamically handles the list of machines behind a
+given DNS alias to allow scaling and improve availability.
 
-The Domain Name System (DNS), the defacto standard for name resolution and esential for the network, is an open standard based protocol which allows the use of names instead of IP addresses on the network.
-Load balancing is an advanced function that can be provided by DNS, to load balance requests across several machines running the same service by using the same DNS name.
+The Domain Name System (DNS), the defacto standard for name resolution and
+esential for the network, is an open standard based protocol which allows the 
+use of names instead of IP addresses on the network.
+Load balancing is an advanced function that can be provided by DNS, to load
+balance requests across several machines running the same service by using the
+same DNS name.
 
 The load balancing server requests each machine for its load status.
-The SNMP daemon, gets the request and calls the locally installed metric program, which delivers the load value in SNMP syntax to STDOUT. The SNMP daemon then passes this back to the load balancing server.
-The lowest loaded machine names are updated on the DNS servers via the DynDNS mechanism.
+The SNMP daemon, gets the request and calls the locally installed metric
+program, which delivers the load value in SNMP syntax to STDOUT. The SNMP
+daemon then passes this back to the load balancing server.
+
+The lowest loaded machine names are updated on the DNS servers via the DynDNS
+mechanism.
 
 
 %prep
@@ -64,7 +73,7 @@ install -p -m0660 %{lbd}.sysconfig %{buildroot}%{_sysconfdir}/sysconfig/%{lbd}
 install -d -m0755 %{buildroot}%{_unitdir}
 install -p -m0644 %{lbd}.service %{buildroot}%{_unitdir}/%{lbd}.service
 install -d -m0755 %{buildroot}%{_sysconfdir}/logrotate.d
-install -p -m0640 %{lbd}.logrotate %{buildroot}%{_sysconfdir}/logrotate.d/%{lbd}
+install -p -m0644 %{lbd}.logrotate %{buildroot}%{_sysconfdir}/logrotate.d/%{repo}
 
 # create some dirs for logs if needed
 install -d -m0755  %{buildroot}/var/log/lb
