@@ -53,3 +53,13 @@ build_rpm7:
   before_script:
      - yum install -y golang
      - yum-builddep -y *.spec
+
+build_docker_image_stable:
+  image: gitlab-registry.cern.ch/ci-tools/docker-image-builder:latest
+  stage: prebuild
+  script: "echo"
+  tags:
+    - docker-image-build
+  variables:
+    TO: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_BRANCH}
+
