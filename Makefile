@@ -13,7 +13,7 @@ installgo:
 	export GOPATH=/go13
 	go get ./... || true
 
-srpm:
+srpm: installgo
 	echo "Creating the source rpm"
 	mkdir -p SOURCES version
 	go mod init
