@@ -26,6 +26,10 @@ build-my-project:
   stage: prebuild
   script:
     - *install_go
+    - pwd
+    - yum install -y mlocate
+    - updatedb
+    - locate lbcluster
     - go build
     - go build -race
 
