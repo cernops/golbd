@@ -10,7 +10,7 @@ import (
 )
 
 func TestLoadConfig(t *testing.T) {
-	lg := lbcluster.Log{Syslog: false, Stdout: true, Debugflag: false}
+	lg := lbcluster.Log{Stdout: true, Debugflag: false}
 
 	//open file
 	loadconfig, err := os.Open("testloadconfig")
