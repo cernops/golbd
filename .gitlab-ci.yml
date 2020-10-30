@@ -21,15 +21,13 @@ variables:
     ln -s /go13/go/bin/go /usr/bin/go
     export GOPATH=/go13
     go get || true
+    rm -rf /go13/src/gitlab.cern.ch/lb-experts/golbd/
+    ln -s /builds/lb-experts/golbd /go13/src/gitlab.cern.ch/lb-experts/
 
 build-my-project:
   stage: prebuild
   script:
     - *install_go
-    - pwd
-    - yum install -y mlocate
-    - updatedb
-    - locate lbcluster
     - go build
     - go build -race
 
