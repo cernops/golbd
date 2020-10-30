@@ -77,9 +77,6 @@ install -p -m0644 %{lbd}.logrotate %{buildroot}%{_sysconfdir}/logrotate.d/%{repo
 
 # create some dirs for logs if needed
 install -d -m0755  %{buildroot}/var/log/lb
-install -d -m0755  %{buildroot}/var/log/lb/cluster
-install -d -m0755  %{buildroot}/var/log/lb/old
-install -d -m0755  %{buildroot}/var/log/lb/old/cluster
 
 %check
 GOPATH=$(pwd)/:%{gopath} go test %{provider_full}/%{repo}
