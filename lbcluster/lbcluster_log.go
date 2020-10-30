@@ -11,11 +11,11 @@ import (
 
 //Log struct for the log
 type Log struct {
-	SyslogWriter     *syslog.Writer
-	Stdout           bool
-	Debugflag        bool
-	TofilePath       string
-	logMu            sync.Mutex
+	SyslogWriter *syslog.Writer
+	Stdout       bool
+	Debugflag    bool
+	TofilePath   string
+	logMu        sync.Mutex
 }
 
 //Logger struct for the Logger interface
@@ -49,7 +49,7 @@ func (lbc *LBCluster) Write_to_log(level string, msg string) error {
 //Info write as Info
 func (l *Log) Info(s string) error {
 	var err error
-	if l.SyslogWriter {
+	if l.SyslogWriter != nil {
 		err = l.SyslogWriter.Info(s)
 	}
 	if l.Stdout || (l.TofilePath != "") {
@@ -62,7 +62,7 @@ func (l *Log) Info(s string) error {
 //Warning write as Warning
 func (l *Log) Warning(s string) error {
 	var err error
-	if l.SyslogWriter {
+	if l.SyslogWriter != nil {
 		err = l.SyslogWriter.Warning(s)
 	}
 	if l.Stdout || (l.TofilePath != "") {
@@ -76,7 +76,7 @@ func (l *Log) Warning(s string) error {
 func (l *Log) Debug(s string) error {
 	var err error
 	if l.Debugflag {
-		if l.SyslogWriter {
+		if l.SyslogWriter != nil {
 			err = l.SyslogWriter.Debug(s)
 		}
 		if l.Stdout || (l.TofilePath != "") {
@@ -90,7 +90,7 @@ func (l *Log) Debug(s string) error {
 //Error write as Error
 func (l *Log) Error(s string) error {
 	var err error
-	if l.SyslogWriter {
+	if l.SyslogWriter != nil {
 		err = l.SyslogWriter.Err(s)
 	}
 	if l.Stdout || (l.TofilePath != "") {
