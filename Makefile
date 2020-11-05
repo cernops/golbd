@@ -18,6 +18,9 @@ srpm: installgo
 	mkdir -p SOURCES version
 	go mod init
 	go mod vendor
+	rm -rf  vendor/gitlab.cern.ch/lb-experts/golbd/*
+	cp -r COPYING    lbcluster/ lbconfig/  lbhost/    LICENSE vendor/gitlab.cern.ch/lb-experts/golbd/
+
 	tar zcf SOURCES/$(PKG).tgz  --exclude SOURCES --exclude .git --exclude .koji --exclude .gitlab-ci.yml --exclude go.mod --exclude go.sum --transform "s||$(PKG)/|" .
 	rpmbuild -bs --define 'dist $(DIST)' --define "_topdir $(PWD)/build" --define '_sourcedir $(PWD)/SOURCES' $(SPECFILE)
    
@@ -25,3 +28,5 @@ rpm: srpm
 	echo "Creating the rpm"
 	rpmbuild -bb --define 'dist $(DIST)' --define "_topdir $(PWD)/build" --define '_sourcedir $(PWD)/SOURCES' $(SPECFILE)
 
+clean:
+	rm -rf build go.sum go.mod vendor
