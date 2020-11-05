@@ -64,4 +64,3 @@ build_docker_image_stable:
     - docker-image-build
   variables:
     TO: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_BRANCH}
-
