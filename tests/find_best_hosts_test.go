@@ -14,7 +14,8 @@ func getExpectedHostMetric() map[string]lbcluster.Node {
 		"monit-kafkax-17be060b0d.cern.ch": lbcluster.Node{Load: 816, IPs: []net.IP{net.ParseIP("188.184.108.100")}},
 		"lxplus132.cern.ch":               lbcluster.Node{Load: 2, IPs: []net.IP{net.ParseIP("2001:1458:d00:2c::100:a6"), net.ParseIP("188.184.108.98")}},
 		"lxplus041.cern.ch":               lbcluster.Node{Load: 3, IPs: []net.IP{net.ParseIP("2001:1458:d00:32::100:51"), net.ParseIP("188.184.116.81")}},
-		"lxplus130.cern.ch":               lbcluster.Node{Load: 27, IPs: []net.IP{net.ParseIP("188.184.108.100")}}}
+		"lxplus130.cern.ch":               lbcluster.Node{Load: 27, IPs: []net.IP{net.ParseIP("188.184.108.100")}},
+		"lxplus133.subdo.cern.ch":         lbcluster.Node{Load: 27, IPs: []net.IP{net.ParseIP("188.184.108.101")}}}
 }
 
 func TestFindBestHosts(t *testing.T) {
