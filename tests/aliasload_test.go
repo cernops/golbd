@@ -25,6 +25,9 @@ func TestGetLoadHosts(t *testing.T) {
 	if !reflect.DeepEqual(hosts[0].Get_load_for_alias(hosts[0].Cluster_name), expectedhost0) {
 		t.Errorf(" got\n%v\nexpected\n%v", hosts[0].Get_load_for_alias(hosts[0].Cluster_name), expectedhost0)
 	}
+	if !reflect.DeepEqual(hosts[1].Get_load_for_alias(hosts[1].Cluster_name), 0) {
+		t.Errorf(" got\n%v\nexpected\n%v", hosts[1].Get_load_for_alias(hosts[1].Cluster_name), 0)
+	}
 	if !reflect.DeepEqual(hosts[1].Get_load_for_alias("blabla.cern.ch"), 179) {
 		t.Errorf(" got\n%v\nexpected\n%v", hosts[1].Get_load_for_alias("blabla.cern.ch"), 179)
 	}
