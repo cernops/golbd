@@ -8,72 +8,36 @@ import (
 )
 
 //Function TestGetLoadHosts tests the function Get_load_for_alias
-func TestGetLoadHostsCernCh(t *testing.T) {
+func TestGetLoadHosts(t *testing.T) {
 
 	hosts := []lbhost.LBHost{
 		getHost("lxplus132.cern.ch", 7, ""),
 		getHost("lxplus132.cern.ch", 0, "blabla.cern.ch=179,blablabla2.cern.ch=4"),
-		getHost("toto132.lxplus.cern.ch", 7, ""),
+		getHost("toto132.lxplus.cern.ch", 42, ""),
 		getHost("toto132.lxplus.cern.ch", 0, "blabla.subdo.cern.ch=179,blablabla2.subdo.cern.ch=4"),
 	}
 
 	expectedhost0 := hosts[0].Host_transports[0].Response_int
-	expectedhost1 := hosts[1].Host_transports[0].Response_int
+	//expectedhost1 := hosts[1].Host_transports[0].Response_int
 	expectedhost2 := hosts[2].Host_transports[0].Response_int
-	expectedhost3 := hosts[3].Host_transports[0].Response_int
+	//expectedhost3 := hosts[3].Host_transports[0].Response_int
 
 	if !reflect.DeepEqual(hosts[0].Get_load_for_alias(hosts[0].Cluster_name), expectedhost0) {
 		t.Errorf(" got\n%v\nexpected\n%v", hosts[0].Get_load_for_alias(hosts[0].Cluster_name), expectedhost0)
 	}
 	if !reflect.DeepEqual(hosts[1].Get_load_for_alias("blabla.cern.ch"), 179) {
-		t.Errorf(" got\n%v\nexpected\n%v", hosts[1].Get_load_for_alias(hosts[1].Cluster_name), expectedhost1)
+		t.Errorf(" got\n%v\nexpected\n%v", hosts[1].Get_load_for_alias("blabla.cern.ch"), 179)
 	}
 	if !reflect.DeepEqual(hosts[1].Get_load_for_alias("blablabla2.cern.ch"), 4) {
-		t.Errorf(" got\n%v\nexpected\n%v", hosts[1].Get_load_for_alias(hosts[1].Cluster_name), expectedhost1)
+		t.Errorf(" got\n%v\nexpected\n%v", hosts[1].Get_load_for_alias("blablabla2.cern.ch"), 4)
 	}
 	if !reflect.DeepEqual(hosts[2].Get_load_for_alias(hosts[2].Cluster_name), expectedhost2) {
 		t.Errorf(" got\n%v\nexpected\n%v", hosts[2].Get_load_for_alias(hosts[2].Cluster_name), expectedhost2)
 	}
 	if !reflect.DeepEqual(hosts[3].Get_load_for_alias("blabla.subdo.cern.ch"), 179) {
-		t.Errorf(" got\n%v\nexpected\n%v", hosts[3].Get_load_for_alias(hosts[3].Cluster_name), expectedhost3)
+		t.Errorf(" got\n%v\nexpected\n%v", hosts[3].Get_load_for_alias("blabla.subdo.cern.ch"), 179)
 	}
 	if !reflect.DeepEqual(hosts[3].Get_load_for_alias("blablabla2.subdo.cern.ch"), 4) {
-		t.Errorf(" got\n%v\nexpected\n%v", hosts[3].Get_load_for_alias(hosts[3].Cluster_name), expectedhost3)
-	}
-}
-func TestGetLoadHostsSubdo(t *testing.T) {
-
-	hosts := []lbhost.LBHost{
-		getHost("lxplus132.cern.ch", 7, ""),
-		getHost("lxplus132.cern.ch", 0, "blabla.cern.ch=179,blablabla2.cern.ch=4"),
-		getHost("toto132.lxplus.cern.ch", 7, ""),
-		getHost("toto132.lxplus.cern.ch", 0, "blabla.subdo.cern.ch=179,blablabla2.subdo.cern.ch=4"),
-	}
-	for _, h := range hosts {
-		h.Cluster_name = "totoalias.subdo.cern.ch"
-	}
-
-	expectedhost0 := hosts[0].Host_transports[0].Response_int
-	expectedhost1 := hosts[1].Host_transports[0].Response_int
-	expectedhost2 := hosts[2].Host_transports[0].Response_int
-	expectedhost3 := hosts[3].Host_transports[0].Response_int
-
-	if !reflect.DeepEqual(hosts[0].Get_load_for_alias(hosts[0].Cluster_name), expectedhost0) {
-		t.Errorf(" got\n%v\nexpected\n%v", hosts[0].Get_load_for_alias(hosts[0].Cluster_name), expectedhost0)
-	}
-	if !reflect.DeepEqual(hosts[1].Get_load_for_alias("blabla.cern.ch"), 179) {
-		t.Errorf(" got\n%v\nexpected\n%v", hosts[1].Get_load_for_alias(hosts[1].Cluster_name), expectedhost1)
-	}
-	if !reflect.DeepEqual(hosts[1].Get_load_for_alias("blablabla2.cern.ch"), 4) {
-		t.Errorf(" got\n%v\nexpected\n%v", hosts[1].Get_load_for_alias(hosts[1].Cluster_name), expectedhost1)
-	}
-	if !reflect.DeepEqual(hosts[2].Get_load_for_alias(hosts[2].Cluster_name), expectedhost2) {
-		t.Errorf(" got\n%v\nexpected\n%v", hosts[2].Get_load_for_alias(hosts[2].Cluster_name), expectedhost2)
-	}
-	if !reflect.DeepEqual(hosts[3].Get_load_for_alias("blabla.subdo.cern.ch"), 179) {
-		t.Errorf(" got\n%v\nexpected\n%v", hosts[3].Get_load_for_alias(hosts[3].Cluster_name), expectedhost3)
-	}
-	if !reflect.DeepEqual(hosts[3].Get_load_for_alias("blablabla2.subdo.cern.ch"), 4) {
-		t.Errorf(" got\n%v\nexpected\n%v", hosts[3].Get_load_for_alias(hosts[3].Cluster_name), expectedhost3)
+		t.Errorf(" got\n%v\nexpected\n%v", hosts[3].Get_load_for_alias("blablabla2.subdo.cern.ch"), 4)
 	}
 }
