@@ -84,3 +84,24 @@ func TestFindBestHostsNoValidHostMinino(t *testing.T) {
 		t.Errorf("e.Find_best_hosts: c.Time_of_last_evaluation: got\n%v\ncurrent time\n%v", c.Time_of_last_evaluation, time.Now())
 	}
 }
+
+func TestFindBestHostsNoValidHostMinimum(t *testing.T) {
+
+	c := getTestCluster("testbad.cern.ch")
+
+	c.Parameters.Metric = "minimum"
+
+	bad_hosts_to_check := getBadHostsToCheck(c)
+
+	not_expected_current_best_ips := []net.IP{}
+
+	if !c.FindBestHosts(bad_hosts_to_check) {
+		t.Errorf("e.Find_best_hosts: returned false, expected true")
+	}
+	if reflect.DeepEqual(c.Current_best_ips, not_expected_current_best_ips) {
+		t.Errorf("e.Find_best_hosts: c.Current_best_hosts: got\n%v\nwhich is not expected", c.Current_best_ips)
+	}
+	if c.Time_of_last_evaluation.Add(time.Duration(2) * time.Second).Before(time.Now()) {
+		t.Errorf("e.Find_best_hosts: c.Time_of_last_evaluation: got\n%v\ncurrent time\n%v", c.Time_of_last_evaluation, time.Now())
+	}
+}
