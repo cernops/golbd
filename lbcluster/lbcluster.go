@@ -198,15 +198,13 @@ func (lbc *LBCluster) ApplyMetric(hosts_to_check map[string]lbhost.LBHost) bool 
 
 		if lbc.Parameters.Metric == "minimum" {
 			lbc.Write_to_log("WARNING", fmt.Sprintf("no usable hosts found for cluster! Returning random %v hosts.", max))
-			//Get hosts with all IPs although not OK for SNMP
-			lbc.Write_to_log("WARNING", fmt.Sprintf("Previous host list: %v", lbc.Host_metric_table))
-			lbc.ReEvaluateHosts(hosts_to_check)
+			//Get hosts with all IPs even when not OK for SNMP
+			lbc.ReEvaluateHostsForMinimum(hosts_to_check)
 			i := 0
 			for _, v := range lbc.Host_metric_table {
 				pl[i] = v
 				i++
 			}
-			lbc.Write_to_log("WARNING", fmt.Sprintf("Reset host list: %v", lbc.Host_metric_table))
 			//Let's shuffle the hosts
 			Shuffle(len(pl), func(i, j int) { pl[i], pl[j] = pl[j], pl[i] })
 			for i := 0; i < max; i++ {
@@ -303,8 +301,8 @@ func (lbc *LBCluster) EvaluateHosts(hostsToCheck map[string]lbhost.LBHost) {
 	}
 }
 
-//ReEvaluateHosts gets the load from the all the nodes for Minimum metric policy
-func (lbc *LBCluster) ReEvaluateHosts(hostsToCheck map[string]lbhost.LBHost) {
+//ReEvaluateHostsForMinimum gets the load from the all the nodes for Minimum metric policy
+func (lbc *LBCluster) ReEvaluateHostsForMinimum(hostsToCheck map[string]lbhost.LBHost) {
 
 	for currenthost := range lbc.Host_metric_table {
 		host := hostsToCheck[currenthost]
