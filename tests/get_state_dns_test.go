@@ -42,7 +42,8 @@ func TestGetStateDNS(t *testing.T) {
 	//DeepEqual comparison between the map with expected values and the one with the outputs
 	for _, c := range Clusters {
 		if !reflect.DeepEqual(received[c.Cluster_name], expected[c.Cluster_name]) {
-			t.Errorf("\ngot\n%T and %v\nexpected\n%T and %v", received[c.Cluster_name][0], received[c.Cluster_name][0], expected[c.Cluster_name], expected[c.Cluster_name])
+			t.Errorf("\ngot ips\n%T type and value %v\nexpected\n%T type and value %v", received[c.Cluster_name][0], received[c.Cluster_name][0], expected[c.Cluster_name][0], expected[c.Cluster_name][0])
+			t.Errorf("\ngot error\n%T type and value %v\nexpected\n%T type and value %v", received[c.Cluster_name][1], received[c.Cluster_name][1], expected[c.Cluster_name][1], expected[c.Cluster_name][1])
 		}
 	}
 
