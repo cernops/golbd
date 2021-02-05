@@ -39,7 +39,7 @@ func TestEvaluateMetric(t *testing.T) {
 	for best, ips := range myTests {
 		fmt.Printf("Checking if with %v best host it works", best)
 		c.Parameters.Best_hosts = best
-		c.ApplyMetric()
+		c.ApplyMetric(getHostsToCheck(c))
 		compareIPs(t, c.Current_best_ips, ips)
 		//		if !reflect.DeepEqual(c.Current_best_ips, ips) {
 		//			t.Errorf("e.apply_metric: Best:%v c.Current_best_ips: got\n %v\nexpected\n%v", best, c.Current_best_ips, ips)
