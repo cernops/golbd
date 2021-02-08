@@ -29,6 +29,12 @@ dns_manager = 137.138.28.176
 
 parameters aiermis.cern.ch = behaviour#mindless best_hosts#1 external#no metric#cmsfrontier polling_interval#300 statistics#long ttl#60
 parameters uermis.cern.ch = behaviour#mindless best_hosts#1 external#no metric#cmsfrontier polling_interval#300 statistics#long ttl#222
+parameters permis.cern.ch = behaviour#mindless best_hosts#1 external#no metric#cmsfrontier polling_interval#300 statistics#long ttl#222
+parameters ermis.test.cern.ch = behaviour#mindless best_hosts#1 external#no metric#cmsfrontier polling_interval#300 statistics#long ttl#222
+parameters ermis2.test.cern.ch = behaviour#mindless best_hosts#1 external#no metric#cmsfrontier polling_interval#300 statistics#long ttl#222
 
 clusters aiermis.cern.ch = ermis19.cern.ch ermis20.cern.ch
 clusters uermis.cern.ch = ermis21.cern.ch ermis22.cern.ch
+clusters permis.cern.ch = ermis21.sub.cern.ch ermis22.test.cern.ch ermis42.cern.ch
+clusters ermis.test.cern.ch = ermis23.cern.ch ermis24.cern.ch
+clusters ermis2.test.cern.ch = ermis23.toto.cern.ch ermis24.cern.ch ermis25.sub.cern.ch

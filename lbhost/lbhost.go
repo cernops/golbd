@@ -165,6 +165,15 @@ func (self *LBHost) Get_working_IPs() ([]net.IP, error) {
 	return my_ips, nil
 }
 
+func (self *LBHost) Get_all_IPs() ([]net.IP, error) {
+	var my_ips []net.IP
+	for _, my_transport := range self.Host_transports {
+		my_ips = append(my_ips, my_transport.IP)
+	}
+	self.Write_to_log("INFO", fmt.Sprintf("All ips for this host are %v", my_ips))
+	return my_ips, nil
+}
+
 func (self *LBHost) Get_Ips() ([]net.IP, error) {
 
 	var ips []net.IP

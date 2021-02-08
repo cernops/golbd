@@ -34,12 +34,13 @@ func TestEvaluateMetric(t *testing.T) {
 		net.ParseIP("2001:1458:d00:32::100:51"),
 		net.ParseIP("188.184.116.81"),
 		net.ParseIP("188.184.108.100"),
+		net.ParseIP("188.184.108.101"),
 	}
 
 	for best, ips := range myTests {
 		fmt.Printf("Checking if with %v best host it works", best)
 		c.Parameters.Best_hosts = best
-		c.ApplyMetric()
+		c.ApplyMetric(getHostsToCheck(c))
 		compareIPs(t, c.Current_best_ips, ips)
 		//		if !reflect.DeepEqual(c.Current_best_ips, ips) {
 		//			t.Errorf("e.apply_metric: Best:%v c.Current_best_ips: got\n %v\nexpected\n%v", best, c.Current_best_ips, ips)

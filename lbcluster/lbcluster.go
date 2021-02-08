@@ -147,7 +147,7 @@ func (lbc *LBCluster) FindBestHosts(hosts_to_check map[string]lbhost.LBHost) boo
 		return false
 	}
 	lbc.Time_of_last_evaluation = time.Now()
-	if !lbc.ApplyMetric() {
+	if !lbc.ApplyMetric(hosts_to_check) {
 		return false
 	}
 	nodes := lbc.concatenateIps(lbc.Current_best_ips)
@@ -159,7 +159,7 @@ func (lbc *LBCluster) FindBestHosts(hosts_to_check map[string]lbhost.LBHost) boo
 }
 
 // ApplyMetric This is the core of the lbcluster: based on the metrics, select the best hosts
-func (lbc *LBCluster) ApplyMetric() bool {
+func (lbc *LBCluster) ApplyMetric(hosts_to_check map[string]lbhost.LBHost) bool {
 	lbc.Write_to_log("INFO", "Got metric = "+lbc.Parameters.Metric)
 	pl := make(NodeList, len(lbc.Host_metric_table))
 	i := 0
@@ -198,13 +198,19 @@ func (lbc *LBCluster) ApplyMetric() bool {
 
 		if lbc.Parameters.Metric == "minimum" {
 			lbc.Write_to_log("WARNING", fmt.Sprintf("no usable hosts found for cluster! Returning random %v hosts.", max))
-			Shuffle(len(sorted_host_list), func(i, j int) {
-				sorted_host_list[i], sorted_host_list[j] = sorted_host_list[j], sorted_host_list[i]
-			})
-			for i := 0; i < max; i++ {
-				lbc.Current_best_ips = append(lbc.Current_best_ips, sorted_host_list[i].IPs...)
+			//Get hosts with all IPs even when not OK for SNMP
+			lbc.ReEvaluateHostsForMinimum(hosts_to_check)
+			i := 0
+			for _, v := range lbc.Host_metric_table {
+				pl[i] = v
+				i++
 			}
-			lbc.Write_to_log("Warning", fmt.Sprintf("We have put random hosts behind the alias: %v", lbc.Current_best_ips))
+			//Let's shuffle the hosts
+			Shuffle(len(pl), func(i, j int) { pl[i], pl[j] = pl[j], pl[i] })
+			for i := 0; i < max; i++ {
+				lbc.Current_best_ips = append(lbc.Current_best_ips, pl[i].IPs...)
+			}
+			lbc.Write_to_log("WARNING", fmt.Sprintf("We have put random hosts behind the alias: %v", lbc.Current_best_ips))
 
 		} else if (lbc.Parameters.Metric == "minino") || (lbc.Parameters.Metric == "cmsweb") {
 			lbc.Write_to_log("WARNING", "no usable hosts found for cluster! Returning no hosts.")
@@ -287,6 +293,20 @@ func (lbc *LBCluster) EvaluateHosts(hostsToCheck map[string]lbhost.LBHost) {
 	for currenthost := range lbc.Host_metric_table {
 		host := hostsToCheck[currenthost]
 		ips, err := host.Get_working_IPs()
+		if err != nil {
+			ips, err = host.Get_Ips()
+		}
+		lbc.Host_metric_table[currenthost] = Node{host.Get_load_for_alias(lbc.Cluster_name), ips}
+		lbc.Write_to_log("DEBUG", fmt.Sprintf("node: %s It has a load of %d", currenthost, lbc.Host_metric_table[currenthost].Load))
+	}
+}
+
+//ReEvaluateHostsForMinimum gets the load from the all the nodes for Minimum metric policy
+func (lbc *LBCluster) ReEvaluateHostsForMinimum(hostsToCheck map[string]lbhost.LBHost) {
+
+	for currenthost := range lbc.Host_metric_table {
+		host := hostsToCheck[currenthost]
+		ips, err := host.Get_all_IPs()
 		if err != nil {
 			ips, err = host.Get_Ips()
 		}

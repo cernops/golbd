@@ -19,7 +19,8 @@ variables:
     curl https://dl.google.com/go/go1.13.14.linux-amd64.tar.gz  | tar -zxC /go13
     rm -f /usr/bin/go
     ln -s /go13/go/bin/go /usr/bin/go
-    export GOPATH=/go13
+    go mod init
+    go mod edit -replace gitlab.cern.ch/lb-experts/golbd=/builds/lb-experts/golbd
     go get || true
     rm -rf /go13/src/gitlab.cern.ch/lb-experts/golbd/
     ln -s /builds/lb-experts/golbd /go13/src/gitlab.cern.ch/lb-experts/
