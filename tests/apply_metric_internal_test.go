@@ -34,6 +34,7 @@ func TestEvaluateMetric(t *testing.T) {
 		net.ParseIP("2001:1458:d00:32::100:51"),
 		net.ParseIP("188.184.116.81"),
 		net.ParseIP("188.184.108.100"),
+		net.ParseIP("188.184.108.101"),
 	}
 
 	for best, ips := range myTests {
