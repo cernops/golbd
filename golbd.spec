@@ -11,7 +11,7 @@
 
 Name:           %{repo}
 Version:        0.2
-Release:        8%{?dist}
+Release:        9%{?dist}
 Summary:        CERN DNS Load Balancer Daemon
 License:        ASL 2.0
 URL:            https://%{import_path}
@@ -115,6 +115,8 @@ fi
 
 
 %changelog
+* Tue Feb 16 2021 Ignacio Reguero <ignacio.reguero@cern.ch> - 0.2.9
+- Fix the behaviour of the minimum metric policy reported in INC2678250
 * Thu Jun 04 2020 Ignacio Reguero <ignacio.reguero@cern.ch> - 0.2.8
 - Update the time of last evaluation when no host is found
 * Thu Jan 30 2020 Pablo Saiz <pablo.saiz@cern.ch>           - 0.2.4
