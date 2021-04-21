@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 """
-    This script sends KPI of the lb service
+    This script sends status of the lb service to SLS
 
 """
 import argparse
