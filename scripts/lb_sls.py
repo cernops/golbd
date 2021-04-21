@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 """
     This script sends KPI of the lb service
 
@@ -39,8 +39,8 @@ def get_server_availability(logger, server_host):
 
     try:
         info = requests.get("http://%s/load-balancing/heartbeat" % server_host)
-        logger.debug("Host contacted, and got %s", info.content)
-        my_date = int(re.match(r'.*: (\d+) : I am alive', info.content).group(1))
+        logger.debug("Host contacted, and got %s", info.content.decode())
+        my_date = int(re.match(r'.*: (\d+) : I am alive', info.content.decode()).group(1))
 
         logger.debug("The last execution was at %s", my_date)
         now = time.mktime(datetime.now().timetuple())
@@ -64,7 +64,7 @@ def get_number_of_clusters(logger):
     """ Checks how many aliases are defined in ermis"""
     logger.info("Getting the number of aliases from kermis")
 
-    return os.popen('/usr/bin/kermis -j -a all | /usr/bin/jgrep -s alias_name').read().count('\n')
+    return os.popen('/usr/bin/kermis -j -o read -a all | /usr/bin/jq ".[] |.alias_name "').read().count('\n')
 
 
 def get_data(logger, args):
