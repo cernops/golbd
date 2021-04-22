@@ -1,10 +1,10 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 """
     This script sends KPI of the lb service
 
 """
 import argparse
-import ConfigParser
+import configparser
 import sys
 import logging
 import logging.config
@@ -21,7 +21,7 @@ def load_config():
     primary_conf_path = "./lb.conf"
     secondary_conf_path = "/etc/cgs/cgs.conf"
 
-    conf = ConfigParser.ConfigParser()
+    conf = configparser.ConfigParser()
 
     if os.path.isfile(primary_conf_path):
         logging.config.fileConfig(
@@ -115,7 +115,7 @@ def get_data(logger, args):
 
         for data in result['aggregations']['tenant']['buckets']:
             logger.info(data)
-            if not tenants.has_key(data['key']):
+            if data['key'] not in tenants:
                 logger.info("Skipping %s", data['key'])
                 continue
             tenants[data['key']]['number_of_cnames'] = data['cnames']['value']
@@ -134,7 +134,7 @@ def get_data(logger, args):
                             'number_of_cnames': tenants[tenant]['number_of_cnames'],
                             'partition_lb': tenant})
 
-    except KeyError, my_ex:
+    except KeyError as my_ex:
         logger.error("Error connecting to elasticsearch: %s", my_ex)
 
     return my_data
