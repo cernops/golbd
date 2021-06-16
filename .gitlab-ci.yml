@@ -1,26 +1,21 @@
 ---
+image: gitlab-registry.cern.ch/linuxsupport/c8-base:latest
+
 include:
   - 'https://gitlab.cern.ch/linuxsupport/rpmci/raw/master/rpm-ci.yml'
 
 variables:
   KOJI_TAG: 'lb'
-  KOJI_TAG_7: 'ai7'
 
-  BUILD_7: 'True'
   BUILD_8: 'True'
 
   DIST_8: .el8
-  DIST_7: .ai7
-
 
 .install_go: &install_go |
-    mkdir -p /go13
-    yum -y install git gcc
-    curl https://dl.google.com/go/go1.13.14.linux-amd64.tar.gz  | tar -zxC /go13
-    rm -f /usr/bin/go
-    ln -s /go13/go/bin/go /usr/bin/go
-    go mod init
-    go mod edit -replace gitlab.cern.ch/lb-experts/golbd=/builds/lb-experts/golbd
+    yum -y install git gcc golang
+    mkdir -p /root/go/src/gitlab.cern.ch/lb-experts/
+    ln -s $(pwd) /root/go/src/gitlab.cern.ch/lb-experts/golbd
+    cd /root/go/src/gitlab.cern.ch/lb-experts/golbd
     go get || true
 
 build-my-project:
@@ -33,7 +28,7 @@ build-my-project:
 fmt-my-project:
   stage: prebuild
   script:
-    - *install_go
+    - yum install -y golang
     - MOD_FILES=$(find . -name "*.go"  -exec /usr/bin/go fmt {} \;)
     - echo "FILES MODIFIED $MOD_FILES"
     - if [ "$MOD_FILES" != "" ]; then false; fi
@@ -45,12 +40,11 @@ test-my-project:
     - go test -v -cover ./...
     - go test -race
 
-build_srpm7:
-  before_script:
-     - yum install -y golang
-     - yum-builddep -y *.spec
-
-build_rpm7:
-  before_script:
-     - yum install -y golang
-     - yum-builddep -y *.spec
+build_docker_image_stable:
+  image: gitlab-registry.cern.ch/ci-tools/docker-image-builder:latest
+  stage: prebuild
+  script: "echo"
+  tags:
+    - docker-image-build
+  variables:
+    TO: ${CI_REGISTRY_IMAGE}:${CI_COMMIT_BRANCH}

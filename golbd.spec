@@ -4,7 +4,6 @@
 %global provider_full   %{provider}.%{provider_tld}/%{project}
 %global repo            golbd
 %global lbd             lbd
-
 %global import_path     %{provider_full}/%{repo}
 %global gopath          %{_datadir}/gocode
 %global debug_package   %{nil}
@@ -77,9 +76,6 @@ install -p -m0644 %{lbd}.logrotate %{buildroot}%{_sysconfdir}/logrotate.d/%{repo
 
 # create some dirs for logs if needed
 install -d -m0755  %{buildroot}/var/log/lb
-install -d -m0755  %{buildroot}/var/log/lb/cluster
-install -d -m0755  %{buildroot}/var/log/lb/old
-install -d -m0755  %{buildroot}/var/log/lb/old/cluster
 
 %check
 GOPATH=$(pwd)/:%{gopath} go test %{provider_full}/%{repo}
@@ -109,9 +105,9 @@ fi
 %attr(644,root,root) %config(noreplace) %{_sysconfdir}/sysconfig/%{lbd}
 %attr(644,root,root) %{_sysconfdir}/logrotate.d/%{repo}
 %attr(755,root,root) /var/log/lb
-%attr(755,root,root) /var/log/lb/cluster
-%attr(755,root,root) /var/log/lb/old
-%attr(755,root,root) /var/log/lb/old/cluster
+#%attr(755,root,root) /var/log/lb/cluster
+#%attr(755,root,root) /var/log/lb/old
+#%attr(755,root,root) /var/log/lb/old/cluster
 
 
 %changelog
