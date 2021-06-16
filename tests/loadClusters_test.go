@@ -11,7 +11,7 @@ import (
 )
 
 func getTestCluster(name string) lbcluster.LBCluster {
-	lg := lbcluster.Log{Syslog: false, Stdout: true, Debugflag: false}
+	lg := lbcluster.Log{SyslogWriter: nil, Stdout: true, Debugflag: false}
 	return lbcluster.LBCluster{Cluster_name: name,
 		Loadbalancing_username: "loadbalancing",
 		Loadbalancing_password: "zzz123",
@@ -30,7 +30,7 @@ func getTestCluster(name string) lbcluster.LBCluster {
 }
 
 func getSecondTestCluster() lbcluster.LBCluster {
-	lg := lbcluster.Log{Syslog: false, Stdout: true, Debugflag: false}
+	lg := lbcluster.Log{SyslogWriter: nil, Stdout: true, Debugflag: false}
 	return lbcluster.LBCluster{Cluster_name: "test02.test.cern.ch",
 		Loadbalancing_username: "loadbalancing",
 		Loadbalancing_password: "zzz123",
@@ -164,7 +164,7 @@ func getHost(hostname string, responseInt int, responseString string) lbhost.LBH
 
 }
 func TestLoadClusters(t *testing.T) {
-	lg := lbcluster.Log{Syslog: false, Stdout: true, Debugflag: false}
+	lg := lbcluster.Log{SyslogWriter: nil, Stdout: true, Debugflag: false}
 
 	config := lbconfig.Config{Master: "lbdxyz.cern.ch",
 		HeartbeatFile: "heartbeat",

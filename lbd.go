@@ -158,10 +158,13 @@ func main() {
 	}
 	rand.Seed(time.Now().UTC().UnixNano())
 	log, e := syslog.New(syslog.LOG_NOTICE, "lbd")
-	lg := lbcluster.Log{Writer: *log, Syslog: false, Stdout: *stdoutFlag, Debugflag: *debugFlag, TofilePath: *logFileFlag}
-	if e == nil {
-		lg.Info("Starting lbd")
+
+	if e != nil {
+		fmt.Printf("Error getting a syslog instance %v\nThe service will only write to the logfile %v\n\n", e, *logFileFlag)
 	}
+	lg := lbcluster.Log{SyslogWriter: log, Stdout: *stdoutFlag, Debugflag: *debugFlag, TofilePath: *logFileFlag}
+
+	lg.Info("Starting lbd")
 
 	//	var sig_hup, sig_term bool
 	// installSignalHandler(&sig_hup, &sig_term, &lg)
