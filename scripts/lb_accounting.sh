@@ -3,6 +3,9 @@
 #First, let's get the list of hostgroups
 DEBUG=0
 
+date
+echo "Starting the report"
+
 HOSTGROUPS=$(kermis -o read -a all -j | jq '.[] | ."hostgroup" ' | awk -F\" '{print $2}' | awk -F\/ '{print $1}' | sort | uniq -c | sort -n -r)
 declare -A ALL_FE
 while read -r line ;
@@ -42,8 +45,11 @@ DATA="""
  }
 """
 
-API_KEY=$(tbag show accounting_key --hg ailbd --plain)
+API_KEY=$(tbag show lb_accounting_key --hg lxplus --plain)
 
 #Finally, let's send the document
 URL="https://accounting-receiver.cern.ch/v3/fe"
 curl -X POST -H "Content-type: application/json" -H "API-Key: $API_KEY" $URL -d "$DATA"
+
+echo "Report finished"
+date
