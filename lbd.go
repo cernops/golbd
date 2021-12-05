@@ -19,14 +19,23 @@ import (
 	"gitlab.cern.ch/lb-experts/golbd/lbhost"
 )
 
-var versionFlag = flag.Bool("version", false, "print lbd version and exit")
-var debugFlag = flag.Bool("debug", false, "set lbd in debug mode")
-var startFlag = flag.Bool("start", false, "start lbd")
-var stopFlag = flag.Bool("stop", false, "stop lbd")
-var updateFlag = flag.Bool("update", false, "update lbd config")
-var configFileFlag = flag.String("config", "./load-balancing.conf", "specify configuration file path")
-var logFileFlag = flag.String("log", "./lbd.log", "specify log file path")
-var stdoutFlag = flag.Bool("stdout", false, "send log to stdtout")
+var (
+	// Version number
+	// This should be overwritten with `go build -ldflags "-X main.Version='HELLO_THERE'"`
+	Version = "head"
+	// Release number
+	// It should also be overwritten
+	Release = "no_release"
+
+	versionFlag    = flag.Bool("version", false, "print lbd version and exit")
+	debugFlag      = flag.Bool("debug", false, "set lbd in debug mode")
+	startFlag      = flag.Bool("start", false, "start lbd")
+	stopFlag       = flag.Bool("stop", false, "stop lbd")
+	updateFlag     = flag.Bool("update", false, "update lbd config")
+	configFileFlag = flag.String("config", "./load-balancing.conf", "specify configuration file path")
+	logFileFlag    = flag.String("log", "./lbd.log", "specify log file path")
+	stdoutFlag     = flag.Bool("stdout", false, "send log to stdtout")
+)
 
 const itCSgroupDNSserver string = "cfmgr.cern.ch"
 
@@ -153,7 +162,7 @@ func sleep(seconds time.Duration, chanModified chan int) error {
 func main() {
 	flag.Parse()
 	if *versionFlag {
-		fmt.Printf("This is a proof of concept golbd version %s \n", "0.001")
+		fmt.Printf("This is a proof of concept golbd version: %s-%s \n", Version, Release)
 		os.Exit(0)
 	}
 	rand.Seed(time.Now().UTC().UnixNano())

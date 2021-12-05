@@ -1,32 +1,19 @@
 DIST ?= $(shell rpm --eval %{dist})
 SPECFILE ?= golbd.spec
-
  
 PKG ?= $(shell rpm -q --specfile $(SPECFILE) --queryformat "%{name}-%{version}\n" | head -n 1)
+RPMBUILD_ARG = --define 'dist $(DIST)' --define "_topdir $(PWD)/build" --define '_sourcedir $(PWD)/SOURCES' $(SPECFILE)
 
-installgo:
-	mkdir -p /go13
-	yum -y install git gcc
-	curl https://dl.google.com/go/go1.13.14.linux-amd64.tar.gz  | tar -zxC /go13
-	rm -f /usr/bin/go
-	ln -s /go13/go/bin/go /usr/bin/go
-	export GOPATH=/go13
-	go get ./... || true
-
-srpm: installgo
+srpm:
 	echo "Creating the source rpm"
 	mkdir -p SOURCES version
-	go mod init
 	go mod vendor
-	rm -rf  vendor/gitlab.cern.ch/lb-experts/golbd/*
-	cp -r COPYING    lbcluster/ lbconfig/  lbhost/    LICENSE vendor/gitlab.cern.ch/lb-experts/golbd/
-
-	tar zcf SOURCES/$(PKG).tgz  --exclude SOURCES --exclude .git --exclude .koji --exclude .gitlab-ci.yml --exclude go.mod --exclude go.sum --transform "s||$(PKG)/|" .
-	rpmbuild -bs --define 'dist $(DIST)' --define "_topdir $(PWD)/build" --define '_sourcedir $(PWD)/SOURCES' $(SPECFILE)
+	tar zcf SOURCES/$(PKG).tgz  --exclude SOURCES --exclude .git --exclude .koji --exclude .gitlab-ci.yml --transform "s||$(PKG)/|" .
+	rpmbuild -bs $(RPMBUILD_ARG)
    
 rpm: srpm
 	echo "Creating the rpm"
-	rpmbuild -bb --define 'dist $(DIST)' --define "_topdir $(PWD)/build" --define '_sourcedir $(PWD)/SOURCES' $(SPECFILE)
+	rpmbuild -bb $(RPMBUILD_ARG)
 
 clean:
-	rm -rf build go.sum go.mod vendor
+	rm -rf build vendor

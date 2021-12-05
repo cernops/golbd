@@ -1,0 +1,6 @@
+github.com/miekg/dns v0.0.0-20160605072344-799de7044d95 h1:BQDvi4qiqpxb1Q2E59rpiT9wTuRNYZAvPMiFp/AUtdg=
+github.com/miekg/dns v0.0.0-20160605072344-799de7044d95/go.mod h1:W1PPwlIAgtquWBMBEV9nkV9Cazfe8ScdGz/Lj7v3Nrg=
+github.com/reguero/go-snmplib v0.0.0-20181019092238-e566f5619b55 h1:XSHUgUOYEcULzyllG50slUg8RFmx0CPtr0xoNoft/ng=
+github.com/reguero/go-snmplib v0.0.0-20181019092238-e566f5619b55/go.mod h1:ZOnUjV/tCr0PrDl0kI9jntec7FWW5prJ1FGD8hZ+I5A=
+gitlab.cern.ch/lb-experts/golbd v0.2.9 h1:zzvn2WmUxZL0lCJG7DJgY8sLzqfMzyBHkRR7ppAJKK0=
+gitlab.cern.ch/lb-experts/golbd v0.2.9/go.mod h1:8fvn3Xj9jTPFqCeV0jNy7ZJN1ui6xsM5a/cWRywIjBE=
