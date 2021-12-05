@@ -10,7 +10,7 @@
 
 Name:           %{repo}
 Version:        0.2
-Release:        9%{?dist}
+Release:        10%{?dist}
 Summary:        CERN DNS Load Balancer Daemon
 License:        ASL 2.0
 URL:            https://%{import_path}
@@ -47,19 +47,7 @@ mechanism.
 %setup -n %{name}-%{version} -q
 
 %build
-mkdir -p src/%{provider_full}
-ln -s ../../../ src/%{provider_full}/%{repo}
-ln -s src/gitlab.cern.ch .
-#(cd src/; ln -s ../vendor/github.com  .)
-#echo "What do we have"
-#ls -al src/github.com/reguero/go-snmplib
-#ls -lR vendor/github.com
-#echo "AND UNDER SRC"
-#ls -lR src/github.com
-#
-#which go
-#ls -lR src/github.com/
-GOPATH=$(pwd):%{gopath} go build %{import_path}
+go build -mod=vendor -o golbd -ldflags "-X main.Version=%{version} -X main.Release=%{release}"
 
 %install
 # main package binary
@@ -78,7 +66,7 @@ install -p -m0644 %{lbd}.logrotate %{buildroot}%{_sysconfdir}/logrotate.d/%{repo
 install -d -m0755  %{buildroot}/var/log/lb
 
 %check
-GOPATH=$(pwd)/:%{gopath} go test %{provider_full}/%{repo}
+go test
 
 %post
 %systemd_post %{lbd}.service

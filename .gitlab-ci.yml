@@ -7,9 +7,7 @@ include:
 variables:
   KOJI_TAG: 'lb'
 
-  BUILD_8: 'True'
-
-  DIST_8: .el8
+  BUILD_8s: 'True'
 
 .install_go: &install_go |
     yum -y install git gcc golang
