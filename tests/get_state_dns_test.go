@@ -29,7 +29,7 @@ func TestGetStateDNS(t *testing.T) {
 	}
 	//receiving the output for every alias and storing the results into a map
 	received := make(map[string][]interface{})
-	iprecString := []string{}
+	var iprecString []string
 	for _, c := range Clusters {
 		err := c.GetStateDNS(dnsManager)
 		iprec := c.Previous_best_ips_dns

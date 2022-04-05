@@ -132,7 +132,7 @@ func (lbc *LBCluster) concatenateIps(myIps []net.IP) string {
 	return strings.Join(ip_string, " ")
 }
 
-//Find_best_hosts Looks for the best hosts for a cluster
+// FindBestHosts Find_best_hosts Looks for the best hosts for a cluster
 func (lbc *LBCluster) FindBestHosts(hosts_to_check map[string]lbhost.LBHost) bool {
 
 	lbc.EvaluateHosts(hosts_to_check)
@@ -257,8 +257,8 @@ func (lbc *LBCluster) checkRogerState(host string) string {
 
 	logmessage := ""
 
-	connectTimeout := (10 * time.Second)
-	readWriteTimeout := (20 * time.Second)
+	connectTimeout := 10 * time.Second
+	readWriteTimeout := 20 * time.Second
 	httpClient := NewTimeoutClient(connectTimeout, readWriteTimeout)
 	response, err := httpClient.Get("http://woger-direct.cern.ch:9098/roger/v1/state/" + host)
 	if err != nil {
@@ -270,7 +270,7 @@ func (lbc *LBCluster) checkRogerState(host string) string {
 			logmessage = logmessage + fmt.Sprintf("%s", err)
 		}
 		var dat map[string]interface{}
-		if err := json.Unmarshal([]byte(contents), &dat); err != nil {
+		if err := json.Unmarshal(contents, &dat); err != nil {
 			logmessage = logmessage + " - " + fmt.Sprintf("%s", host)
 			logmessage = logmessage + " - " + fmt.Sprintf("%v", response.Body)
 			logmessage = logmessage + " - " + fmt.Sprintf("%v", err)

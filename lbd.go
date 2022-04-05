@@ -44,8 +44,8 @@ func shouldUpdateDNS(config *lbconfig.Config, hostname string, lg *lbcluster.Log
 		return true
 	}
 	masterHeartbeat := "I am sick"
-	connectTimeout := (10 * time.Second)
-	readWriteTimeout := (20 * time.Second)
+	connectTimeout := 10 * time.Second
+	readWriteTimeout := 20 * time.Second
 	httpClient := lbcluster.NewTimeoutClient(connectTimeout, readWriteTimeout)
 	response, err := httpClient.Get("http://" + config.Master + "/load-balancing/" + config.HeartbeatFile)
 	if err != nil {
@@ -156,7 +156,6 @@ func sleep(seconds time.Duration, chanModified chan int) error {
 		chanModified <- 2
 		time.Sleep(seconds * time.Second)
 	}
-	return nil
 }
 
 func main() {
@@ -204,8 +203,6 @@ func main() {
 			lg.Error("Got an unexpected value")
 		}
 	}
-	lg.Error("The lbd is not supposed to stop")
-
 }
 func checkAliases(config *lbconfig.Config, lg lbcluster.Log, lbclusters []lbcluster.LBCluster) {
 	hostname, e := os.Hostname()

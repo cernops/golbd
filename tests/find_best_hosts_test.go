@@ -11,11 +11,11 @@ import (
 
 func getExpectedHostMetric() map[string]lbcluster.Node {
 	return map[string]lbcluster.Node{
-		"monit-kafkax-17be060b0d.cern.ch": lbcluster.Node{Load: 816, IPs: []net.IP{net.ParseIP("188.184.108.100")}},
-		"lxplus132.cern.ch":               lbcluster.Node{Load: 2, IPs: []net.IP{net.ParseIP("2001:1458:d00:2c::100:a6"), net.ParseIP("188.184.108.98")}},
-		"lxplus041.cern.ch":               lbcluster.Node{Load: 3, IPs: []net.IP{net.ParseIP("2001:1458:d00:32::100:51"), net.ParseIP("188.184.116.81")}},
-		"lxplus130.cern.ch":               lbcluster.Node{Load: 27, IPs: []net.IP{net.ParseIP("188.184.108.100")}},
-		"lxplus133.subdo.cern.ch":         lbcluster.Node{Load: 27, IPs: []net.IP{net.ParseIP("188.184.108.101")}}}
+		"monit-kafkax-17be060b0d.cern.ch": {Load: 816, IPs: []net.IP{net.ParseIP("188.184.108.100")}},
+		"lxplus132.cern.ch":               {Load: 2, IPs: []net.IP{net.ParseIP("2001:1458:d00:2c::100:a6"), net.ParseIP("188.184.108.98")}},
+		"lxplus041.cern.ch":               {Load: 3, IPs: []net.IP{net.ParseIP("2001:1458:d00:32::100:51"), net.ParseIP("188.184.116.81")}},
+		"lxplus130.cern.ch":               {Load: 27, IPs: []net.IP{net.ParseIP("188.184.108.100")}},
+		"lxplus133.subdo.cern.ch":         {Load: 27, IPs: []net.IP{net.ParseIP("188.184.108.101")}}}
 }
 
 func TestFindBestHosts(t *testing.T) {
@@ -50,7 +50,7 @@ func TestFindBestHostsNoValidHostCmsfrontier(t *testing.T) {
 
 	bad_hosts_to_check := getBadHostsToCheck(c)
 
-	expected_current_best_ips := []net.IP{}
+	var expected_current_best_ips []net.IP
 
 	expected_time_of_last_evaluation := c.Time_of_last_evaluation
 
@@ -73,7 +73,7 @@ func TestFindBestHostsNoValidHostMinino(t *testing.T) {
 
 	bad_hosts_to_check := getBadHostsToCheck(c)
 
-	expected_current_best_ips := []net.IP{}
+	var expected_current_best_ips []net.IP
 
 	if !c.FindBestHosts(bad_hosts_to_check) {
 		t.Errorf("e.Find_best_hosts: returned false, expected true")
@@ -94,7 +94,7 @@ func TestFindBestHostsNoValidHostMinimum(t *testing.T) {
 
 	bad_hosts_to_check := getBadHostsToCheck(c)
 
-	not_expected_current_best_ips := []net.IP{}
+	var not_expected_current_best_ips []net.IP
 
 	if !c.FindBestHosts(bad_hosts_to_check) {
 		t.Errorf("e.Find_best_hosts: returned false, expected true")
