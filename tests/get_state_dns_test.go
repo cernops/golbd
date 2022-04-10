@@ -1,7 +1,6 @@
 package main_test
 
 import (
-	"fmt"
 	"net"
 	"reflect"
 	"testing"
@@ -80,7 +79,7 @@ func TestRefreshDNS(t *testing.T) {
 	}
 
 	for i, tc := range tests {
-		t.Run(fmt.Sprintf("test_case_%d", i), func(t *testing.T) {
+		t.Run(tc.cluster_name, func(t *testing.T) {
 			lg := lbcluster.Log{SyslogWriter: nil, Stdout: false, Debugflag: false}
 			cluster := lbcluster.LBCluster{
 				Cluster_name:          tc.cluster_name,
