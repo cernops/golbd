@@ -30,7 +30,7 @@ func TestLoadConfig(t *testing.T) {
 			TsigInternalKey: "xxx123==",
 			TsigExternalKey: "yyy123==",
 			SnmpPassword:    "zzz123",
-			DNSManager:      "137.138.28.176",
+			DNSManager:      "137.138.28.176:53",
 			ConfigFile:      "testloadconfig",
 			Clusters: map[string][]string{
 				"aiermis.cern.ch":     {"ermis19.cern.ch", "ermis20.cern.ch"},
