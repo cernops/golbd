@@ -55,5 +55,48 @@ func TestGetStateDNS(t *testing.T) {
 			t.Errorf("\ngot error\n%T type and value %v\nexpected\n%T type and value %v", received[c.Cluster_name][1], received[c.Cluster_name][1], expected[c.Cluster_name][1], expected[c.Cluster_name][1])
 		}
 	}
+}
 
+//TestRefreshDNS tests the function RefreshDNS
+func TestRefreshDNS(t *testing.T) {
+	// Create a local dns server
+	server, err := setupDnsServer("5353")
+	if err != nil {
+		t.Errorf("Failed to setup DNS server for the test.")
+	}
+	defer server.Shutdown()
+
+	//DNS IP
+	dnsManager := "127.0.0.1:5353"
+
+	tests := []struct {
+		cluster_name     string
+		current_best_ips []net.IP
+	}{
+		{"aiermis.cern.ch", []net.IP{net.ParseIP("189.184.104.222"), net.ParseIP("3001:1458:d00:2d::100:59")}},
+		{"testrefresh.cern.ch", []net.IP{net.ParseIP("2.3.4.5")}},
+		{"nochange.cern.ch", []net.IP{net.ParseIP("1.1.1.1")}},
+		{"notexists.cern.ch", []net.IP{net.ParseIP("2.2.2.2")}},
+	}
+
+	for i, tc := range tests {
+		t.Run(fmt.Sprintf("test_case_%d", i), func(t *testing.T) {
+			lg := lbcluster.Log{SyslogWriter: nil, Stdout: false, Debugflag: false}
+			cluster := lbcluster.LBCluster{
+				Cluster_name:          tc.cluster_name,
+				Current_best_ips:      tc.current_best_ips,
+				Previous_best_ips_dns: []net.IP{},
+				Slog:                  &lg,
+			}
+
+			cluster.RefreshDNS(dnsManager, "abcd-", "xxx123==", "yyy123==")
+			cluster.GetStateDNS(dnsManager)
+
+			got := cluster.Previous_best_ips_dns
+			expected := tc.current_best_ips
+			if !reflect.DeepEqual(expected, got) {
+				t.Fatalf("test %d: expected: %v, got: %v", i+1, expected, got)
+			}
+		})
+	}
 }
