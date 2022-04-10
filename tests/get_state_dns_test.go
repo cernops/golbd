@@ -1,16 +1,25 @@
 package main_test
 
 import (
+	"fmt"
+	"net"
 	"reflect"
 	"testing"
 
 	"gitlab.cern.ch/lb-experts/golbd/lbcluster"
 )
 
-//TestGetStateDNS tests the function get_state_dns
+//TestGetStateDNS tests the function GetStateDNS
 func TestGetStateDNS(t *testing.T) {
+	// Create a local dns server
+	server, err := setupDnsServer("5354")
+	if err != nil {
+		t.Errorf("Failed to setup DNS server for the test.")
+	}
+	defer server.Shutdown()
+
 	//DNS IP
-	dnsManager := "137.138.16.5"
+	dnsManager := "127.0.0.1:5354"
 
 	Clusters := []lbcluster.LBCluster{
 		//Non-existing clusters
