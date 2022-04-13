@@ -11,14 +11,14 @@ import (
 //TestGetStateDNS tests the function GetStateDNS
 func TestGetStateDNS(t *testing.T) {
 	// Create a local dns server
-	server, err := setupDnsServer("5354")
+	server, err := setupDnsServer("50054")
 	if err != nil {
 		t.Errorf("Failed to setup DNS server for the test.")
 	}
 	defer server.Shutdown()
 
 	//DNS IP
-	dnsManager := "127.0.0.1:5354"
+	dnsManager := "127.0.0.1:50054"
 
 	Clusters := []lbcluster.LBCluster{
 		//Non-existing clusters
@@ -59,14 +59,14 @@ func TestGetStateDNS(t *testing.T) {
 //TestRefreshDNS tests the function RefreshDNS
 func TestRefreshDNS(t *testing.T) {
 	// Create a local dns server
-	server, err := setupDnsServer("5353")
+	server, err := setupDnsServer("50053")
 	if err != nil {
 		t.Errorf("Failed to setup DNS server for the test.")
 	}
 	defer server.Shutdown()
 
 	//DNS IP
-	dnsManager := "127.0.0.1:5353"
+	dnsManager := "127.0.0.1:50053"
 
 	tests := []struct {
 		cluster_name     string
