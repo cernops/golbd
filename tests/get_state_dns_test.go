@@ -78,7 +78,7 @@ func TestRefreshDNS(t *testing.T) {
 		{"notexists.cern.ch", []net.IP{net.ParseIP("2.2.2.2")}},
 	}
 
-	for i, tc := range tests {
+	for _, tc := range tests {
 		t.Run(tc.cluster_name, func(t *testing.T) {
 			lg := lbcluster.Log{SyslogWriter: nil, Stdout: false, Debugflag: false}
 			cluster := lbcluster.LBCluster{
@@ -88,13 +88,21 @@ func TestRefreshDNS(t *testing.T) {
 				Slog:                  &lg,
 			}
 
-			cluster.RefreshDNS(dnsManager, "abcd-", "xxx123==", "yyy123==")
+			cluster.RefreshDNS(dnsManager, "test-", "aW50ZXJuYWxzZWNyZXQ=", "ZXh0ZXJuYWxzZWNyZXQ=")
 			cluster.GetStateDNS(dnsManager)
 
-			got := cluster.Previous_best_ips_dns
-			expected := tc.current_best_ips
+			var got []string
+			for _, ip := range cluster.Previous_best_ips_dns {
+				got = append(got, ip.String())
+			}
+
+			var expected []string
+			for _, ip := range tc.current_best_ips {
+				expected = append(expected, ip.String())
+			}
+
 			if !reflect.DeepEqual(expected, got) {
-				t.Fatalf("test %d: expected: %v, got: %v", i+1, expected, got)
+				t.Fatalf("expected: %v, got: %v", expected, got)
 			}
 		})
 	}
