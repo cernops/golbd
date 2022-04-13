@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"gitlab.cern.ch/lb-experts/golbd/lbcluster"
+	"gopkg.in/yaml.v3"
 )
 
 // Config this is the configuration of the lbd
@@ -28,6 +29,18 @@ type Config struct {
 	ConfigFile      string
 	Clusters        map[string][]string
 	Parameters      map[string]lbcluster.Params
+}
+
+func LoadConfig(configFile string, lg *lbcluster.Log) (*Config, []lbcluster.LBCluster, error) {
+	var configFunc func(configFile string, lg *lbcluster.Log) (*Config, []lbcluster.LBCluster, error)
+
+	if strings.HasSuffix(configFile, ".yaml") {
+		configFunc = loadConfigYaml
+	} else {
+		configFunc = loadConfigOriginal
+	}
+
+	return configFunc(configFile, lg)
 }
 
 // readLines reads a whole file into memory and returns a slice of lines.
@@ -78,8 +91,33 @@ func LoadClusters(config *Config, lg *lbcluster.Log) ([]lbcluster.LBCluster, err
 
 }
 
+//LoadConfigYaml reads a YAML configuration file and returns a struct with the config
+func loadConfigYaml(configFile string, lg *lbcluster.Log) (*Config, []lbcluster.LBCluster, error) {
+	var config Config
+
+	configBytes, err := os.ReadFile(configFile)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if err := yaml.Unmarshal(configBytes, &config); err != nil {
+		return nil, nil, err
+	}
+
+	config.ConfigFile = configFile
+
+	lbclusters, err := LoadClusters(&config, lg)
+	if err != nil {
+		fmt.Println("Error getting the clusters")
+		return nil, nil, err
+	}
+	lg.Info("Clusters loaded")
+
+	return &config, lbclusters, nil
+}
+
 //LoadConfig reads a configuration file and returns a struct with the config
-func LoadConfig(configFile string, lg *lbcluster.Log) (*Config, []lbcluster.LBCluster, error) {
+func loadConfigOriginal(configFile string, lg *lbcluster.Log) (*Config, []lbcluster.LBCluster, error) {
 	var (
 		config Config
 		p      lbcluster.Params
@@ -163,5 +201,4 @@ func LoadConfig(configFile string, lg *lbcluster.Log) (*Config, []lbcluster.LBCl
 	lg.Info("Clusters loaded")
 
 	return &config, lbclusters, nil
-
 }
