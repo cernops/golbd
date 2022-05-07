@@ -41,6 +41,7 @@ type LBHost struct {
 	Debugflag              bool
 }
 
+// todo: refractor into smaller functions
 func (self *LBHost) Snmp_req() {
 
 	self.find_transports()
@@ -128,7 +129,7 @@ func (self *LBHost) Write_to_log(level string, msg string) error {
 
 	return err
 }
-
+// todo: instead of polling try adhoc webhook updates
 func (self *LBHost) Get_load_for_alias(cluster_name string) int {
 
 	my_load := -200

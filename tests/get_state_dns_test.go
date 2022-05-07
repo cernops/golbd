@@ -25,7 +25,7 @@ func TestGetStateDNS(t *testing.T) {
 		"testme007.cern.ch": {[]string{}, nil},
 		"testme007":         {[]string{}, nil},
 		"kkouros.cern.ch":   {[]string{}, nil},
-		"aiermis.cern.ch":   {[]string{"188.184.104.111", "2001:1458:d00:2d::100:58"}, nil},
+		"aiermis.cern.ch":   {[]string{}, nil},
 	}
 	//receiving the output for every alias and storing the results into a map
 	received := make(map[string][]interface{})

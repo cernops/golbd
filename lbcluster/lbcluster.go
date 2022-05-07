@@ -292,10 +292,12 @@ func (lbc *LBCluster) EvaluateHosts(hostsToCheck map[string]lbhost.LBHost) {
 
 	for currenthost := range lbc.Host_metric_table {
 		host := hostsToCheck[currenthost]
+		//todo: parallelize here
 		ips, err := host.Get_working_IPs()
 		if err != nil {
 			ips, err = host.Get_Ips()
 		}
+
 		lbc.Host_metric_table[currenthost] = Node{host.Get_load_for_alias(lbc.Cluster_name), ips}
 		lbc.Write_to_log("DEBUG", fmt.Sprintf("node: %s It has a load of %d", currenthost, lbc.Host_metric_table[currenthost].Load))
 	}

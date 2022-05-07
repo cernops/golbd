@@ -18,6 +18,8 @@ type Log struct {
 	logMu        sync.Mutex
 }
 
+// todo: refractor logging and consider log based snapshots
+// todo: consider start and end times of dns updates
 //Logger struct for the Logger interface
 type Logger interface {
 	Info(s string) error

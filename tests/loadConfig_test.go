@@ -1,8 +1,10 @@
 package main
 
 import (
+	lbconfig2 "lb-experts/golbd/lbconfig"
 	"os"
 	"reflect"
+	"sync"
 	"testing"
 
 	"gitlab.cern.ch/lb-experts/golbd/lbcluster"
@@ -57,4 +59,16 @@ func TestLoadConfig(t *testing.T) {
 
 	}
 
+}
+
+func TestWatchConfigFileChanges(t *testing.T) {
+	lg := lbcluster.Log{Stdout: true, Debugflag: false}
+	var wg *sync.WaitGroup
+	var controlChan = make(chan bool)
+	defer close(controlChan)
+	config:=lbconfig2.NewLoadBalancerConfig("testloadconfig", &lg)
+	fileChangeSignal := config.WatchFileChange(controlChan, wg)
+	for filChangeData := range fileChangeSignal {
+
+	}
 }

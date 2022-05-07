@@ -10,12 +10,26 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"gitlab.cern.ch/lb-experts/golbd/lbcluster"
 )
 
+type Config interface {
+	GetMasterHost() string
+	GetHeartBeatFileName() string
+	GetHeartBeatDirPath() string
+	GetDNSManager() string
+	GetTSIGKeyPrefix() string
+	GetTSIGInternalKey() string
+	GetTSIGExternalKey() string
+	LockHeartBeatMutex()
+	UnlockHeartBeatMutex()
+	WatchFileChange(controlChan <-chan bool, waitGroup *sync.WaitGroup) <-chan ConfigFileChangeSignal
+	Load() (*LBConfig, []lbcluster.LBCluster, error)
+}
 // Config this is the configuration of the lbd
-type Config struct {
+type LBConfig struct {
 	Master          string
 	HeartbeatFile   string
 	HeartbeatPath   string
@@ -25,69 +39,107 @@ type Config struct {
 	TsigExternalKey string
 	SnmpPassword    string
 	DNSManager      string
-	ConfigFile      string
+	configFilePath  string
+	lbLog *lbcluster.Log
 	Clusters        map[string][]string
 	Parameters      map[string]lbcluster.Params
 }
 
-// readLines reads a whole file into memory and returns a slice of lines.
-func readLines(path string) (lines []string, err error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	sc := bufio.NewScanner(f)
-	for sc.Scan() {
-		lines = append(lines, sc.Text())
-	}
-	return lines, sc.Err()
+type ConfigFileChangeSignal struct {
+	readSignal bool
+	readError error
 }
 
-//LoadClusters checks the syntax of the clusters defined in the configuration file
-func LoadClusters(config *Config, lg *lbcluster.Log) ([]lbcluster.LBCluster, error) {
-	var lbc lbcluster.LBCluster
-	var lbcs []lbcluster.LBCluster
+func (fs ConfigFileChangeSignal) IsErrorPresent() bool {
+	return fs.readError != nil
+}
 
-	for k, v := range config.Clusters {
-		if len(v) == 0 {
-			lg.Warning("cluster: " + k + " ignored as it has no members defined in the configuration file " + config.ConfigFile)
-			continue
+// NewLoadBalancerConfig - instantiates a new load balancer config
+func NewLoadBalancerConfig(configFilePath string, lbClusterLog *lbcluster.Log) Config {
+	return &LBConfig{
+		configFilePath: configFilePath,
+		lbLog: lbClusterLog,
+	}
+}
+
+func (c *LBConfig) GetMasterHost() string {
+	return c.Master
+}
+
+func (c *LBConfig) GetHeartBeatFileName() string {
+	return c.HeartbeatFile
+}
+
+func (c *LBConfig) GetHeartBeatDirPath() string {
+	return c.HeartbeatPath
+}
+
+func (c *LBConfig) GetDNSManager() string {
+	return c.DNSManager
+}
+
+func (c *LBConfig) GetTSIGKeyPrefix() string{
+	return c.TsigKeyPrefix
+}
+
+func (c *LBConfig) GetTSIGInternalKey() string {
+	return c.TsigInternalKey
+}
+
+func (c *LBConfig) GetTSIGExternalKey() string {
+	return c.TsigExternalKey
+}
+
+func (c *LBConfig) LockHeartBeatMutex() {
+	c.HeartbeatMu.Lock()
+}
+
+func (c *LBConfig) UnlockHeartBeatMutex(){
+	c.HeartbeatMu.Unlock()
+}
+
+
+func (c *LBConfig) WatchFileChange(controlChan <-chan bool, waitGroup *sync.WaitGroup) <-chan ConfigFileChangeSignal {
+	fileWatcherChan := make(chan ConfigFileChangeSignal)
+	waitGroup.Add(1)
+	go func() {
+		defer close(fileWatcherChan)
+		defer waitGroup.Done()
+		initialStat, err := os.Stat(c.configFilePath)
+		if err != nil {
+			fileWatcherChan <- ConfigFileChangeSignal{readError: err}
 		}
-		if par, ok := config.Parameters[k]; ok {
-			lbc = lbcluster.LBCluster{Cluster_name: k, Loadbalancing_username: "loadbalancing",
-				Loadbalancing_password: config.SnmpPassword, Parameters: par,
-				Current_best_ips:      []net.IP{},
-				Previous_best_ips_dns: []net.IP{},
-				Slog:                  lg}
-			hm := make(map[string]lbcluster.Node)
-			for _, h := range v {
-				hm[h] = lbcluster.Node{Load: 100000, IPs: []net.IP{}}
+		secondTicker := time.NewTicker(1*time.Second)
+		for {
+			select {
+			case <- secondTicker.C:
+				stat, err := os.Stat(c.configFilePath)
+				if err != nil {
+					fileWatcherChan <- ConfigFileChangeSignal{readError: err}
+					continue
+				}
+				if stat.Size() != initialStat.Size() || stat.ModTime() != initialStat.ModTime() {
+					fileWatcherChan <- ConfigFileChangeSignal{readSignal: true}
+					initialStat = stat
+				}
+			case <-controlChan:
+				return
 			}
-			lbc.Host_metric_table = hm
-			lbcs = append(lbcs, lbc)
-			lbc.Write_to_log("INFO", "(re-)loaded cluster ")
-
-		} else {
-			lg.Warning("cluster: " + k + " missing parameters for cluster; ignoring the cluster, please check the configuration file " + config.ConfigFile)
 		}
-	}
-
-	return lbcs, nil
-
+	}()
+	return fileWatcherChan
 }
 
-//LoadConfig reads a configuration file and returns a struct with the config
-func LoadConfig(configFile string, lg *lbcluster.Log) (*Config, []lbcluster.LBCluster, error) {
+//Load reads a configuration file and returns a struct with the config
+func (c *LBConfig) Load() (*LBConfig, []lbcluster.LBCluster, error) {
 	var (
-		config Config
+		config LBConfig
 		p      lbcluster.Params
 		mc     = make(map[string][]string)
 		mp     = make(map[string]lbcluster.Params)
 	)
 
-	lines, err := readLines(configFile)
+	lines, err := readLines(c.configFilePath)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -139,29 +191,76 @@ func LoadConfig(configFile string, lg *lbcluster.Log) (*Config, []lbcluster.LBCl
 					break
 				} else if err != nil {
 					//log.Fatal(err)
-					lg.Warning(fmt.Sprintf("%v", err))
+					c.lbLog.Warning(fmt.Sprintf("%v", err))
 					os.Exit(1)
 				}
 				mp[words[1]] = p
 
 			} else if words[0] == "clusters" {
 				mc[words[1]] = words[3:]
-				lg.Debug(words[1])
-				lg.Debug(fmt.Sprintf("%v", words[3:]))
+				c.lbLog.Debug(words[1])
+				c.lbLog.Debug(fmt.Sprintf("%v", words[3:]))
 			}
 		}
 	}
 	config.Parameters = mp
 	config.Clusters = mc
-	config.ConfigFile = configFile
 
-	lbclusters, err := LoadClusters(&config, lg)
+	lbclusters, err := c.loadClusters()
 	if err != nil {
 		fmt.Println("Error getting the clusters")
 		return nil, nil, err
 	}
-	lg.Info("Clusters loaded")
+	c.lbLog.Info("Clusters loaded")
 
 	return &config, lbclusters, nil
+
+}
+
+// readLines reads a whole file into memory and returns a slice of lines.
+func readLines(path string) (lines []string, err error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	sc := bufio.NewScanner(f)
+	for sc.Scan() {
+		lines = append(lines, sc.Text())
+	}
+	return lines, sc.Err()
+}
+
+//loadClusters checks the syntax of the clusters defined in the configuration file
+func (c *LBConfig) loadClusters() ([]lbcluster.LBCluster, error) {
+	var lbc lbcluster.LBCluster
+	var lbcs []lbcluster.LBCluster
+
+	for k, v := range c.Clusters {
+		if len(v) == 0 {
+			c.lbLog.Warning("cluster: " + k + " ignored as it has no members defined in the configuration file " + c.configFilePath)
+			continue
+		}
+		if par, ok := c.Parameters[k]; ok {
+			lbc = lbcluster.LBCluster{Cluster_name: k, Loadbalancing_username: "loadbalancing",
+				Loadbalancing_password: c.SnmpPassword, Parameters: par,
+				Current_best_ips:      []net.IP{},
+				Previous_best_ips_dns: []net.IP{},
+				Slog:                  c.lbLog}
+			hm := make(map[string]lbcluster.Node)
+			for _, h := range v {
+				hm[h] = lbcluster.Node{Load: 100000, IPs: []net.IP{}}
+			}
+			lbc.Host_metric_table = hm
+			lbcs = append(lbcs, lbc)
+			lbc.Write_to_log("INFO", "(re-)loaded cluster ")
+
+		} else {
+			c.lbLog.Warning("cluster: " + k + " missing parameters for cluster; ignoring the cluster, please check the configuration file " + c.configFilePath)
+		}
+	}
+
+	return lbcs, nil
 
 }

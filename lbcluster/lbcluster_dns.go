@@ -58,7 +58,7 @@ func (lbc *LBCluster) updateDNS(keyName, tsigKey, dnsManager string) error {
 	m.RemoveRRset([]dns.RR{rrRemoveA})
 	m.RemoveRRset([]dns.RR{rrRemoveAAAA})
 
-	for _, ip := range lbc.Current_best_ips {
+	for _, ip := range lbc.x {
 		var rrInsert dns.RR
 		if ip.To4() != nil {
 			rrInsert, _ = dns.NewRR(lbc.Cluster_name + ". " + ttl + " IN A " + ip.String())
@@ -73,6 +73,7 @@ func (lbc *LBCluster) updateDNS(keyName, tsigKey, dnsManager string) error {
 	c.TsigSecret = map[string]string{keyName: tsigKey}
 	_, _, err := c.Exchange(m, dnsManager+":53")
 	if err != nil {
+		// todo: consider retries here
 		lbc.Write_to_log("ERROR", fmt.Sprintf("DNS update failed with (%v)", err))
 		return err
 	}
