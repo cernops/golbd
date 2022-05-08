@@ -14,26 +14,26 @@ func (lbc *LBCluster) RefreshDNS(dnsManager, keyPrefix, internalKey, externalKey
 
 	e := lbc.GetStateDNS(dnsManager)
 	if e != nil {
-		lbc.Write_to_log("WARNING", fmt.Sprintf("Get_state_dns Error: %v", e.Error()))
+		lbc.Slog.Warning(fmt.Sprintf("Get_state_dns Error: %v", e.Error()))
 	}
 
 	pbiDNS := lbc.concatenateIps(lbc.Previous_best_ips_dns)
 	cbi := lbc.concatenateIps(lbc.Current_best_ips)
 	if pbiDNS == cbi {
-		lbc.Write_to_log("INFO", fmt.Sprintf("DNS not update keyName %v cbh == pbhDns == %v", keyPrefix, cbi))
+		lbc.Slog.Info(fmt.Sprintf("DNS not update keyName %v cbh == pbhDns == %v", keyPrefix, cbi))
 		return
 	}
 
-	lbc.Write_to_log("INFO", fmt.Sprintf("Updating the DNS with %v (previous state was %v)", cbi, pbiDNS))
+	lbc.Slog.Info(fmt.Sprintf("Updating the DNS with %v (previous state was %v)", cbi, pbiDNS))
 
 	e = lbc.updateDNS(keyPrefix+"internal.", internalKey, dnsManager)
 	if e != nil {
-		lbc.Write_to_log("WARNING", fmt.Sprintf("Internal Update_dns Error: %v", e.Error()))
+		lbc.Slog.Warning(fmt.Sprintf("Internal Update_dns Error: %v", e.Error()))
 	}
 	if lbc.externallyVisible() {
 		e = lbc.updateDNS(keyPrefix+"external.", externalKey, dnsManager)
 		if e != nil {
-			lbc.Write_to_log("WARNING", fmt.Sprintf("External Update_dns Error: %v", e.Error()))
+			lbc.Slog.Warning(fmt.Sprintf("External Update_dns Error: %v", e.Error()))
 		}
 	}
 }
@@ -67,17 +67,16 @@ func (lbc *LBCluster) updateDNS(keyName, tsigKey, dnsManager string) error {
 		}
 		m.Insert([]dns.RR{rrInsert})
 	}
-	lbc.Write_to_log("INFO", fmt.Sprintf("WE WOULD UPDATE THE DNS WITH THE IPS %v", m))
+	lbc.Slog.Info(fmt.Sprintf("WE WOULD UPDATE THE DNS WITH THE IPS %v", m))
 	c := new(dns.Client)
 	m.SetTsig(keyName, dns.HmacMD5, 300, time.Now().Unix())
 	c.TsigSecret = map[string]string{keyName: tsigKey}
 	_, _, err := c.Exchange(m, dnsManager+":53")
 	if err != nil {
-		// todo: consider retries here
-		lbc.Write_to_log("ERROR", fmt.Sprintf("DNS update failed with (%v)", err))
+		lbc.Slog.Error(fmt.Sprintf("DNS update failed with (%v)", err))
 		return err
 	}
-	lbc.Write_to_log("INFO", fmt.Sprintf("DNS update with keyName %v", keyName))
+	lbc.Slog.Info(fmt.Sprintf("DNS update with keyName %v", keyName))
 
 	return nil
 }
@@ -86,7 +85,7 @@ func (lbc *LBCluster) getIpsFromDNS(m *dns.Msg, dnsManager string, dnsType uint1
 	m.SetQuestion(lbc.ClusterConfig.Cluster_name+".", dnsType)
 	in, err := dns.Exchange(m, dnsManager+":53")
 	if err != nil {
-		lbc.Write_to_log("ERROR", fmt.Sprintf("Error getting the ipv4 state of dns: %v", err))
+		lbc.Slog.Error(fmt.Sprintf("Error getting the ipv4 state of dns: %v", err))
 		return err
 	}
 	for _, a := range in.Answer {
@@ -105,7 +104,7 @@ func (lbc *LBCluster) GetStateDNS(dnsManager string) error {
 	m := new(dns.Msg)
 	var ips []net.IP
 	m.SetEdns0(4096, false)
-	lbc.Write_to_log("DEBUG", "Getting the ips from the DNS")
+	lbc.Slog.Debug("Getting the ips from the DNS")
 	err := lbc.getIpsFromDNS(m, dnsManager, dns.TypeA, &ips)
 
 	if err != nil {
@@ -116,7 +115,7 @@ func (lbc *LBCluster) GetStateDNS(dnsManager string) error {
 		return err
 	}
 
-	lbc.Write_to_log("INFO", fmt.Sprintf("Let's keep the list of ips : %v", ips))
+	lbc.Slog.Info(fmt.Sprintf("Let's keep the list of ips : %v", ips))
 	lbc.Previous_best_ips_dns = ips
 
 	return nil

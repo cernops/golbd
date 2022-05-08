@@ -50,7 +50,7 @@ type ConfigFileChangeSignal struct {
 	readError  error
 }
 
-func shouldUpdateDNS(config lbconfig.Config, hostname string, lg *lbcluster.Log) bool {
+func shouldUpdateDNS(config lbconfig.Config, hostname string, lg lbcluster.Logger) bool {
 	if strings.EqualFold(hostname, config.GetMasterHost()) {
 		return true
 	}
@@ -91,7 +91,7 @@ func shouldUpdateDNS(config lbconfig.Config, hostname string, lg *lbcluster.Log)
 
 }
 
-func updateHeartbeat(config lbconfig.Config, hostname string, lg *lbcluster.Log) error {
+func updateHeartbeat(config lbconfig.Config, hostname string, lg lbcluster.Logger) error {
 	if hostname != config.GetMasterHost() {
 		return nil
 	}
@@ -200,7 +200,7 @@ func main() {
 }
 
 // todo: add some tests
-func checkAliases(config lbconfig.Config, lg lbcluster.Log, lbclusters []lbcluster.LBCluster) {
+func checkAliases(config lbconfig.Config, lg lbcluster.Logger, lbclusters []lbcluster.LBCluster) {
 	hostCheckChannel := make(chan lbhost.Host)
 	defer close(hostCheckChannel)
 
@@ -217,9 +217,9 @@ func checkAliases(config lbconfig.Config, lg lbcluster.Log, lbclusters []lbclust
 	/* First, let's identify the hosts that have to be checked */
 	for i := range lbclusters {
 		currentCluster := &lbclusters[i]
-		currentCluster.Write_to_log("DEBUG", "DO WE HAVE TO UPDATE?")
+		lg.Debug("DO WE HAVE TO UPDATE?")
 		if currentCluster.Time_to_refresh() {
-			currentCluster.Write_to_log("INFO", "Time to refresh the cluster")
+			lg.Info("Time to refresh the cluster")
 			currentCluster.Get_list_hosts(hostsToCheck)
 			clustersToUpdate = append(clustersToUpdate, currentCluster)
 		}
@@ -242,23 +242,22 @@ func checkAliases(config lbconfig.Config, lg lbcluster.Log, lbclusters []lbclust
 		updateDNS = shouldUpdateDNS(config, hostname, &lg)
 
 		/* Finally, let's go through the aliases, selecting the best hosts*/
-		//todo: try to update clusters in parallel
 		for _, pc := range clustersToUpdate {
-			pc.Write_to_log("DEBUG", "READY TO UPDATE THE CLUSTER")
+			lg.Debug("READY TO UPDATE THE CLUSTER")
 			isDNSUpdateValid, err := pc.FindBestHosts(hostsToCheck)
 			if err != nil {
 				log.Fatalf("Error while finding best hosts. error:%v", err)
 			}
 			if isDNSUpdateValid {
 				if updateDNS {
-					pc.Write_to_log("DEBUG", "Should update dns is true")
+					lg.Debug( "Should update dns is true")
 					// todo: try to implement retry mechanismlbcluster/lbcluster_dns.go
 					pc.RefreshDNS(config.GetDNSManager(), config.GetTSIGKeyPrefix(), config.GetTSIGInternalKey(), config.GetTSIGExternalKey())
 				} else {
-					pc.Write_to_log("DEBUG", "should_update_dns false")
+					lg.Debug( "should_update_dns false")
 				}
 			} else {
-				pc.Write_to_log("DEBUG", "FindBestHosts false")
+				lg.Debug( "FindBestHosts false")
 			}
 		}
 	}

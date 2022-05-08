@@ -9,101 +9,102 @@ import (
 	"time"
 )
 
+const (
+	DefaultLbdTag   = "lbd"
+	logLevelInfo    = "INFO"
+	logLevelDebug   = "DEBUG"
+	logLevelWarning = "WARNING"
+	logLevelError   = "ERROR"
+)
+
+func NewLoggerFactory(logFilePath string) (Logger, error) {
+	log, err := syslog.New(syslog.LOG_NOTICE, DefaultLbdTag)
+	if err != nil {
+		return nil, err
+	}
+	if strings.EqualFold(logFilePath, "") {
+		return nil, fmt.Errorf("empty log file path")
+	}
+	_, err = os.OpenFile(logFilePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0640)
+	if err != nil {
+		return nil, err
+	}
+	return &Log{
+			logWriter: log,
+			filePath:  logFilePath},
+		nil
+}
+
 //Log struct for the log
 type Log struct {
-	SyslogWriter *syslog.Writer
-	Stdout       bool
-	Debugflag    bool
-	TofilePath   string
-	logMu        sync.Mutex
+	logWriter        *syslog.Writer
+	shouldWriteToSTD bool
+	isDebugAllowed   bool
+	filePath         string
+	logMu            sync.Mutex
 }
 
-// todo: refractor logging and consider log based snapshots
-// todo: consider start and end times of dns updates
 //Logger struct for the Logger interface
 type Logger interface {
-	Info(s string) error
-	Warning(s string) error
-	Debug(s string) error
-	Error(s string) error
+	EnableDebugMode()
+	EnableWriteToSTd()
+	Info(s string)
+	Warning(s string)
+	Debug(s string)
+	Error(s string)
 }
 
-//Write_to_log put something in the log file
-func (lbc *LBCluster) Write_to_log(level string, msg string) error {
+func (l *Log) EnableDebugMode() {
+	l.isDebugAllowed = true
+}
 
-	myMessage := "cluster: " + lbc.ClusterConfig.Cluster_name + " " + msg
-
-	if level == "INFO" {
-		lbc.Slog.Info(myMessage)
-	} else if level == "DEBUG" {
-		lbc.Slog.Debug(myMessage)
-	} else if level == "WARNING" {
-		lbc.Slog.Warning(myMessage)
-	} else if level == "ERROR" {
-		lbc.Slog.Error(myMessage)
-	} else {
-		lbc.Slog.Error("LEVEL " + level + " NOT UNDERSTOOD, ASSUMING ERROR " + myMessage)
-	}
-
-	return nil
+func (l *Log) EnableWriteToSTd() {
+	l.shouldWriteToSTD = true
 }
 
 //Info write as Info
-func (l *Log) Info(s string) error {
-	var err error
-	if l.SyslogWriter != nil {
-		err = l.SyslogWriter.Info(s)
+func (l *Log) Info(s string) {
+	if l.logWriter != nil {
+		_ = l.logWriter.Info(s)
 	}
-	if l.Stdout || (l.TofilePath != "") {
-		err = l.writefilestd("INFO: " + s)
+	if l.shouldWriteToSTD || (l.filePath != "") {
+		l.write(fmt.Sprintf("%s: %s", logLevelInfo, s))
 	}
-	return err
-
 }
 
 //Warning write as Warning
-func (l *Log) Warning(s string) error {
-	var err error
-	if l.SyslogWriter != nil {
-		err = l.SyslogWriter.Warning(s)
+func (l *Log) Warning(s string) {
+	if l.logWriter != nil {
+		_ = l.logWriter.Warning(s)
 	}
-	if l.Stdout || (l.TofilePath != "") {
-		err = l.writefilestd("WARNING: " + s)
+	if l.shouldWriteToSTD || (l.filePath != "") {
+		l.write(fmt.Sprintf("%s: %s", logLevelWarning, s))
 	}
-	return err
-
 }
 
 //Debug write as Debug
-func (l *Log) Debug(s string) error {
-	var err error
-	if l.Debugflag {
-		if l.SyslogWriter != nil {
-			err = l.SyslogWriter.Debug(s)
+func (l *Log) Debug(s string) {
+	if l.isDebugAllowed {
+		if l.logWriter != nil {
+			_ = l.logWriter.Debug(s)
 		}
-		if l.Stdout || (l.TofilePath != "") {
-			err = l.writefilestd("DEBUG: " + s)
+		if l.shouldWriteToSTD || (l.filePath != "") {
+			l.write(fmt.Sprintf("%s: %s", logLevelDebug, s))
 		}
 	}
-	return err
-
 }
 
 //Error write as Error
-func (l *Log) Error(s string) error {
-	var err error
-	if l.SyslogWriter != nil {
-		err = l.SyslogWriter.Err(s)
+func (l *Log) Error(s string) {
+	if l.logWriter != nil {
+		_ = l.logWriter.Err(s)
 	}
-	if l.Stdout || (l.TofilePath != "") {
-		err = l.writefilestd("ERROR: " + s)
+	if l.shouldWriteToSTD || (l.filePath != "") {
+		l.write(fmt.Sprintf("%s: %s", logLevelError, s))
 	}
-	return err
-
 }
 
-func (l *Log) writefilestd(s string) error {
-	var err error
+func (l *Log) write(s string) {
 	tag := "lbd"
 	nl := ""
 	if !strings.HasSuffix(s, "\n") {
@@ -115,16 +116,18 @@ func (l *Log) writefilestd(s string) error {
 		tag, os.Getpid(), s, nl)
 	l.logMu.Lock()
 	defer l.logMu.Unlock()
-	if l.Stdout {
-		_, err = fmt.Printf(msg)
+	if l.shouldWriteToSTD {
+		fmt.Printf(msg)
 	}
-	if l.TofilePath != "" {
-		f, err := os.OpenFile(l.TofilePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0640)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-		_, err = fmt.Fprintf(f, msg)
+
+	f, err := os.OpenFile(l.filePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0640)
+	if err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "error while opening the log file. error: %v", err)
+		return
 	}
-	return err
+	defer f.Close()
+	_, err = fmt.Fprintf(f, msg)
+	if err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "error while writing to the log file. error: %v", err)
+	}
 }
