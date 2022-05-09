@@ -71,6 +71,7 @@ func (lbc *LBCluster) updateDNS(keyName, tsigKey, dnsManager string) error {
 	c := new(dns.Client)
 	m.SetTsig(keyName, dns.HmacMD5, 300, time.Now().Unix())
 	c.TsigSecret = map[string]string{keyName: tsigKey}
+
 	_, _, err := c.Exchange(m, dnsManager+":53")
 	if err != nil {
 		lbc.Write_to_log("ERROR", fmt.Sprintf("DNS update failed with (%v)", err))
