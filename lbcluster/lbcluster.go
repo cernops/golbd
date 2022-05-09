@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 
 	"gitlab.cern.ch/lb-experts/golbd/lbhost"
 
@@ -76,8 +77,9 @@ func Shuffle(n int, swap func(i, j int)) {
 
 //Node Struct to keep the ips and load of a node for an alias
 type Node struct {
-	Load int
-	IPs  []net.IP
+	Load     int
+	IPs      []net.IP
+	HostName string
 }
 
 //NodeList struct for the list
@@ -289,16 +291,28 @@ func (lbc *LBCluster) checkRogerState(host string) string {
 
 //EvaluateHosts gets the load from the all the nodes
 func (lbc *LBCluster) EvaluateHosts(hostsToCheck map[string]lbhost.LBHost) {
-
-	for currenthost := range lbc.Host_metric_table {
-		host := hostsToCheck[currenthost]
-		ips, err := host.Get_working_IPs()
-		if err != nil {
-			ips, err = host.Get_Ips()
-		}
-		lbc.Host_metric_table[currenthost] = Node{host.Get_load_for_alias(lbc.Cluster_name), ips}
-		lbc.Write_to_log("DEBUG", fmt.Sprintf("node: %s It has a load of %d", currenthost, lbc.Host_metric_table[currenthost].Load))
+	var nodeChan = make(chan Node)
+	defer close(nodeChan)
+	var wg sync.WaitGroup
+	for currentHost := range lbc.Host_metric_table {
+		wg.Add(1)
+		go func(selectedHost string) {
+			host := hostsToCheck[selectedHost]
+			ips, err := host.Get_working_IPs()
+			if err != nil {
+				ips, err = host.Get_Ips()
+			}
+			nodeChan <- Node{host.Get_load_for_alias(lbc.Cluster_name), ips, selectedHost}
+		}(currentHost)
 	}
+	go func() {
+		for nodeData := range nodeChan {
+			wg.Done()
+			lbc.Host_metric_table[nodeData.HostName] = nodeData
+			lbc.Write_to_log("DEBUG", fmt.Sprintf("node: %s It has a load of %d", nodeData.HostName, lbc.Host_metric_table[nodeData.HostName].Load))
+		}
+	}()
+	wg.Wait()
 }
 
 //ReEvaluateHostsForMinimum gets the load from the all the nodes for Minimum metric policy
