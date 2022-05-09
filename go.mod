@@ -1,6 +1,6 @@
 module lb-experts/golbd
 
-go 1.17
+go 1.18
 
 require (
 	github.com/miekg/dns v0.0.0-20160605072344-799de7044d95
