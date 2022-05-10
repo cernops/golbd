@@ -71,7 +71,7 @@ func (lbc *LBCluster) updateDNS(keyName, tsigKey, dnsManager string) error {
 	c := new(dns.Client)
 	m.SetTsig(keyName, dns.HmacMD5, 300, time.Now().Unix())
 	c.TsigSecret = map[string]string{keyName: tsigKey}
-	_, _, err := c.Exchange(m, dnsManager+":53")
+	_, _, err := c.Exchange(m, dnsManager)
 	if err != nil {
 		lbc.Write_to_log("ERROR", fmt.Sprintf("DNS update failed with (%v)", err))
 		return err
@@ -83,7 +83,7 @@ func (lbc *LBCluster) updateDNS(keyName, tsigKey, dnsManager string) error {
 
 func (lbc *LBCluster) getIpsFromDNS(m *dns.Msg, dnsManager string, dnsType uint16, ips *[]net.IP) error {
 	m.SetQuestion(lbc.Cluster_name+".", dnsType)
-	in, err := dns.Exchange(m, dnsManager+":53")
+	in, err := dns.Exchange(m, dnsManager)
 	if err != nil {
 		lbc.Write_to_log("ERROR", fmt.Sprintf("Error getting the ipv4 state of dns: %v", err))
 		return err
