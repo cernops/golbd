@@ -1,0 +1,79 @@
+---
+#
+# Who is the primary master to upload the data ?
+#  - fully qualified DNS name
+#
+master: lbdxyz.cern.ch
+
+#
+# Heartbeat details
+#
+heartbeatpath: /work/go/src/github.com/cernops/golbd
+heartbeatfile: heartbeat
+
+#
+# TSIG HMAC-MD5 algorithm keys for DNS access
+#
+tsigkeyprefix: abcd-
+tsiginternalkey: xxx123==
+tsigexternalkey: yyy123==
+
+#
+# SNMPv3 password for 'loadbalancing' user
+#
+snmppassword: zzz123
+
+#
+# Which node manages information in DNS servers ?
+#
+dnsmanager: 137.138.28.176
+
+parameters:
+  aiermis.cern.ch:
+    behaviour: mindless
+    best_hosts: 1
+    external: false
+    metric: cmsfrontier
+    polling_interval: 300
+    statistics: long
+    ttl: 60
+  uermis.cern.ch:
+    behaviour: mindless
+    best_hosts: 1
+    external: false
+    metric: cmsfrontier
+    polling_interval: 300
+    statistics: long
+    ttl: 222
+  permis.cern.ch:
+    behaviour: mindless
+    best_hosts: 1
+    external: false
+    metric: cmsfrontier
+    polling_interval: 300
+    statistics: long
+    ttl: 222
+  ermis.test.cern.ch:
+    behaviour: mindless
+    best_hosts: 1
+    external: false
+    metric: cmsfrontier
+    polling_interval: 300
+    statistics: long
+    ttl: 222
+  ermis2.test.cern.ch:
+    behaviour: mindless
+    best_hosts: 1
+    external: false
+    metric: cmsfrontier
+    polling_interval: 300
+    statistics: long
+    ttl: 222
+
+clusters:
+  aiermis.cern.ch: [ermis19.cern.ch, ermis20.cern.ch]
+  uermis.cern.ch: [ermis21.cern.ch, ermis22.cern.ch]
+  permis.cern.ch: [ermis21.sub.cern.ch, ermis22.test.cern.ch, ermis42.cern.ch]
+  ermis.test.cern.ch: [ermis23.cern.ch, ermis24.cern.ch]
+  ermis2.test.cern.ch:
+    [ermis23.toto.cern.ch, ermis24.cern.ch, ermis25.sub.cern.ch]

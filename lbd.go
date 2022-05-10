@@ -32,7 +32,7 @@ var (
 	startFlag      = flag.Bool("start", false, "start lbd")
 	stopFlag       = flag.Bool("stop", false, "stop lbd")
 	updateFlag     = flag.Bool("update", false, "update lbd config")
-	configFileFlag = flag.String("config", "./load-balancing.conf", "specify configuration file path")
+	configFileFlag = flag.String("config", "./load-balancing.[conf][yaml]", "specify configuration file path")
 	logFileFlag    = flag.String("log", "./lbd.log", "specify log file path")
 	stdoutFlag     = flag.Bool("stdout", false, "send log to stdtout")
 )
@@ -177,7 +177,6 @@ func main() {
 
 	//	var sig_hup, sig_term bool
 	// installSignalHandler(&sig_hup, &sig_term, &lg)
-
 	config, lbclusters, err := lbconfig.LoadConfig(*configFileFlag, &lg)
 	if err != nil {
 		lg.Warning("loadConfig Error: ")
