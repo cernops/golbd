@@ -26,7 +26,7 @@ snmppassword: zzz123
 #
 # Which node manages information in DNS servers ?
 #
-dnsmanager: 137.138.28.176
+dnsmanager: 137.138.28.176:53
 
 parameters:
   aiermis.cern.ch:
