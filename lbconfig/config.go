@@ -152,6 +152,9 @@ func loadConfigOriginal(configFile string, lg *lbcluster.Log) (*Config, []lbclus
 				config.SnmpPassword = words[2]
 			case "dns_manager":
 				config.DNSManager = words[2]
+				if !strings.Contains(config.DNSManager, ":") {
+					config.DNSManager += ":53"
+				}
 			}
 		} else if words[2] == "=" {
 			jsonStream := "{"
