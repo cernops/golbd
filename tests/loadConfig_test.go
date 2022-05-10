@@ -33,7 +33,7 @@ func TestLoadConfig(t *testing.T) {
 				TsigInternalKey: "xxx123==",
 				TsigExternalKey: "yyy123==",
 				SnmpPassword:    "zzz123",
-				DNSManager:      "137.138.28.176",
+				DNSManager:      "137.138.28.176:53",
 				ConfigFile:      testFile,
 				Clusters: map[string][]string{
 					"aiermis.cern.ch":     {"ermis19.cern.ch", "ermis20.cern.ch"},
@@ -55,7 +55,7 @@ func TestLoadConfig(t *testing.T) {
 			t.Errorf("loadConfig Error: %v", e.Error())
 		} else {
 			if !reflect.DeepEqual(configExisting, &expected) {
-				t.Errorf("loadConfig: got\n %+v expected\n %+v", configExisting, &expected)
+				t.Errorf("loadConfig: got\n %+v \nexpected\n %+v", configExisting, &expected)
 			}
 		}
 	}
