@@ -5,13 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"lb-experts/golbd/lbcluster"
 	"net"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"lb-experts/golbd/lbcluster"
 )
 
 const (
@@ -264,7 +265,7 @@ func (c *LBConfig) loadClusters() ([]lbcluster.LBCluster, error) {
 			}
 			lbc.Host_metric_table = hm
 			lbcs = append(lbcs, lbc)
-			lbc.Write_to_log("INFO", "(re-)loaded cluster ")
+			lbc.Slog.Info("(re-)loaded cluster ")
 
 		} else {
 			c.lbLog.Warning("cluster: " + k + " missing parameters for cluster; ignoring the cluster, please check the configuration file " + c.configFilePath)

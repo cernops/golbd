@@ -1,25 +1,14 @@
 package lbhost
 
 import (
-	//	"encoding/json"
 	"fmt"
-	"lb-experts/golbd/lbcluster"
-
-	//"io/ioutil"
-	"github.com/reguero/go-snmplib"
-	//"math/rand"
 	"net"
-	"os"
 	"regexp"
 	"strconv"
-	"strings"
-	"sync"
-
-	//	"net/http"
-
-	//	"sort"
-	//	"strings"
 	"time"
+
+	"github.com/reguero/go-snmplib"
+	"lb-experts/golbd/lbcluster"
 )
 
 const (
@@ -73,7 +62,7 @@ func (lh *LBHost) SNMPDiscovery() {
 		hostTransport.Response_int = DefaultResponseInt
 		node_ip := hostTransport.IP.String()
 		/* There is no need to put square brackets around the ipv6 addresses*/
-		lh.Write_to_log("DEBUG", "Checking the host "+node_ip+" with "+hostTransport.Transport)
+		lh.Logger.Debug("Checking the host " + node_ip + " with " + hostTransport.Transport)
 		snmp, err := snmplib.NewSNMPv3(node_ip, lh.ClusterConfig.Loadbalancing_username, "MD5", lh.ClusterConfig.Loadbalancing_password, "NOPRIV", lh.ClusterConfig.Loadbalancing_password,
 			time.Duration(TIMEOUT)*time.Second, 2)
 		if err != nil {
@@ -90,7 +79,7 @@ func (lh *LBHost) SNMPDiscovery() {
 		lh.HostTransports[i] = hostTransport
 
 	}
-	lh.Write_to_log("DEBUG", "All the ips have been tested")
+	lh.Logger.Debug("All the ips have been tested")
 }
 
 func (lh *LBHost) setTransportResponse(snmpClient *snmplib.SNMP, lbHostTransportResultPayload *LBHostTransportResult) {
@@ -104,7 +93,7 @@ func (lh *LBHost) setTransportResponse(snmpClient *snmplib.SNMP, lbHostTransport
 		lbHostTransportResultPayload.Response_error = fmt.Sprintf("contacted node: The getv3 gave the following error: %v ", err)
 		return
 	}
-	lh.Write_to_log("INFO", fmt.Sprintf("contacted node: transport: %v ip: %v - reply was %v", lbHostTransportResultPayload.Transport, lbHostTransportResultPayload.IP.String(), pdu))
+	lh.Logger.Info(fmt.Sprintf("contacted node: transport: %v ip: %v - reply was %v", lbHostTransportResultPayload.Transport, lbHostTransportResultPayload.IP.String(), pdu))
 	switch t := pdu.(type) {
 	case int:
 		lbHostTransportResultPayload.Response_int = pdu.(int)
@@ -132,10 +121,10 @@ func (lh *LBHost) GetLoadForAlias(clusterName string) int {
 		if (pduInteger > 0 && pduInteger < my_load) || (my_load < 0) {
 			my_load = pduInteger
 		}
-		lh.Write_to_log("DEBUG", fmt.Sprintf("Possible load is %v", pduInteger))
+		lh.Logger.Debug(fmt.Sprintf("Possible load is %v", pduInteger))
 
 	}
-	lh.Write_to_log("DEBUG", fmt.Sprintf("THE LOAD IS %v, ", my_load))
+	lh.Logger.Debug(fmt.Sprintf("THE LOAD IS %v, ", my_load))
 
 	return my_load
 }
@@ -148,7 +137,7 @@ func (lh *LBHost) GetWorkingIPs() ([]net.IP, error) {
 		}
 
 	}
-	lh.Write_to_log("INFO", fmt.Sprintf("The ips for this host are %v", my_ips))
+	lh.Logger.Info(fmt.Sprintf("The ips for this host are %v", my_ips))
 	return my_ips, nil
 }
 
@@ -157,7 +146,7 @@ func (lh *LBHost) GetAllIPs() ([]net.IP, error) {
 	for _, my_transport := range lh.HostTransports {
 		my_ips = append(my_ips, my_transport.IP)
 	}
-	lh.Write_to_log("INFO", fmt.Sprintf("All ips for this host are %v", my_ips))
+	lh.Logger.Info(fmt.Sprintf("All ips for this host are %v", my_ips))
 	return my_ips, nil
 }
 
@@ -167,30 +156,30 @@ func (lh *LBHost) GetIps() ([]net.IP, error) {
 	re := regexp.MustCompile(".*no such host")
 	net.DefaultResolver.StrictErrors = true
 	for i := 0; i < 3; i++ {
-		lh.Write_to_log("INFO", "Getting the ip addresses")
+		lh.Logger.Info("Getting the ip addresses")
 		ips, err = net.LookupIP(lh.Host_name)
 		if err == nil {
 			return ips, nil
 		}
-		lh.Write_to_log("WARNING", fmt.Sprintf("LookupIP: %v has incorrect or missing IP address (%v) ", lh.Host_name, err))
+		lh.Logger.Info(fmt.Sprintf("LookupIP: %v has incorrect or missing IP address (%v) ", lh.Host_name, err))
 		submatch := re.FindStringSubmatch(err.Error())
 		if submatch != nil {
-			lh.Write_to_log("INFO", "There is no need to retry this error")
+			lh.Logger.Info("There is no need to retry this error")
 			return nil, err
 		}
 	}
 
-	lh.Write_to_log("ERROR", "After several retries, we couldn't get the ips!. Let's try with partial results")
+	lh.Logger.Error("After several retries, we couldn't get the ips!. Let's try with partial results")
 	net.DefaultResolver.StrictErrors = false
 	ips, err = net.LookupIP(lh.Host_name)
 	if err != nil {
-		lh.Write_to_log("ERROR", fmt.Sprintf("It didn't work :(. This node will be ignored during this evaluation: %v", err))
+		lh.Logger.Error(fmt.Sprintf("It didn't work :(. This node will be ignored during this evaluation: %v", err))
 	}
 	return ips, err
 }
 
 func (lh *LBHost) find_transports() {
-	lh.Write_to_log("DEBUG", "Let's find the ips behind this host")
+	lh.Logger.Debug("Let's find the ips behind this host")
 
 	ips, _ := lh.GetIps()
 	for _, ip := range ips {

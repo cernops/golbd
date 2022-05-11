@@ -250,14 +250,14 @@ func checkAliases(config lbconfig.Config, lg lbcluster.Logger, lbclusters []lbcl
 			}
 			if isDNSUpdateValid {
 				if updateDNS {
-					lg.Debug( "Should update dns is true")
+					lg.Debug("Should update dns is true")
 					// todo: try to implement retry mechanismlbcluster/lbcluster_dns.go
 					pc.RefreshDNS(config.GetDNSManager(), config.GetTSIGKeyPrefix(), config.GetTSIGInternalKey(), config.GetTSIGExternalKey())
 				} else {
-					lg.Debug( "should_update_dns false")
+					lg.Debug("should_update_dns false")
 				}
 			} else {
-				lg.Debug( "FindBestHosts false")
+				lg.Debug("FindBestHosts false")
 			}
 		}
 	}

@@ -4,14 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"lb-experts/golbd/lbhost"
 	"math/rand"
 	"net"
 	"net/http"
-	"strings"
-
 	"sort"
+	"strings"
 	"time"
+
+	"lb-experts/golbd/lbhost"
 )
 
 //WorstValue worst possible load
@@ -157,11 +157,11 @@ func (lbc *LBCluster) FindBestHosts(hosts_to_check map[string]lbhost.Host) (bool
 		nodes = "NONE"
 	}
 	lbc.Slog.Info("best hosts are: " + nodes)
-	return true,nil
+	return true, nil
 }
 
 // ApplyMetric This is the core of the lbcluster: based on the metrics, select the best hosts
-func (lbc *LBCluster) ApplyMetric(hosts_to_check map[string]lbhost.Host) (bool,error) {
+func (lbc *LBCluster) ApplyMetric(hosts_to_check map[string]lbhost.Host) (bool, error) {
 	lbc.Slog.Info("Got metric = " + lbc.Parameters.Metric)
 	pl := make(NodeList, len(lbc.Host_metric_table))
 	i := 0
@@ -224,7 +224,7 @@ func (lbc *LBCluster) ApplyMetric(hosts_to_check map[string]lbhost.Host) (bool,e
 			lbc.Slog.Warning("no usable hosts found for cluster! Returning no hosts.")
 		} else if lbc.Parameters.Metric == "cmsfrontier" {
 			lbc.Slog.Warning("no usable hosts found for cluster! Skipping the DNS update")
-			return false,nil
+			return false, nil
 		}
 	} else {
 		if useful_hosts < max {
