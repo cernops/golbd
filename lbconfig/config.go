@@ -5,14 +5,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"lb-experts/golbd/lbcluster"
 	"net"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+)
 
-	"gitlab.cern.ch/lb-experts/golbd/lbcluster"
+const (
+	DefaultLoadBalancerConfig = "loadbalancing"
 )
 
 type Config interface {
@@ -28,6 +31,7 @@ type Config interface {
 	WatchFileChange(controlChan <-chan bool, waitGroup *sync.WaitGroup) <-chan ConfigFileChangeSignal
 	Load() (*LBConfig, []lbcluster.LBCluster, error)
 }
+
 // Config this is the configuration of the lbd
 type LBConfig struct {
 	Master          string
@@ -40,14 +44,14 @@ type LBConfig struct {
 	SnmpPassword    string
 	DNSManager      string
 	configFilePath  string
-	lbLog *lbcluster.Log
+	lbLog           *lbcluster.Log
 	Clusters        map[string][]string
 	Parameters      map[string]lbcluster.Params
 }
 
 type ConfigFileChangeSignal struct {
 	readSignal bool
-	readError error
+	readError  error
 }
 
 func (fs ConfigFileChangeSignal) IsErrorPresent() bool {
@@ -58,7 +62,7 @@ func (fs ConfigFileChangeSignal) IsErrorPresent() bool {
 func NewLoadBalancerConfig(configFilePath string, lbClusterLog *lbcluster.Log) Config {
 	return &LBConfig{
 		configFilePath: configFilePath,
-		lbLog: lbClusterLog,
+		lbLog:          lbClusterLog,
 	}
 }
 
@@ -78,7 +82,7 @@ func (c *LBConfig) GetDNSManager() string {
 	return c.DNSManager
 }
 
-func (c *LBConfig) GetTSIGKeyPrefix() string{
+func (c *LBConfig) GetTSIGKeyPrefix() string {
 	return c.TsigKeyPrefix
 }
 
@@ -94,10 +98,9 @@ func (c *LBConfig) LockHeartBeatMutex() {
 	c.HeartbeatMu.Lock()
 }
 
-func (c *LBConfig) UnlockHeartBeatMutex(){
+func (c *LBConfig) UnlockHeartBeatMutex() {
 	c.HeartbeatMu.Unlock()
 }
-
 
 func (c *LBConfig) WatchFileChange(controlChan <-chan bool, waitGroup *sync.WaitGroup) <-chan ConfigFileChangeSignal {
 	fileWatcherChan := make(chan ConfigFileChangeSignal)
@@ -109,10 +112,10 @@ func (c *LBConfig) WatchFileChange(controlChan <-chan bool, waitGroup *sync.Wait
 		if err != nil {
 			fileWatcherChan <- ConfigFileChangeSignal{readError: err}
 		}
-		secondTicker := time.NewTicker(1*time.Second)
+		secondTicker := time.NewTicker(1 * time.Second)
 		for {
 			select {
-			case <- secondTicker.C:
+			case <-secondTicker.C:
 				stat, err := os.Stat(c.configFilePath)
 				if err != nil {
 					fileWatcherChan <- ConfigFileChangeSignal{readError: err}
@@ -243,11 +246,18 @@ func (c *LBConfig) loadClusters() ([]lbcluster.LBCluster, error) {
 			continue
 		}
 		if par, ok := c.Parameters[k]; ok {
-			lbc = lbcluster.LBCluster{Cluster_name: k, Loadbalancing_username: "loadbalancing",
-				Loadbalancing_password: c.SnmpPassword, Parameters: par,
+			lbcConfig := lbcluster.Config{
+				Cluster_name:           k,
+				Loadbalancing_username: DefaultLoadBalancerConfig,
+				Loadbalancing_password: c.SnmpPassword,
+			}
+			lbc = lbcluster.LBCluster{
+				ClusterConfig:         lbcConfig,
+				Parameters:            par,
 				Current_best_ips:      []net.IP{},
 				Previous_best_ips_dns: []net.IP{},
-				Slog:                  c.lbLog}
+				Slog:                  c.lbLog,
+			}
 			hm := make(map[string]lbcluster.Node)
 			for _, h := range v {
 				hm[h] = lbcluster.Node{Load: 100000, IPs: []net.IP{}}

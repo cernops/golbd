@@ -51,19 +51,19 @@ func (lbc *LBCluster) updateDNS(keyName, tsigKey, dnsManager string) error {
 	}
 	//best_hosts_len := len(lbc.Current_best_hosts)
 	m := new(dns.Msg)
-	m.SetUpdate(lbc.Cluster_name + ".")
+	m.SetUpdate(lbc.ClusterConfig.Cluster_name + ".")
 	m.Id = 1234
-	rrRemoveA, _ := dns.NewRR(lbc.Cluster_name + ". " + ttl + " IN A 127.0.0.1")
-	rrRemoveAAAA, _ := dns.NewRR(lbc.Cluster_name + ". " + ttl + " IN AAAA ::1")
+	rrRemoveA, _ := dns.NewRR(lbc.ClusterConfig.Cluster_name + ". " + ttl + " IN A 127.0.0.1")
+	rrRemoveAAAA, _ := dns.NewRR(lbc.ClusterConfig.Cluster_name + ". " + ttl + " IN AAAA ::1")
 	m.RemoveRRset([]dns.RR{rrRemoveA})
 	m.RemoveRRset([]dns.RR{rrRemoveAAAA})
 
-	for _, ip := range lbc.x {
+	for _, ip := range lbc.Current_best_ips {
 		var rrInsert dns.RR
 		if ip.To4() != nil {
-			rrInsert, _ = dns.NewRR(lbc.Cluster_name + ". " + ttl + " IN A " + ip.String())
+			rrInsert, _ = dns.NewRR(lbc.ClusterConfig.Cluster_name + ". " + ttl + " IN A " + ip.String())
 		} else if ip.To16() != nil {
-			rrInsert, _ = dns.NewRR(lbc.Cluster_name + ". " + ttl + " IN AAAA " + ip.String())
+			rrInsert, _ = dns.NewRR(lbc.ClusterConfig.Cluster_name + ". " + ttl + " IN AAAA " + ip.String())
 		}
 		m.Insert([]dns.RR{rrInsert})
 	}
@@ -83,7 +83,7 @@ func (lbc *LBCluster) updateDNS(keyName, tsigKey, dnsManager string) error {
 }
 
 func (lbc *LBCluster) getIpsFromDNS(m *dns.Msg, dnsManager string, dnsType uint16, ips *[]net.IP) error {
-	m.SetQuestion(lbc.Cluster_name+".", dnsType)
+	m.SetQuestion(lbc.ClusterConfig.Cluster_name+".", dnsType)
 	in, err := dns.Exchange(m, dnsManager+":53")
 	if err != nil {
 		lbc.Write_to_log("ERROR", fmt.Sprintf("Error getting the ipv4 state of dns: %v", err))

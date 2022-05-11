@@ -7,7 +7,7 @@ import (
 	"gitlab.cern.ch/lb-experts/golbd/lbhost"
 )
 
-//Function TestGetLoadHosts tests the function Get_load_for_alias
+//Function TestGetLoadHosts tests the function GetLoadForAlias
 func TestGetLoadHosts(t *testing.T) {
 
 	hosts := []lbhost.LBHost{
@@ -18,9 +18,9 @@ func TestGetLoadHosts(t *testing.T) {
 	}
 
 	expectedhost0 := hosts[0].Host_transports[0].Response_int
-	//expectedhost1 := hosts[1].Host_transports[0].Response_int
+	//expectedhost1 := hosts[1].HostTransports[0].Response_int
 	expectedhost2 := hosts[2].Host_transports[0].Response_int
-	//expectedhost3 := hosts[3].Host_transports[0].Response_int
+	//expectedhost3 := hosts[3].HostTransports[0].Response_int
 
 	if !reflect.DeepEqual(hosts[0].Get_load_for_alias(hosts[0].Cluster_name), expectedhost0) {
 		t.Errorf(" got\n%v\nexpected\n%v", hosts[0].Get_load_for_alias(hosts[0].Cluster_name), expectedhost0)
