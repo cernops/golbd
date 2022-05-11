@@ -45,7 +45,7 @@ type LBConfig struct {
 	SnmpPassword    string
 	DNSManager      string
 	configFilePath  string
-	lbLog           *lbcluster.Log
+	lbLog           lbcluster.Logger
 	Clusters        map[string][]string
 	Parameters      map[string]lbcluster.Params
 }
@@ -60,7 +60,7 @@ func (fs ConfigFileChangeSignal) IsErrorPresent() bool {
 }
 
 // NewLoadBalancerConfig - instantiates a new load balancer config
-func NewLoadBalancerConfig(configFilePath string, lbClusterLog *lbcluster.Log) Config {
+func NewLoadBalancerConfig(configFilePath string, lbClusterLog lbcluster.Logger) Config {
 	return &LBConfig{
 		configFilePath: configFilePath,
 		lbLog:          lbClusterLog,

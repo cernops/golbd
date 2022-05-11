@@ -114,7 +114,7 @@ func updateHeartbeat(config lbconfig.Config, hostname string, lg lbcluster.Logge
 	return nil
 }
 
-func updateHeartBeatToFile(heartBeatFilePath string, hostname string, lg *lbcluster.Log) error {
+func updateHeartBeatToFile(heartBeatFilePath string, hostname string, lg lbcluster.Logger) error {
 	secs := time.Now().Unix()
 	f, err := os.OpenFile(heartBeatFilePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
 	defer f.Close()
@@ -151,31 +151,34 @@ func sleep(seconds time.Duration, controlChan <-chan bool, waitGroup *sync.WaitG
 
 func main() {
 	wg := sync.WaitGroup{}
-	log, e := syslog.New(syslog.LOG_NOTICE, DefaultLbdTag)
-	lg := lbcluster.Log{SyslogWriter: log, Stdout: *stdoutFlag, Debugflag: *debugFlag, TofilePath: *logFileFlag}
+	logger, err := lbcluster.NewLoggerFactory(*logFileFlag)
+	if err != nil {
+		fmt.Printf("error during log initialization. error: %v", err)
+		os.Exit(1)
+	}
+
+	if *stdoutFlag {
+		logger.EnableWriteToSTd()
+	}
 	controlChan := make(chan bool)
 	defer close(controlChan)
 	defer wg.Done()
-	defer lg.Error("The lbd is not supposed to stop")
+	defer logger.Error("The lbd is not supposed to stop")
 	flag.Parse()
 	if *versionFlag {
 		fmt.Printf("This is a proof of concept golbd version: %s-%s \n", Version, Release)
 		os.Exit(0)
 	}
 	rand.Seed(time.Now().UTC().UnixNano())
-	if e != nil {
-		fmt.Printf("Error getting a syslog instance %v\nThe service will only write to the logfile %v\n\n", e, *logFileFlag)
-	}
-
-	lg.Info("Starting lbd")
-	lbConfig := lbconfig.NewLoadBalancerConfig(*configFileFlag, &lg)
+	logger.Info("Starting lbd")
+	lbConfig := lbconfig.NewLoadBalancerConfig(*configFileFlag, logger)
 	config, lbclusters, err := lbConfig.Load()
 	if err != nil {
-		lg.Warning("loadConfig Error: ")
-		lg.Warning(err.Error())
+		logger.Warning("loadConfig Error: ")
+		logger.Warning(err.Error())
 		os.Exit(1)
 	}
-	lg.Info("Clusters loaded")
+	logger.Info("Clusters loaded")
 
 	fileChangeSignal := lbConfig.WatchFileChange(controlChan, &wg)
 	intervalTickerSignal := sleep(DefaultSleepDuration, controlChan, &wg)
@@ -187,13 +190,13 @@ func main() {
 				controlChan <- true
 				return
 			}
-			lg.Info("Config Changed")
+			logger.Info("Config Changed")
 			config, lbclusters, err = lbConfig.Load()
 			if err != nil {
-				lg.Error(fmt.Sprintf("Error getting the clusters (something wrong in %v", configFileFlag))
+				logger.Error(fmt.Sprintf("Error getting the clusters (something wrong in %v", configFileFlag))
 			}
 		case <-intervalTickerSignal:
-			checkAliases(config, lg, lbclusters)
+			checkAliases(config, logger, lbclusters)
 			break
 		}
 	}
@@ -239,7 +242,7 @@ func checkAliases(config lbconfig.Config, lg lbcluster.Logger, lbclusters []lbcl
 
 		lg.Debug("All the hosts have been tested")
 
-		updateDNS = shouldUpdateDNS(config, hostname, &lg)
+		updateDNS = shouldUpdateDNS(config, hostname, lg)
 
 		/* Finally, let's go through the aliases, selecting the best hosts*/
 		for _, pc := range clustersToUpdate {
@@ -263,7 +266,7 @@ func checkAliases(config lbconfig.Config, lg lbcluster.Logger, lbclusters []lbcl
 	}
 
 	if updateDNS {
-		updateHeartbeat(config, hostname, &lg)
+		updateHeartbeat(config, hostname, lg)
 	}
 
 	lg.Debug("iteration done!")
