@@ -6,8 +6,8 @@ import (
 	"io/ioutil"
 	"lb-experts/golbd/lbcluster"
 	"lb-experts/golbd/lbhost"
+	"lb-experts/golbd/logger"
 	"log"
-	"log/syslog"
 	"math/rand"
 	"os"
 	"regexp"
@@ -50,7 +50,7 @@ type ConfigFileChangeSignal struct {
 	readError  error
 }
 
-func shouldUpdateDNS(config lbconfig.Config, hostname string, lg lbcluster.Logger) bool {
+func shouldUpdateDNS(config lbconfig.Config, hostname string, lg logger.Logger) bool {
 	if strings.EqualFold(hostname, config.GetMasterHost()) {
 		return true
 	}
@@ -91,7 +91,7 @@ func shouldUpdateDNS(config lbconfig.Config, hostname string, lg lbcluster.Logge
 
 }
 
-func updateHeartbeat(config lbconfig.Config, hostname string, lg lbcluster.Logger) error {
+func updateHeartbeat(config lbconfig.Config, hostname string, lg logger.Logger) error {
 	if hostname != config.GetMasterHost() {
 		return nil
 	}
@@ -114,7 +114,7 @@ func updateHeartbeat(config lbconfig.Config, hostname string, lg lbcluster.Logge
 	return nil
 }
 
-func updateHeartBeatToFile(heartBeatFilePath string, hostname string, lg lbcluster.Logger) error {
+func updateHeartBeatToFile(heartBeatFilePath string, hostname string, lg logger.Logger) error {
 	secs := time.Now().Unix()
 	f, err := os.OpenFile(heartBeatFilePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
 	defer f.Close()
@@ -151,7 +151,7 @@ func sleep(seconds time.Duration, controlChan <-chan bool, waitGroup *sync.WaitG
 
 func main() {
 	wg := sync.WaitGroup{}
-	logger, err := lbcluster.NewLoggerFactory(*logFileFlag)
+	logger, err := logger.NewLoggerFactory(*logFileFlag)
 	if err != nil {
 		fmt.Printf("error during log initialization. error: %v", err)
 		os.Exit(1)
@@ -190,7 +190,7 @@ func main() {
 				controlChan <- true
 				return
 			}
-			logger.Info("Config Changed")
+			logger.Info("CluserConfig Changed")
 			config, lbclusters, err = lbConfig.Load()
 			if err != nil {
 				logger.Error(fmt.Sprintf("Error getting the clusters (something wrong in %v", configFileFlag))
@@ -203,7 +203,7 @@ func main() {
 }
 
 // todo: add some tests
-func checkAliases(config lbconfig.Config, lg lbcluster.Logger, lbclusters []lbcluster.LBCluster) {
+func checkAliases(config lbconfig.Config, lg logger.Logger, lbclusters []lbcluster.LBCluster) {
 	hostCheckChannel := make(chan lbhost.Host)
 	defer close(hostCheckChannel)
 

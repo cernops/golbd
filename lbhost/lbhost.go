@@ -2,13 +2,14 @@ package lbhost
 
 import (
 	"fmt"
+	"lb-experts/golbd/logger"
+	"lb-experts/golbd/model"
 	"net"
 	"regexp"
 	"strconv"
 	"time"
 
 	"github.com/reguero/go-snmplib"
-	"lb-experts/golbd/lbcluster"
 )
 
 const (
@@ -25,34 +26,49 @@ type LBHostTransportResult struct {
 	Response_error  string
 }
 type LBHost struct {
-	ClusterConfig  lbcluster.Config
+	ClusterConfig  model.CluserConfig
 	Host_name      string
 	HostTransports []LBHostTransportResult
-	Logger         lbcluster.Logger
+	Logger         logger.Logger
 }
 
 type Host interface {
 	GetName() string
+	SetName(name string)
 	SNMPDiscovery()
-	GetClusterConfig() *lbcluster.Config
+	GetClusterConfig() *model.CluserConfig
 	GetLoadForAlias(clusterName string) int
 	GetWorkingIPs() ([]net.IP, error)
 	GetAllIPs() ([]net.IP, error)
 	GetIps() ([]net.IP, error)
+	SetTransportPayload(transportPayloadList []LBHostTransportResult)
+	GetHostTransportPayloads() []LBHostTransportResult
 }
 
-func NewLBHost(clusterConfig lbcluster.Config, logger lbcluster.Logger) Host {
+func NewLBHost(clusterConfig model.CluserConfig, logger logger.Logger) Host {
 	return &LBHost{
 		ClusterConfig: clusterConfig,
 		Logger:        logger,
 	}
 }
 
+func (lh *LBHost) SetName(name string) {
+	lh.Host_name = name
+}
+
 func (lh *LBHost) GetName() string {
 	return lh.Host_name
 }
-func (lh *LBHost) GetClusterConfig() *lbcluster.Config {
+func (lh *LBHost) GetClusterConfig() *model.CluserConfig {
 	return &lh.ClusterConfig
+}
+
+func (lh *LBHost) GetHostTransportPayloads() []LBHostTransportResult {
+	return lh.HostTransports
+}
+
+func (lh *LBHost) SetTransportPayload(transportPayloadList []LBHostTransportResult) {
+	lh.HostTransports = transportPayloadList
 }
 
 // todo: refractor into smaller functions

@@ -1,4 +1,4 @@
-package lbcluster
+package logger
 
 import (
 	"fmt"

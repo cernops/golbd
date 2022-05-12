@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"lb-experts/golbd/logger"
+	"lb-experts/golbd/model"
 	"net"
 	"os"
 	"strconv"
@@ -31,6 +33,18 @@ type Config interface {
 	UnlockHeartBeatMutex()
 	WatchFileChange(controlChan <-chan bool, waitGroup *sync.WaitGroup) <-chan ConfigFileChangeSignal
 	Load() (*LBConfig, []lbcluster.LBCluster, error)
+
+	// testing only
+	SetMasterHost(masterHostName string)
+	SetHeartBeatFileName(heartBeatFileName string)
+	SetHeartBeatDirPath(heartBeatDirPath string)
+	SetDNSManager(dnsManager string)
+	SetTSIGKeyPrefix(tsigKeyPrefix string)
+	SetTSIGInternalKey(tsigInternalKey string)
+	SetTSIGExternalKey(tsigExternalKey string)
+	SetClusters(clusters map[string][]string)
+	SetSNMPPassword(password string)
+	SetParameters(params map[string]lbcluster.Params)
 }
 
 // Config this is the configuration of the lbd
@@ -45,7 +59,7 @@ type LBConfig struct {
 	SnmpPassword    string
 	DNSManager      string
 	configFilePath  string
-	lbLog           lbcluster.Logger
+	lbLog           logger.Logger
 	Clusters        map[string][]string
 	Parameters      map[string]lbcluster.Params
 }
@@ -60,7 +74,7 @@ func (fs ConfigFileChangeSignal) IsErrorPresent() bool {
 }
 
 // NewLoadBalancerConfig - instantiates a new load balancer config
-func NewLoadBalancerConfig(configFilePath string, lbClusterLog lbcluster.Logger) Config {
+func NewLoadBalancerConfig(configFilePath string, lbClusterLog logger.Logger) Config {
 	return &LBConfig{
 		configFilePath: configFilePath,
 		lbLog:          lbClusterLog,
@@ -71,28 +85,68 @@ func (c *LBConfig) GetMasterHost() string {
 	return c.Master
 }
 
+func (c *LBConfig) SetMasterHost(masterHostName string) {
+	c.Master = masterHostName
+}
+
 func (c *LBConfig) GetHeartBeatFileName() string {
 	return c.HeartbeatFile
+}
+
+func (c *LBConfig) SetHeartBeatFileName(heartBeatFileName string) {
+	c.HeartbeatFile = heartBeatFileName
 }
 
 func (c *LBConfig) GetHeartBeatDirPath() string {
 	return c.HeartbeatPath
 }
 
+func (c *LBConfig) SetHeartBeatDirPath(heartBeatDirPath string) {
+	c.HeartbeatPath = heartBeatDirPath
+}
+
 func (c *LBConfig) GetDNSManager() string {
 	return c.DNSManager
+}
+
+func (c *LBConfig) SetDNSManager(dnsManager string) {
+	c.DNSManager = dnsManager
 }
 
 func (c *LBConfig) GetTSIGKeyPrefix() string {
 	return c.TsigKeyPrefix
 }
 
+func (c *LBConfig) SetTSIGKeyPrefix(tsigKeyPrefix string) {
+	c.TsigKeyPrefix = tsigKeyPrefix
+}
+
 func (c *LBConfig) GetTSIGInternalKey() string {
 	return c.TsigInternalKey
 }
 
+func (c *LBConfig) SetTSIGInternalKey(tsigInternalKey string) {
+	c.TsigInternalKey = tsigInternalKey
+}
+
 func (c *LBConfig) GetTSIGExternalKey() string {
 	return c.TsigExternalKey
+}
+
+func (c *LBConfig) SetTSIGExternalKey(tsigExternalKey string) {
+	c.TsigExternalKey = tsigExternalKey
+}
+
+func (c *LBConfig) SetClusters(clusters map[string][]string) {
+	c.Clusters = clusters
+}
+
+func (c *LBConfig) SetParameters(params map[string]lbcluster.Params) {
+	c.Parameters = params
+}
+
+func (c *LBConfig) SetSNMPPassword(password string) {
+	c.SnmpPassword = password
 }
 
 func (c *LBConfig) LockHeartBeatMutex() {
@@ -247,7 +301,7 @@ func (c *LBConfig) loadClusters() ([]lbcluster.LBCluster, error) {
 			continue
 		}
 		if par, ok := c.Parameters[k]; ok {
-			lbcConfig := lbcluster.Config{
+			lbcConfig := model.CluserConfig{
 				Cluster_name:           k,
 				Loadbalancing_username: DefaultLoadBalancerConfig,
 				Loadbalancing_password: c.SnmpPassword,

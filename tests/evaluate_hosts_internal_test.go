@@ -1,12 +1,65 @@
 package main_test
 
 import (
+	"fmt"
+	"lb-experts/golbd/lbcluster"
+	"lb-experts/golbd/lbhost"
+	"lb-experts/golbd/logger"
+	"lb-experts/golbd/model"
 	"net"
+	"os"
 	"reflect"
 	"testing"
-
-	"gitlab.cern.ch/lb-experts/golbd/lbcluster"
+	"time"
 )
+
+type mockHost struct {
+}
+
+func (m mockHost) GetHostTransportPayloads() []lbhost.LBHostTransportResult {
+	panic("implement me")
+}
+
+func (m mockHost) SetName(name string) {
+	panic("implement me")
+}
+
+func (m mockHost) SetTransportPayload(transportPayloadList []lbhost.LBHostTransportResult) {
+	panic("implement me")
+}
+
+func (m mockHost) GetName() string {
+	panic("implement me")
+}
+
+func (m mockHost) SNMPDiscovery() {
+	panic("implement me")
+}
+
+func (m mockHost) GetClusterConfig() *model.CluserConfig {
+	panic("implement me")
+}
+
+func (m mockHost) GetLoadForAlias(clusterName string) int {
+	return 0
+}
+
+func (m mockHost) GetWorkingIPs() ([]net.IP, error) {
+	return []net.IP{}, fmt.Errorf("sample error")
+}
+
+func (m mockHost) GetAllIPs() ([]net.IP, error) {
+	panic("implement me")
+}
+
+func (m mockHost) GetIps() ([]net.IP, error) {
+	time.Sleep(5 * time.Second) // simulating a network request
+	return []net.IP{}, nil
+}
+
+func NewMockHost() lbhost.Host {
+	return &mockHost{}
+}
 
 func compareIPs(t *testing.T, source, target []net.IP) {
 
@@ -67,4 +120,20 @@ func TestEvaluateHosts(t *testing.T) {
 	if !reflect.DeepEqual(c.Time_of_last_evaluation, expectedTimeOfLastEvaluation) {
 		t.Errorf("e.evaluate_hosts: c.Time_of_last_evaluation: got\n%v\nexpected\n%v", c.Time_of_last_evaluation, expectedTimeOfLastEvaluation)
 	}
+}
+
+func TestEvaluateHostsConcurrency(t *testing.T) {
+	mockHostMap := make(map[string]lbhost.Host)
+	mockHostMap["sampleHost"] = NewMockHost()
+	logger, _ := logger.NewLoggerFactory("sample.log")
+	cluster := lbcluster.LBCluster{Slog: logger}
+	cluster.Host_metric_table = map[string]lbcluster.Node{"sampleHost": {HostName: "sampleHost"}}
+	startTime := time.Now()
+	cluster.EvaluateHosts(mockHostMap)
+	endTime := time.Now()
+	if endTime.Sub(startTime) > 6*time.Second {
+		t.Fail()
+		t.Errorf("concurrent job not running properly. expDuration:%v, actualDuration:%v", 6, endTime.Sub(startTime))
+	}
+	os.Remove("sample.log")
 }

@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"lb-experts/golbd/logger"
+	"lb-experts/golbd/model"
 	"math/rand"
 	"net"
 	"net/http"
-	"sync"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"lb-experts/golbd/lbhost"
@@ -26,20 +28,14 @@ const OID string = ".1.3.6.1.4.1.96.255.1"
 
 //LBCluster struct of an lbcluster alias
 type LBCluster struct {
-	ClusterConfig           Config
+	ClusterConfig           model.CluserConfig
 	Host_metric_table       map[string]Node
 	Parameters              Params
 	Time_of_last_evaluation time.Time
 	Current_best_ips        []net.IP
 	Previous_best_ips_dns   []net.IP
 	Current_index           int
-	Slog                    Logger
-}
-
-type Config struct {
-	Cluster_name           string
-	Loadbalancing_username string
-	Loadbalancing_password string
+	Slog                    logger.Logger
 }
 
 //Params of the alias
@@ -315,9 +311,9 @@ func (lbc *LBCluster) EvaluateHosts(hostsToCheck map[string]lbhost.Host) {
 	}
 	go func() {
 		for nodeData := range nodeChan {
-			wg.Done()
 			lbc.Host_metric_table[nodeData.HostName] = nodeData
 			lbc.Slog.Debug(fmt.Sprintf("node: %s It has a load of %d", nodeData.HostName, lbc.Host_metric_table[nodeData.HostName].Load))
+			wg.Done()
 		}
 	}()
 	wg.Wait()
@@ -332,7 +328,7 @@ func (lbc *LBCluster) ReEvaluateHostsForMinimum(hostsToCheck map[string]lbhost.H
 		if err != nil {
 			ips, err = host.GetIps()
 		}
-		lbc.Host_metric_table[currenthost] = Node{host.GetLoadForAlias(lbc.ClusterConfig.Cluster_name), ips}
+		lbc.Host_metric_table[currenthost] = Node{host.GetLoadForAlias(lbc.ClusterConfig.Cluster_name), ips, host.GetName()}
 		lbc.Slog.Debug(fmt.Sprintf("node: %s It has a load of %d", currenthost, lbc.Host_metric_table[currenthost].Load))
 	}
 }

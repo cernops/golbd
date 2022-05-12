@@ -3,7 +3,7 @@ package main_test
 import (
 	"fmt"
 	"io/ioutil"
-	"lb-experts/golbd/lbcluster"
+	"lb-experts/golbd/logger"
 	"log"
 	"os"
 	"strings"
@@ -20,7 +20,7 @@ func getLogFilePath() string {
 	return fmt.Sprintf("%s/%s.%s", testLogDirPath, testFileName, "log")
 }
 func TestLBClusterLoggerForInitFailure(t *testing.T) {
-	_, err := lbcluster.NewLoggerFactory("")
+	_, err := logger.NewLoggerFactory("")
 	if err == nil {
 		t.Errorf("expected error not thrown")
 	}
@@ -28,7 +28,7 @@ func TestLBClusterLoggerForInitFailure(t *testing.T) {
 
 func TestLBClusterLoggerForInitSuccess(t *testing.T) {
 	defer deleteFile(t)
-	logger, err := lbcluster.NewLoggerFactory(getLogFilePath())
+	logger, err := logger.NewLoggerFactory(getLogFilePath())
 	if err != nil {
 		t.Fail()
 		t.Errorf("unexpected error thrown. error: %v", err)
@@ -41,7 +41,7 @@ func TestLBClusterLoggerForInitSuccess(t *testing.T) {
 
 func TestLBClusterLoggerForSnapshot(t *testing.T) {
 	defer deleteFile(t)
-	logger, err := lbcluster.NewLoggerFactory(getLogFilePath())
+	logger, err := logger.NewLoggerFactory(getLogFilePath())
 	if err != nil {
 		t.Fail()
 		t.Errorf("unexpected error thrown. error: %v", err)
@@ -60,7 +60,7 @@ func TestLBClusterLoggerForSnapshot(t *testing.T) {
 
 func TestLBClusterLoggerForNewSnapshot(t *testing.T) {
 	defer deleteFile(t)
-	logger, err := lbcluster.NewLoggerFactory(getLogFilePath())
+	logger, err := logger.NewLoggerFactory(getLogFilePath())
 	if err != nil {
 		t.Fail()
 		t.Errorf("unexpected error thrown. error: %v", err)
@@ -83,7 +83,7 @@ func TestLBClusterLoggerForNewSnapshot(t *testing.T) {
 
 func TestLBClusterLoggerForDebugDisabled(t *testing.T) {
 	defer deleteFile(t)
-	logger, err := lbcluster.NewLoggerFactory(getLogFilePath())
+	logger, err := logger.NewLoggerFactory(getLogFilePath())
 	if err != nil {
 		t.Fail()
 		t.Errorf("unexpected error thrown. error: %v", err)
@@ -97,7 +97,7 @@ func TestLBClusterLoggerForDebugDisabled(t *testing.T) {
 
 func TestLBClusterLoggerForDebugEnabled(t *testing.T) {
 	defer deleteFile(t)
-	logger, err := lbcluster.NewLoggerFactory(getLogFilePath())
+	logger, err := logger.NewLoggerFactory(getLogFilePath())
 	if err != nil {
 		t.Fail()
 		t.Errorf("unexpected error thrown. error: %v", err)
@@ -112,7 +112,7 @@ func TestLBClusterLoggerForDebugEnabled(t *testing.T) {
 
 func TestLBClusterLoggerForInfo(t *testing.T) {
 	defer deleteFile(t)
-	logger, err := lbcluster.NewLoggerFactory(getLogFilePath())
+	logger, err := logger.NewLoggerFactory(getLogFilePath())
 	if err != nil {
 		t.Fail()
 		t.Errorf("unexpected error thrown. error: %v", err)
@@ -126,7 +126,7 @@ func TestLBClusterLoggerForInfo(t *testing.T) {
 
 func TestLBClusterLoggerForWarning(t *testing.T) {
 	defer deleteFile(t)
-	logger, err := lbcluster.NewLoggerFactory(getLogFilePath())
+	logger, err := logger.NewLoggerFactory(getLogFilePath())
 	if err != nil {
 		t.Fail()
 		t.Errorf("unexpected error thrown. error: %v", err)
@@ -140,7 +140,7 @@ func TestLBClusterLoggerForWarning(t *testing.T) {
 
 func TestLBClusterLoggerForError(t *testing.T) {
 	defer deleteFile(t)
-	logger, err := lbcluster.NewLoggerFactory(getLogFilePath())
+	logger, err := logger.NewLoggerFactory(getLogFilePath())
 	if err != nil {
 		t.Fail()
 		t.Errorf("unexpected error thrown. error: %v", err)
