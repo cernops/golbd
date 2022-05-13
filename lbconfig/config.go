@@ -31,8 +31,8 @@ type Config interface {
 	GetTSIGExternalKey() string
 	LockHeartBeatMutex()
 	UnlockHeartBeatMutex()
-	WatchFileChange(controlChan <-chan bool, waitGroup *sync.WaitGroup) <-chan ConfigFileChangeSignal
-	Load() (*LBConfig, []lbcluster.LBCluster, error)
+	WatchFileChange(controlChan <-chan bool, waitGroup sync.WaitGroup) <-chan ConfigFileChangeSignal
+	Load() ([]lbcluster.LBCluster, error)
 
 	// testing only
 	SetMasterHost(masterHostName string)
@@ -157,7 +157,7 @@ func (c *LBConfig) UnlockHeartBeatMutex() {
 	c.HeartbeatMu.Unlock()
 }
 
-func (c *LBConfig) WatchFileChange(controlChan <-chan bool, waitGroup *sync.WaitGroup) <-chan ConfigFileChangeSignal {
+func (c *LBConfig) WatchFileChange(controlChan <-chan bool, waitGroup sync.WaitGroup) <-chan ConfigFileChangeSignal {
 	fileWatcherChan := make(chan ConfigFileChangeSignal)
 	waitGroup.Add(1)
 	go func() {
@@ -189,17 +189,16 @@ func (c *LBConfig) WatchFileChange(controlChan <-chan bool, waitGroup *sync.Wait
 }
 
 //Load reads a configuration file and returns a struct with the config
-func (c *LBConfig) Load() (*LBConfig, []lbcluster.LBCluster, error) {
+func (c *LBConfig) Load() ([]lbcluster.LBCluster, error) {
 	var (
-		config LBConfig
-		p      lbcluster.Params
-		mc     = make(map[string][]string)
-		mp     = make(map[string]lbcluster.Params)
+		p  lbcluster.Params
+		mc = make(map[string][]string)
+		mp = make(map[string]lbcluster.Params)
 	)
 
 	lines, err := readLines(c.configFilePath)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	for _, line := range lines {
 		if strings.HasPrefix(line, "#") || (line == "") {
@@ -209,21 +208,21 @@ func (c *LBConfig) Load() (*LBConfig, []lbcluster.LBCluster, error) {
 		if words[1] == "=" {
 			switch words[0] {
 			case "master":
-				config.Master = words[2]
+				c.Master = words[2]
 			case "heartbeat_path":
-				config.HeartbeatPath = words[2]
+				c.HeartbeatPath = words[2]
 			case "heartbeat_file":
-				config.HeartbeatFile = words[2]
+				c.HeartbeatFile = words[2]
 			case "tsig_key_prefix":
-				config.TsigKeyPrefix = words[2]
+				c.TsigKeyPrefix = words[2]
 			case "tsig_internal_key":
-				config.TsigInternalKey = words[2]
+				c.TsigInternalKey = words[2]
 			case "tsig_external_key":
-				config.TsigExternalKey = words[2]
+				c.TsigExternalKey = words[2]
 			case "snmpd_password":
-				config.SnmpPassword = words[2]
+				c.SnmpPassword = words[2]
 			case "dns_manager":
-				config.DNSManager = words[2]
+				c.DNSManager = words[2]
 			}
 		} else if words[2] == "=" {
 			jsonStream := "{"
@@ -261,17 +260,17 @@ func (c *LBConfig) Load() (*LBConfig, []lbcluster.LBCluster, error) {
 			}
 		}
 	}
-	config.Parameters = mp
-	config.Clusters = mc
+	c.Parameters = mp
+	c.Clusters = mc
 
-	lbclusters, err := c.loadClusters()
+	lbclusters, err := c.LoadClusters()
 	if err != nil {
 		fmt.Println("Error getting the clusters")
-		return nil, nil, err
+		return nil, err
 	}
 	c.lbLog.Info("Clusters loaded")
 
-	return &config, lbclusters, nil
+	return lbclusters, nil
 
 }
 
@@ -290,8 +289,8 @@ func readLines(path string) (lines []string, err error) {
 	return lines, sc.Err()
 }
 
-//loadClusters checks the syntax of the clusters defined in the configuration file
-func (c *LBConfig) loadClusters() ([]lbcluster.LBCluster, error) {
+//LoadClusters checks the syntax of the clusters defined in the configuration file
+func (c *LBConfig) LoadClusters() ([]lbcluster.LBCluster, error) {
 	var lbc lbcluster.LBCluster
 	var lbcs []lbcluster.LBCluster
 

@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"lb-experts/golbd/logger"
-	"lb-experts/golbd/model"
 	"math/rand"
 	"net"
 	"net/http"
@@ -15,16 +13,12 @@ import (
 	"time"
 
 	"lb-experts/golbd/lbhost"
+	"lb-experts/golbd/logger"
+	"lb-experts/golbd/model"
 )
 
 //WorstValue worst possible load
 const WorstValue int = 99999
-
-//TIMEOUT snmp timeout
-const TIMEOUT int = 10
-
-//OID snmp object to get
-const OID string = ".1.3.6.1.4.1.96.255.1"
 
 //LBCluster struct of an lbcluster alias
 type LBCluster struct {

@@ -116,7 +116,10 @@ func (l *Log) getFileNameTimeSuffix() string {
 }
 
 func (l *Log) shouldStartNewSnapshot() bool {
-	return time.Now().Sub(l.logStartTime) >= l.snapShotCycleTime
+	if l.isSnapShotEnabled {
+		return time.Now().Sub(l.logStartTime) >= l.snapShotCycleTime
+	}
+	return false
 }
 
 //Info write as Info

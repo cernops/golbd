@@ -7,6 +7,7 @@ import (
 	"lb-experts/golbd/logger"
 	"lb-experts/golbd/model"
 	"net"
+	"os"
 	"reflect"
 	"testing"
 )
@@ -149,7 +150,7 @@ func getHost(hostname string, responseInt int, responseString string) lbhost.Hos
 
 }
 func TestLoadClusters(t *testing.T) {
-	lg, _ := logger.NewLoggerFactory("")
+	lg, _ := logger.NewLoggerFactory("sample.log")
 	lg.EnableWriteToSTd()
 
 	config := lbconfig.NewLoadBalancerConfig("", lg)
@@ -173,7 +174,7 @@ func TestLoadClusters(t *testing.T) {
 	expected := []lbcluster.LBCluster{getTestCluster("test01.cern.ch"),
 		getSecondTestCluster()}
 
-	_, lbclusters, _ := config.Load()
+	lbclusters, _ := config.Load()
 	// reflect.DeepEqual(lbclusters, expected) occassionally fails as the array order is not always the same
 	// so comparing element par element
 	i := 0
@@ -193,4 +194,5 @@ func TestLoadClusters(t *testing.T) {
 		t.Errorf("loadClusters: wrong number of clusters, got\n%v\nexpected\n%v (and %v", len(lbclusters), len(expected), i)
 
 	}
+	os.Remove("sample.log")
 }

@@ -31,11 +31,24 @@ type LBHost struct {
 	Host_name      string
 	HostTransports []LBHostTransportResult
 	Logger         logger.Logger
+	SnmpAgent      DiscoveryAgent
 }
 
 type snmpDiscoveryResult struct {
 	hostIdx             int
 	hostTransportResult LBHostTransportResult
+}
+
+type DiscoveryAgent interface {
+	Close() error
+	Discover() error
+	GetV3(oid snmplib.Oid) (interface{}, error)
+}
+
+func NewHostDiscoveryAgent(nodeIp string, clusterConfig model.CluserConfig) (DiscoveryAgent, error) {
+	return snmplib.NewSNMPv3(nodeIp, clusterConfig.Loadbalancing_username, "MD5",
+		clusterConfig.Loadbalancing_password, "NOPRIV", clusterConfig.Loadbalancing_password,
+		time.Duration(TIMEOUT)*time.Second, 2)
 }
 
 type Host interface {
@@ -102,31 +115,36 @@ func (lh *LBHost) SNMPDiscovery() {
 }
 
 func (lh *LBHost) discoverNode(hostTransportIdx int, hostTransport LBHostTransportResult, resultChan chan<- snmpDiscoveryResult) {
+	var snmpAgent DiscoveryAgent
+	var err error
 	hostTransport.Response_int = DefaultResponseInt
 	nodeIp := hostTransport.IP.String()
-
 	lh.Logger.Debug("Checking the host " + nodeIp + " with " + hostTransport.Transport)
-	snmp, err := snmplib.NewSNMPv3(nodeIp, lh.ClusterConfig.Loadbalancing_username, "MD5",
-		lh.ClusterConfig.Loadbalancing_password, "NOPRIV", lh.ClusterConfig.Loadbalancing_password,
-		time.Duration(TIMEOUT)*time.Second, 2)
-	if err != nil {
-		hostTransport.Response_error = fmt.Sprintf("contacted node: error creating the snmp object: %v", err)
+	if lh.SnmpAgent == nil {
+		snmpAgent, err = NewHostDiscoveryAgent(nodeIp, lh.ClusterConfig)
+		if err != nil {
+			hostTransport.Response_error = fmt.Sprintf("contacted node: error creating the snmp object: %v", err)
+		}
 	} else {
-		defer snmp.Close()
-		err = snmp.Discover()
+		snmpAgent = lh.SnmpAgent
+	}
+	if err == nil {
+		defer snmpAgent.Close()
+		err = snmpAgent.Discover()
 		if err != nil {
 			hostTransport.Response_error = fmt.Sprintf("contacted node: error in the snmp discovery: %v", err)
 		} else {
-			lh.setTransportResponse(snmp, &hostTransport)
+			lh.setTransportResponse(snmpAgent, &hostTransport)
 		}
 	}
+
 	resultChan <- snmpDiscoveryResult{
 		hostIdx:             hostTransportIdx,
 		hostTransportResult: hostTransport,
 	}
 }
 
-func (lh *LBHost) setTransportResponse(snmpClient *snmplib.SNMP, lbHostTransportResultPayload *LBHostTransportResult) {
+func (lh *LBHost) setTransportResponse(snmpClient DiscoveryAgent, lbHostTransportResultPayload *LBHostTransportResult) {
 	oid, err := snmplib.ParseOid(OID)
 	if err != nil {
 		lbHostTransportResultPayload.Response_error = fmt.Sprintf("contacted node: Error parsing the OID %v", err)

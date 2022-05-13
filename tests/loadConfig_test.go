@@ -3,7 +3,9 @@ package main
 import (
 	"os"
 	"reflect"
+	"sync"
 	"testing"
+	"time"
 
 	"lb-experts/golbd/lbcluster"
 	"lb-experts/golbd/lbconfig"
@@ -16,12 +18,12 @@ func TestLoadConfig(t *testing.T) {
 	lg.EnableWriteToSTd()
 
 	configFromFile := lbconfig.NewLoadBalancerConfig("testloadconfig", lg)
-	configExisting, _, err := configFromFile.Load()
+	_, err := configFromFile.Load()
 	if err != nil {
 		t.Fail()
 		t.Errorf("loadConfig Error: %v", err.Error())
 	}
-	expConfig := lbconfig.NewLoadBalancerConfig("", lg)
+	expConfig := lbconfig.NewLoadBalancerConfig("testloadconfig", lg)
 	expConfig.SetMasterHost("lbdxyz.cern.ch")
 	expConfig.SetHeartBeatFileName("heartbeat")
 	expConfig.SetHeartBeatDirPath("/work/go/src/github.com/cernops/golbd")
@@ -45,20 +47,73 @@ func TestLoadConfig(t *testing.T) {
 		"ermis2.test.cern.ch": {Behaviour: "mindless", Best_hosts: 1, External: false, Metric: "cmsfrontier", Polling_interval: 300, Statistics: "long", Ttl: 222},
 	})
 
-	if !reflect.DeepEqual(configExisting, &expConfig) {
-		t.Errorf("loadConfig: got\n %v expected\n %v", configExisting, &expConfig)
+	if !reflect.DeepEqual(configFromFile, expConfig) {
+		t.Errorf("loadConfig: got\n %v expected\n %v", configFromFile, expConfig)
 	}
 	os.Remove("sample.log")
 }
 
-//func TestWatchConfigFileChanges(t *testing.T) {
-//	lg := lbcluster.Log{Stdout: true, Debugflag: false}
-//	var wg *sync.WaitGroup
-//	var controlChan = make(chan bool)
-//	defer close(controlChan)
-//	config:=lbconfig2.NewLoadBalancerConfig("testloadconfig", &lg)
-//	fileChangeSignal := config.WatchFileChange(controlChan, wg)
-//	for filChangeData := range fileChangeSignal {
-//
-//	}
-//}
+func TestWatchConfigFileChanges(t *testing.T) {
+	lg, _ := logger.NewLoggerFactory("sample.log")
+	lg.EnableWriteToSTd()
+	var wg sync.WaitGroup
+	var controlChan = make(chan bool)
+	var changeCounter int
+	sampleConfigFileName := "sampleConfig"
+	dataSet := []string{
+		"data 1",
+		"data 12",
+		"data 123",
+	}
+
+	err := createTestConfigFile(sampleConfigFileName)
+	if err != nil {
+		t.Fail()
+		t.Errorf("error while creating test config file. name: %s", sampleConfigFileName)
+	}
+	go func() {
+		defer close(controlChan)
+		for _, dataToWrite := range dataSet {
+			time.Sleep(1 * time.Second)
+			err = writeDataToFile(sampleConfigFileName, dataToWrite)
+			if err != nil {
+				t.Fail()
+				t.Errorf("error while writting to test config file. filename: %s, data:%s", sampleConfigFileName, dataToWrite)
+			}
+		}
+	}()
+	config := lbconfig.NewLoadBalancerConfig(sampleConfigFileName, lg)
+	fileChangeSignal := config.WatchFileChange(controlChan, wg)
+	for fileChangeData := range fileChangeSignal {
+		changeCounter += 1
+		t.Log("file change signal", fileChangeData)
+	}
+	if changeCounter == 0 {
+		t.Fail()
+		t.Error("file changes not observed")
+	}
+	deleteFile("sample.log")
+	deleteFile(sampleConfigFileName)
+}
+
+func createTestConfigFile(fileName string) error {
+	_, err := os.Create(fileName)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func writeDataToFile(fileName string, data string) error {
+	fp, err := os.Create(fileName)
+	if err != nil {
+		return err
+	}
+	_, err = fp.WriteString(data)
+	fp.Close()
+	return err
+}
+
+func deleteFile(fileName string) {
+	os.Remove(fileName)
+}

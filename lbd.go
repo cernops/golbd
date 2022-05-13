@@ -130,7 +130,7 @@ func updateHeartBeatToFile(heartBeatFilePath string, hostname string, lg logger.
 	return nil
 }
 
-func sleep(seconds time.Duration, controlChan <-chan bool, waitGroup *sync.WaitGroup) <-chan bool {
+func sleep(seconds time.Duration, controlChan <-chan bool, waitGroup sync.WaitGroup) <-chan bool {
 	sleepSignalChan := make(chan bool)
 	waitGroup.Add(1)
 	secondsTicker := time.NewTicker(seconds * time.Second)
@@ -172,7 +172,7 @@ func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
 	logger.Info("Starting lbd")
 	lbConfig := lbconfig.NewLoadBalancerConfig(*configFileFlag, logger)
-	config, lbclusters, err := lbConfig.Load()
+	lbclusters, err := lbConfig.Load()
 	if err != nil {
 		logger.Warning("loadConfig Error: ")
 		logger.Warning(err.Error())
@@ -180,8 +180,8 @@ func main() {
 	}
 	logger.Info("Clusters loaded")
 
-	fileChangeSignal := lbConfig.WatchFileChange(controlChan, &wg)
-	intervalTickerSignal := sleep(DefaultSleepDuration, controlChan, &wg)
+	fileChangeSignal := lbConfig.WatchFileChange(controlChan, wg)
+	intervalTickerSignal := sleep(DefaultSleepDuration, controlChan, wg)
 	for {
 		select {
 		case fileWatcherData := <-fileChangeSignal:
@@ -190,13 +190,13 @@ func main() {
 				controlChan <- true
 				return
 			}
-			logger.Info("CluserConfig Changed")
-			config, lbclusters, err = lbConfig.Load()
+			logger.Info("ClusterConfig Changed")
+			lbclusters, err = lbConfig.Load()
 			if err != nil {
 				logger.Error(fmt.Sprintf("Error getting the clusters (something wrong in %v", configFileFlag))
 			}
 		case <-intervalTickerSignal:
-			checkAliases(config, logger, lbclusters)
+			checkAliases(lbConfig, logger, lbclusters)
 			break
 		}
 	}
