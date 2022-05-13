@@ -7,6 +7,7 @@ import (
 	"net"
 	"regexp"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/reguero/go-snmplib"
@@ -30,6 +31,11 @@ type LBHost struct {
 	Host_name      string
 	HostTransports []LBHostTransportResult
 	Logger         logger.Logger
+}
+
+type snmpDiscoveryResult struct {
+	hostIdx             int
+	hostTransportResult LBHostTransportResult
 }
 
 type Host interface {
@@ -71,31 +77,53 @@ func (lh *LBHost) SetTransportPayload(transportPayloadList []LBHostTransportResu
 	lh.HostTransports = transportPayloadList
 }
 
-// todo: refractor into smaller functions
 func (lh *LBHost) SNMPDiscovery() {
+	var wg sync.WaitGroup
 	lh.find_transports()
+	discoveryResultChan := make(chan snmpDiscoveryResult)
+	defer close(discoveryResultChan)
+	hostTransportResultList := make([]LBHostTransportResult, 0, len(lh.HostTransports))
+	hostTransportResultList = append(hostTransportResultList, lh.HostTransports...)
 	for i, hostTransport := range lh.HostTransports {
-		hostTransport.Response_int = DefaultResponseInt
-		node_ip := hostTransport.IP.String()
-		/* There is no need to put square brackets around the ipv6 addresses*/
-		lh.Logger.Debug("Checking the host " + node_ip + " with " + hostTransport.Transport)
-		snmp, err := snmplib.NewSNMPv3(node_ip, lh.ClusterConfig.Loadbalancing_username, "MD5", lh.ClusterConfig.Loadbalancing_password, "NOPRIV", lh.ClusterConfig.Loadbalancing_password,
-			time.Duration(TIMEOUT)*time.Second, 2)
-		if err != nil {
-			hostTransport.Response_error = fmt.Sprintf("contacted node: error creating the snmp object: %v", err)
-		} else {
-			defer snmp.Close()
-			err = snmp.Discover()
-			if err != nil {
-				hostTransport.Response_error = fmt.Sprintf("contacted node: error in the snmp discovery: %v", err)
-			} else {
-				lh.setTransportResponse(snmp, &hostTransport)
-			}
-		}
-		lh.HostTransports[i] = hostTransport
-
+		wg.Add(1)
+		go func(idx int, hostTransport LBHostTransportResult) {
+			defer wg.Done()
+			lh.discoverNode(idx, hostTransport, discoveryResultChan)
+		}(i, hostTransport)
 	}
+	go func(discoveryResultChan <-chan snmpDiscoveryResult) {
+		for discoveryResultData := range discoveryResultChan {
+			hostTransportResultList[discoveryResultData.hostIdx] = discoveryResultData.hostTransportResult
+		}
+	}(discoveryResultChan)
+	wg.Wait()
+	lh.HostTransports = hostTransportResultList
 	lh.Logger.Debug("All the ips have been tested")
+}
+
+func (lh *LBHost) discoverNode(hostTransportIdx int, hostTransport LBHostTransportResult, resultChan chan<- snmpDiscoveryResult) {
+	hostTransport.Response_int = DefaultResponseInt
+	nodeIp := hostTransport.IP.String()
+
+	lh.Logger.Debug("Checking the host " + nodeIp + " with " + hostTransport.Transport)
+	snmp, err := snmplib.NewSNMPv3(nodeIp, lh.ClusterConfig.Loadbalancing_username, "MD5",
+		lh.ClusterConfig.Loadbalancing_password, "NOPRIV", lh.ClusterConfig.Loadbalancing_password,
+		time.Duration(TIMEOUT)*time.Second, 2)
+	if err != nil {
+		hostTransport.Response_error = fmt.Sprintf("contacted node: error creating the snmp object: %v", err)
+	} else {
+		defer snmp.Close()
+		err = snmp.Discover()
+		if err != nil {
+			hostTransport.Response_error = fmt.Sprintf("contacted node: error in the snmp discovery: %v", err)
+		} else {
+			lh.setTransportResponse(snmp, &hostTransport)
+		}
+	}
+	resultChan <- snmpDiscoveryResult{
+		hostIdx:             hostTransportIdx,
+		hostTransportResult: hostTransport,
+	}
 }
 
 func (lh *LBHost) setTransportResponse(snmpClient *snmplib.SNMP, lbHostTransportResultPayload *LBHostTransportResult) {

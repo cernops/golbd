@@ -94,19 +94,21 @@ func (lbc *LBCluster) Time_to_refresh() bool {
 	return lbc.Time_of_last_evaluation.Add(time.Duration(lbc.Parameters.Polling_interval) * time.Second).Before(time.Now())
 }
 
-//Get_list_hosts Get the hosts for an alias
-func (lbc *LBCluster) Get_list_hosts(current_list map[string]lbhost.Host) {
+//GetHostList Get the hosts for an alias
+func (lbc *LBCluster) GetHostList() map[string]lbhost.Host {
+	hostMap := make(map[string]lbhost.Host)
 	lbc.Slog.Debug("Getting the list of hosts for the alias")
 	for host := range lbc.Host_metric_table {
-		myHost, ok := current_list[host]
+		myHost, ok := hostMap[host]
 		if ok {
 			clusterConfig := myHost.GetClusterConfig()
 			clusterConfig.Cluster_name = clusterConfig.Cluster_name + "," + clusterConfig.Cluster_name
 		} else {
 			myHost = lbhost.NewLBHost(lbc.ClusterConfig, lbc.Slog)
 		}
-		current_list[host] = myHost
+		hostMap[host] = myHost
 	}
+	return hostMap
 }
 
 func (lbc *LBCluster) concatenateNodes(myNodes []Node) string {

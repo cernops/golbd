@@ -202,7 +202,6 @@ func main() {
 	}
 }
 
-// todo: add some tests
 func checkAliases(config lbconfig.Config, lg logger.Logger, lbclusters []lbcluster.LBCluster) {
 	hostCheckChannel := make(chan lbhost.Host)
 	defer close(hostCheckChannel)
@@ -215,7 +214,7 @@ func checkAliases(config lbconfig.Config, lg logger.Logger, lbclusters []lbclust
 	//var wg sync.WaitGroup
 	updateDNS := true
 	lg.Info("Checking if any of the " + strconv.Itoa(len(lbclusters)) + " clusters needs updating")
-	hostsToCheck := make(map[string]lbhost.Host)
+	var hostsToCheck map[string]lbhost.Host
 	var clustersToUpdate []*lbcluster.LBCluster
 	/* First, let's identify the hosts that have to be checked */
 	for i := range lbclusters {
@@ -223,7 +222,7 @@ func checkAliases(config lbconfig.Config, lg logger.Logger, lbclusters []lbclust
 		lg.Debug("DO WE HAVE TO UPDATE?")
 		if currentCluster.Time_to_refresh() {
 			lg.Info("Time to refresh the cluster")
-			currentCluster.Get_list_hosts(hostsToCheck)
+			hostsToCheck = currentCluster.GetHostList()
 			clustersToUpdate = append(clustersToUpdate, currentCluster)
 		}
 	}

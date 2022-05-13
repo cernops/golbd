@@ -6,6 +6,7 @@ import (
 	"lb-experts/golbd/logger"
 	"lb-experts/golbd/model"
 	"net"
+	"os"
 	"reflect"
 	"testing"
 )
@@ -30,15 +31,14 @@ func TestGetListHostsOne(t *testing.T) {
 		"lxplus130.cern.ch":               host5,
 	}
 
-	hosts_to_check := make(map[string]lbhost.Host)
-	c.Get_list_hosts(hosts_to_check)
-	if !reflect.DeepEqual(hosts_to_check, expected) {
-		t.Errorf("e.Get_list_hosts: got\n%v\nexpected\n%v", hosts_to_check, expected)
+	hostsToCheck := c.GetHostList()
+	if !reflect.DeepEqual(hostsToCheck, expected) {
+		t.Errorf("e.GetHostList: got\n%v\nexpected\n%v", hostsToCheck, expected)
 	}
 }
 
 func TestGetListHostsTwo(t *testing.T) {
-	logger, _ := logger.NewLoggerFactory("")
+	logger, _ := logger.NewLoggerFactory("sample.log")
 	logger.EnableWriteToSTd()
 
 	clusters := []lbcluster.LBCluster{
@@ -98,11 +98,12 @@ func TestGetListHostsTwo(t *testing.T) {
 		"lxplus025.cern.ch": host4,
 	}
 
-	hosts_to_check := make(map[string]lbhost.Host)
+	var hostsToCheck map[string]lbhost.Host
 	for _, c := range clusters {
-		c.Get_list_hosts(hosts_to_check)
+		hostsToCheck = c.GetHostList()
 	}
-	if !reflect.DeepEqual(hosts_to_check, expected) {
-		t.Errorf("e.Get_list_hosts: got\n%v\nexpected\n%v", hosts_to_check, expected)
+	if !reflect.DeepEqual(hostsToCheck, expected) {
+		t.Errorf("e.GetHostList: got\n%v\nexpected\n%v", hostsToCheck, expected)
 	}
+	os.Remove("sample.log")
 }
