@@ -18,13 +18,15 @@ import (
 )
 
 const (
-	DefaultLoadBalancerConfig = "loadbalancing"
+	DefaultLoadBalancerConfig   = "loadbalancing"
+	DefaultMetricsDirectoryPath = ""
 )
 
 type Config interface {
 	GetMasterHost() string
 	GetHeartBeatFileName() string
 	GetHeartBeatDirPath() string
+	GetMetricDirectoryPath() string
 	GetDNSManager() string
 	GetTSIGKeyPrefix() string
 	GetTSIGInternalKey() string
@@ -49,19 +51,20 @@ type Config interface {
 
 // Config this is the configuration of the lbd
 type LBConfig struct {
-	Master          string
-	HeartbeatFile   string
-	HeartbeatPath   string
-	HeartbeatMu     sync.Mutex
-	TsigKeyPrefix   string
-	TsigInternalKey string
-	TsigExternalKey string
-	SnmpPassword    string
-	DNSManager      string
-	configFilePath  string
-	lbLog           logger.Logger
-	Clusters        map[string][]string
-	Parameters      map[string]lbcluster.Params
+	Master              string
+	HeartbeatFile       string
+	HeartbeatPath       string
+	HeartbeatMu         sync.Mutex
+	TsigKeyPrefix       string
+	TsigInternalKey     string
+	TsigExternalKey     string
+	SnmpPassword        string
+	DNSManager          string
+	configFilePath      string
+	lbLog               logger.Logger
+	Clusters            map[string][]string
+	Parameters          map[string]lbcluster.Params
+	metricDirectoryPath string
 }
 
 type ConfigFileChangeSignal struct {
@@ -87,6 +90,10 @@ func (c *LBConfig) GetMasterHost() string {
 
 func (c *LBConfig) SetMasterHost(masterHostName string) {
 	c.Master = masterHostName
+}
+
+func (c *LBConfig) GetMetricDirectoryPath() string {
+	return c.metricDirectoryPath
 }
 
 func (c *LBConfig) GetHeartBeatFileName() string {
