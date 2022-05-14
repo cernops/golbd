@@ -120,6 +120,11 @@ func TestEvaluateHosts(t *testing.T) {
 	if !reflect.DeepEqual(c.Time_of_last_evaluation, expectedTimeOfLastEvaluation) {
 		t.Errorf("e.evaluate_hosts: c.Time_of_last_evaluation: got\n%v\nexpected\n%v", c.Time_of_last_evaluation, expectedTimeOfLastEvaluation)
 	}
+	err := os.Remove("sample.log")
+	if err != nil {
+		t.Fail()
+		t.Errorf("error deleting file.error %v", err)
+	}
 }
 
 func TestEvaluateHostsConcurrency(t *testing.T) {

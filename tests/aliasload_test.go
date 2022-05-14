@@ -2,6 +2,7 @@ package main_test
 
 import (
 	"lb-experts/golbd/lbhost"
+	"os"
 	"reflect"
 	"testing"
 )
@@ -44,5 +45,10 @@ func TestGetLoadHosts(t *testing.T) {
 	}
 	if !reflect.DeepEqual(hosts[3].GetLoadForAlias("blablabla2.subdo.cern.ch"), 4) {
 		t.Errorf(" got\n%v\nexpected\n%v", hosts[3].GetLoadForAlias("blablabla2.subdo.cern.ch"), 4)
+	}
+	err := os.Remove("sample.log")
+	if err != nil {
+		t.Fail()
+		t.Errorf("error deleting file.error %v", err)
 	}
 }

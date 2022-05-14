@@ -2,11 +2,12 @@ package main_test
 
 import (
 	"net"
+	"os"
 	"reflect"
 	"testing"
 	"time"
 
-	"gitlab.cern.ch/lb-experts/golbd/lbcluster"
+	"lb-experts/golbd/lbcluster"
 )
 
 func getExpectedHostMetric() map[string]lbcluster.Node {
@@ -42,6 +43,11 @@ func TestFindBestHosts(t *testing.T) {
 	}
 	if c.Time_of_last_evaluation.Add(time.Duration(2) * time.Second).Before(time.Now()) {
 		t.Errorf("e.Find_best_hosts: c.Time_of_last_evaluation: got\n%v\ncurrent time\n%v", c.Time_of_last_evaluation, time.Now())
+	}
+	err = os.Remove("sample.log")
+	if err != nil {
+		t.Fail()
+		t.Errorf("error deleting file.error %v", err)
 	}
 }
 

@@ -32,8 +32,14 @@ func TestGetListHostsOne(t *testing.T) {
 	}
 
 	hostsToCheck := c.GetHostList()
-	if !reflect.DeepEqual(hostsToCheck, expected) {
-		t.Errorf("e.GetHostList: got\n%v\nexpected\n%v", hostsToCheck, expected)
+	if len(hostsToCheck) != len(expected) {
+		t.Errorf("length mismatch. expected :%v, actual:%v", len(expected), len(hostsToCheck))
+	}
+	for hostName, actualHost := range hostsToCheck {
+		expHost := expected[hostName]
+		if !reflect.DeepEqual(expHost.GetClusterConfig(), actualHost.GetClusterConfig()) {
+			t.Errorf("mismatch in cluster config. expected:%v,actual:%v", expHost.GetClusterConfig(), actualHost.GetClusterConfig())
+		}
 	}
 }
 

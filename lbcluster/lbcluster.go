@@ -307,7 +307,7 @@ func (lbc *LBCluster) EvaluateHosts(hostsToCheck map[string]lbhost.Host) {
 	}
 	go func() {
 		for nodeData := range nodeChan {
-			lbc.Host_metric_table[nodeData.HostName] = nodeData
+			lbc.Host_metric_table[nodeData.HostName] = Node{Load: nodeData.Load, IPs: nodeData.IPs}
 			lbc.Slog.Debug(fmt.Sprintf("node: %s It has a load of %d", nodeData.HostName, lbc.Host_metric_table[nodeData.HostName].Load))
 			wg.Done()
 		}

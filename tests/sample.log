@@ -1,0 +1,22 @@
+May 14 15:09:59.614 lbd[97034]: INFO: The ips for this host are []
+May 14 15:09:59.614 lbd[97034]: INFO: The ips for this host are [188.184.108.100]
+May 14 15:09:59.614 lbd[97034]: INFO: The ips for this host are []
+May 14 15:09:59.614 lbd[97034]: INFO: The ips for this host are []
+May 14 15:09:59.614 lbd[97034]: INFO: The ips for this host are []
+May 14 15:09:59.615 lbd[97034]: INFO: Got metric = cmsfrontier
+May 14 15:09:59.615 lbd[97034]: WARNING: no usable hosts found for cluster! Skipping the DNS update
+May 14 15:10:22.159 lbd[97076]: INFO: The ips for this host are []
+May 14 15:10:22.160 lbd[97076]: INFO: The ips for this host are []
+May 14 15:10:22.160 lbd[97076]: INFO: The ips for this host are [188.184.108.100]
+May 14 15:10:22.160 lbd[97076]: INFO: The ips for this host are []
+May 14 15:10:22.160 lbd[97076]: INFO: The ips for this host are []
+May 14 15:10:22.161 lbd[97076]: INFO: Got metric = cmsfrontier
+May 14 15:10:22.161 lbd[97076]: WARNING: no usable hosts found for cluster! Skipping the DNS update
+May 14 15:10:35.875 lbd[97115]: INFO: The ips for this host are []
+May 14 15:10:35.875 lbd[97115]: INFO: The ips for this host are []
+May 14 15:10:35.876 lbd[97115]: INFO: The ips for this host are []
+May 14 15:10:35.876 lbd[97115]: INFO: The ips for this host are [188.184.108.100]
+May 14 15:10:35.876 lbd[97115]: INFO: The ips for this host are []
+May 14 15:10:35.876 lbd[97115]: INFO: Got metric = minino
+May 14 15:10:35.876 lbd[97115]: WARNING: no usable hosts found for cluster! Returning no hosts.
+May 14 15:10:35.877 lbd[97115]: INFO: best hosts are: NONE

@@ -13,7 +13,7 @@ import (
 )
 
 func getTestCluster(name string) lbcluster.LBCluster {
-	lg, _ := logger.NewLoggerFactory("")
+	lg, _ := logger.NewLoggerFactory("sample.log")
 
 	return lbcluster.LBCluster{
 		ClusterConfig: model.CluserConfig{
@@ -36,7 +36,7 @@ func getTestCluster(name string) lbcluster.LBCluster {
 }
 
 func getSecondTestCluster() lbcluster.LBCluster {
-	lg, _ := logger.NewLoggerFactory("")
+	lg, _ := logger.NewLoggerFactory("sample.log")
 
 	return lbcluster.LBCluster{
 		ClusterConfig: model.CluserConfig{
@@ -57,7 +57,7 @@ func getSecondTestCluster() lbcluster.LBCluster {
 		Current_index:         0}
 }
 func getHostsToCheck(c lbcluster.LBCluster) map[string]lbhost.Host {
-	lg, _ := logger.NewLoggerFactory("")
+	lg, _ := logger.NewLoggerFactory("sample.log")
 	host1 := lbhost.NewLBHost(c.ClusterConfig, lg)
 	host1.SetName("lxplus132.cern.ch")
 	host1.SetTransportPayload([]lbhost.LBHostTransportResult{
@@ -96,28 +96,28 @@ func getHostsToCheck(c lbcluster.LBCluster) map[string]lbhost.Host {
 	return hostsToCheck
 }
 func getBadHostsToCheck(c lbcluster.LBCluster) map[string]lbhost.Host {
-	lg, _ := logger.NewLoggerFactory("")
+	lg, _ := logger.NewLoggerFactory("sample.log")
 	host1 := lbhost.NewLBHost(c.ClusterConfig, lg)
 	host1.SetName("lxplus132.cern.ch")
 	host1.SetTransportPayload([]lbhost.LBHostTransportResult{
-		lbhost.LBHostTransportResult{Transport: "udp6", Response_int: 2, Response_string: "", IP: net.ParseIP("2001:1458:d00:2c::100:a6"), Response_error: ""},
-		lbhost.LBHostTransportResult{Transport: "udp", Response_int: 2, Response_string: "", IP: net.ParseIP("188.184.108.98"), Response_error: ""},
+		lbhost.LBHostTransportResult{Transport: "udp6", Response_int: -2, Response_string: "", IP: net.ParseIP("2001:1458:d00:2c::100:a6"), Response_error: ""},
+		lbhost.LBHostTransportResult{Transport: "udp", Response_int: -2, Response_string: "", IP: net.ParseIP("188.184.108.98"), Response_error: ""},
 	})
 	host2 := lbhost.NewLBHost(c.ClusterConfig, lg)
 	host2.SetName("lxplus041.cern.ch")
 	host2.SetTransportPayload([]lbhost.LBHostTransportResult{
-		lbhost.LBHostTransportResult{Transport: "udp6", Response_int: 3, Response_string: "", IP: net.ParseIP("2001:1458:d00:32::100:51"), Response_error: ""},
-		lbhost.LBHostTransportResult{Transport: "udp", Response_int: 3, Response_string: "", IP: net.ParseIP("188.184.116.81"), Response_error: ""},
+		lbhost.LBHostTransportResult{Transport: "udp6", Response_int: -3, Response_string: "", IP: net.ParseIP("2001:1458:d00:32::100:51"), Response_error: ""},
+		lbhost.LBHostTransportResult{Transport: "udp", Response_int: -3, Response_string: "", IP: net.ParseIP("188.184.116.81"), Response_error: ""},
 	})
 	host3 := lbhost.NewLBHost(c.ClusterConfig, lg)
 	host3.SetName("lxplus130.cern.ch")
 	host3.SetTransportPayload([]lbhost.LBHostTransportResult{lbhost.LBHostTransportResult{
-		Transport: "udp", Response_int: 27, Response_string: "", IP: net.ParseIP("188.184.108.100"), Response_error: "",
+		Transport: "udp", Response_int: -27, Response_string: "", IP: net.ParseIP("188.184.108.100"), Response_error: "",
 	}})
 	host4 := lbhost.NewLBHost(c.ClusterConfig, lg)
 	host4.SetName("lxplus133.subdo.cern.ch")
 	host4.SetTransportPayload([]lbhost.LBHostTransportResult{lbhost.LBHostTransportResult{
-		Transport: "udp", Response_int: 27, Response_string: "", IP: net.ParseIP("188.184.108.101"), Response_error: "",
+		Transport: "udp", Response_int: -15, Response_string: "", IP: net.ParseIP("188.184.108.101"), Response_error: "",
 	}})
 	host5 := lbhost.NewLBHost(c.ClusterConfig, lg)
 	host5.SetName("monit-kafkax-17be060b0d.cern.ch")
@@ -135,7 +135,7 @@ func getBadHostsToCheck(c lbcluster.LBCluster) map[string]lbhost.Host {
 	return badHostsToCheck
 }
 func getHost(hostname string, responseInt int, responseString string) lbhost.Host {
-	lg, _ := logger.NewLoggerFactory("")
+	lg, _ := logger.NewLoggerFactory("sample.log")
 	clusterConfig := model.CluserConfig{
 		Cluster_name:           "test01.cern.ch",
 		Loadbalancing_username: "loadbalancing",
@@ -194,5 +194,9 @@ func TestLoadClusters(t *testing.T) {
 		t.Errorf("loadClusters: wrong number of clusters, got\n%v\nexpected\n%v (and %v", len(lbclusters), len(expected), i)
 
 	}
-	os.Remove("sample.log")
+	err := os.Remove("sample.log")
+	if err != nil {
+		t.Fail()
+		t.Errorf("error deleting file.error %v", err)
+	}
 }
