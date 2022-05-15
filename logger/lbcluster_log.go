@@ -30,6 +30,7 @@ type Log struct {
 	snapShotCycleTime time.Duration
 	logFileBasePath   string
 	logFileExtension  string
+	snapshotCounter   int
 }
 
 //Logger struct for the Logger interface
@@ -108,11 +109,8 @@ func (l *Log) GetLogFilePath() string {
 }
 func (l *Log) startSnapShot() {
 	l.logStartTime = time.Now()
-	l.filePath = fmt.Sprintf("%s_%s.%s", l.logFileBasePath, l.getFileNameTimeSuffix(), l.logFileExtension)
-}
-
-func (l *Log) getFileNameTimeSuffix() string {
-	return fmt.Sprintf("%v_%v_%v-%v_%v_%v", l.logStartTime.Year(), l.logStartTime.Month(), l.logStartTime.Day(), l.logStartTime.Hour(), l.logStartTime.Minute(), l.logStartTime.Second())
+	l.filePath = fmt.Sprintf("%s.%d.%s", l.logFileBasePath, l.snapshotCounter, l.logFileExtension)
+	l.snapshotCounter += 1
 }
 
 func (l *Log) shouldStartNewSnapshot() bool {

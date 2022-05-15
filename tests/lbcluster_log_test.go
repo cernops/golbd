@@ -51,8 +51,7 @@ func TestLBClusterLoggerForSnapshot(t *testing.T) {
 		t.Errorf("logger instance is nil")
 	}
 	logger.StartSnapshot(1 * time.Minute)
-	if !strings.Contains(logger.GetLogFilePath(),
-		fmt.Sprintf("%v_%v_%v-%v_%v", time.Now().Year(), time.Now().Month(), time.Now().Day(), time.Now().Hour(), time.Now().Minute())) {
+	if !strings.HasSuffix(logger.GetLogFilePath(), "sample.0.log") {
 		t.Fail()
 		t.Errorf("error while setting snapshot")
 	}
