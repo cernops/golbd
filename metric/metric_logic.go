@@ -15,6 +15,11 @@ const (
 	defaultCycleDuration        = 24 * time.Hour
 )
 
+type Logic interface {
+	GetFilePath() string
+	ReadHostMetric() (HostMetric, error)
+	WriteRecord(property Property) error
+}
 type BizLogic struct {
 	isCurrentHostMaster bool
 	hostName            string
@@ -24,7 +29,7 @@ type BizLogic struct {
 	recordStartTime     time.Time
 }
 
-func NewLogic(dirPath string, hostName string) *BizLogic {
+func NewLogic(dirPath string, hostName string) Logic {
 	logic := &BizLogic{
 		dirPath:  dirPath,
 		hostName: hostName,

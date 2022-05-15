@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"lb-experts/golbd/metric"
 	"log"
 	"math/rand"
 	"os"
@@ -38,11 +39,12 @@ var (
 )
 
 const (
-	itCSgroupDNSserver       string = "cfmgr.cern.ch"
-	DefaultSleepDuration            = 10
-	DefaultLbdTag                   = "lbd"
-	DefaultConnectionTimeout        = 10 * time.Second
-	DefaultReadTimeout              = 20 * time.Second
+	shouldStartMetricServer  = false // server disabled by default
+	itCSgroupDNSserver       = "cfmgr.cern.ch"
+	DefaultSleepDuration     = 10
+	DefaultLbdTag            = "lbd"
+	DefaultConnectionTimeout = 10 * time.Second
+	DefaultReadTimeout       = 20 * time.Second
 )
 
 type ConfigFileChangeSignal struct {
@@ -182,6 +184,15 @@ func main() {
 
 	fileChangeSignal := lbConfig.WatchFileChange(controlChan, wg)
 	intervalTickerSignal := sleep(DefaultSleepDuration, controlChan, wg)
+	if shouldStartMetricServer {
+		go func() {
+			err := metric.NewMetricServer(lbconfig.DefaultMetricsDirectoryPath)
+			if err != nil {
+				logger.Error(fmt.Sprintf("error while starting metric server . error: %v", err))
+			}
+		}()
+	}
+
 	for {
 		select {
 		case fileWatcherData := <-fileChangeSignal:

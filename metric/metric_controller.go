@@ -11,10 +11,10 @@ import (
 const defaultPort = ":8081"
 
 type serverCtx struct {
-	metricLogic *BizLogic
+	metricLogic Logic
 }
 
-func StartNewMetricServer(metricDirectoryPath string) error {
+func NewMetricServer(metricDirectoryPath string) error {
 	currentHostname, err := os.Hostname()
 	if err != nil {
 		return fmt.Errorf("unable to fetch current host name. error: %v", err)

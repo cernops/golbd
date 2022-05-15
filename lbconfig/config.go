@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"lb-experts/golbd/metric"
 	"net"
 	"os"
 	"strconv"
@@ -341,7 +342,11 @@ func readLines(path string) (lines []string, err error) {
 func (c *LBConfig) LoadClusters() ([]lbcluster.LBCluster, error) {
 	var lbc lbcluster.LBCluster
 	var lbcs []lbcluster.LBCluster
-
+	hostName, err := os.Hostname()
+	if err != nil {
+		return nil, err
+	}
+	metricLogic := metric.NewLogic(DefaultMetricsDirectoryPath, hostName)
 	for k, v := range c.Clusters {
 		if len(v) == 0 {
 			c.lbLog.Warning("cluster: " + k + " ignored as it has no members defined in the configuration file " + c.configFilePath)
@@ -359,6 +364,7 @@ func (c *LBConfig) LoadClusters() ([]lbcluster.LBCluster, error) {
 				Current_best_ips:      []net.IP{},
 				Previous_best_ips_dns: []net.IP{},
 				Slog:                  c.lbLog,
+				MetricLogic:           metricLogic,
 			}
 			hm := make(map[string]lbcluster.Node)
 			for _, h := range v {

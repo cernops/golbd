@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"lb-experts/golbd/metric"
 	"math/rand"
 	"net"
 	"net/http"
@@ -30,6 +31,7 @@ type LBCluster struct {
 	Previous_best_ips_dns   []net.IP
 	Current_index           int
 	Slog                    logger.Logger
+	MetricLogic             metric.Logic
 }
 
 //Params of the alias

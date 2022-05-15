@@ -2,6 +2,7 @@ package lbcluster
 
 import (
 	"fmt"
+	"lb-experts/golbd/metric"
 	"net"
 	"time"
 
@@ -75,11 +76,21 @@ func (lbc *LBCluster) updateDNS(keyName, tsigKey, dnsManager string) error {
 	c := new(dns.Client)
 	m.SetTsig(keyName, dns.HmacMD5, 300, time.Now().Unix())
 	c.TsigSecret = map[string]string{keyName: tsigKey}
+	updateStartTime := time.Now()
 	err = retryModule.Execute(func() error {
 		_, _, err := c.Exchange(m, dnsManager+":53")
 		return err
 	})
-
+	updateEndTime := time.Now()
+	if lbc.MetricLogic != nil {
+		err := lbc.MetricLogic.WriteRecord(metric.Property{
+			RoundTripStartTime: updateStartTime,
+			RoundTripEndTime:   updateEndTime,
+		})
+		if err != nil {
+			return err
+		}
+	}
 	if err != nil {
 		lbc.Slog.Error(fmt.Sprintf("DNS update failed with (%v)", err))
 		return err
