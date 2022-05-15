@@ -2,14 +2,25 @@ package main_test
 
 import (
 	"lb-experts/golbd/lbcluster"
+	"lb-experts/golbd/logger"
+	"lb-experts/golbd/model"
+	"net"
+	"os"
 	"reflect"
 	"testing"
 )
 
-//TestGetStateDNS tests the function get_state_dns
+//TestGetStateDNS tests the function GetStateDNS
 func TestGetStateDNS(t *testing.T) {
+	// Create a local dns server
+	server, err := setupDnsServer("50054")
+	if err != nil {
+		t.Errorf("Failed to setup DNS server for the test.")
+	}
+	defer server.Shutdown()
+
 	//DNS IP
-	dnsManager := "137.138.16.5"
+	dnsManager := "127.0.0.1:50054"
 
 	Clusters := []lbcluster.LBCluster{
 		//Non-existing clusters
@@ -24,7 +35,7 @@ func TestGetStateDNS(t *testing.T) {
 		"testme007.cern.ch": {[]string{}, nil},
 		"testme007":         {[]string{}, nil},
 		"kkouros.cern.ch":   {[]string{}, nil},
-		"aiermis.cern.ch":   {[]string{}, nil},
+		"aiermis.cern.ch":   {[]string{"188.184.104.111", "2001:1458:d00:2d::100:58"}, nil},
 	}
 	//receiving the output for every alias and storing the results into a map
 	received := make(map[string][]interface{})
@@ -45,5 +56,59 @@ func TestGetStateDNS(t *testing.T) {
 			t.Errorf("\ngot error\n%T type and value %v\nexpected\n%T type and value %v", received[c.ClusterConfig.Cluster_name][1], received[c.ClusterConfig.Cluster_name][1], expected[c.ClusterConfig.Cluster_name][1], expected[c.ClusterConfig.Cluster_name][1])
 		}
 	}
+}
 
+//TestRefreshDNS tests the function RefreshDNS
+func TestRefreshDNS(t *testing.T) {
+	// Create a local dns server
+	server, err := setupDnsServer("50053")
+	if err != nil {
+		t.Errorf("Failed to setup DNS server for the test.")
+	}
+	defer server.Shutdown()
+
+	//DNS IP
+	dnsManager := "127.0.0.1:50053"
+
+	tests := []struct {
+		cluster_name     string
+		current_best_ips []net.IP
+	}{
+		{"aiermis.cern.ch", []net.IP{net.ParseIP("189.184.104.222"), net.ParseIP("3001:1458:d00:2d::100:59")}},
+		{"testrefresh.cern.ch", []net.IP{net.ParseIP("2.3.4.5")}},
+		{"nochange.cern.ch", []net.IP{net.ParseIP("1.1.1.1")}},
+		{"notexists.cern.ch", []net.IP{net.ParseIP("2.2.2.2")}},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.cluster_name, func(t *testing.T) {
+			lg, _ := logger.NewLoggerFactory("sample.log")
+			cluster := lbcluster.LBCluster{
+				ClusterConfig: model.CluserConfig{
+					Cluster_name: tc.cluster_name,
+				},
+				Current_best_ips:      tc.current_best_ips,
+				Previous_best_ips_dns: []net.IP{},
+				Slog:                  lg,
+			}
+
+			cluster.RefreshDNS(dnsManager, "test-", "aW50ZXJuYWxzZWNyZXQ=", "ZXh0ZXJuYWxzZWNyZXQ=")
+			cluster.GetStateDNS(dnsManager)
+
+			var got []string
+			for _, ip := range cluster.Previous_best_ips_dns {
+				got = append(got, ip.String())
+			}
+
+			var expected []string
+			for _, ip := range tc.current_best_ips {
+				expected = append(expected, ip.String())
+			}
+
+			if !reflect.DeepEqual(expected, got) {
+				t.Fatalf("expected: %v, got: %v", expected, got)
+			}
+		})
+	}
+	os.Remove("sample.log")
 }

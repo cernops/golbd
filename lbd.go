@@ -4,9 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"lb-experts/golbd/lbcluster"
-	"lb-experts/golbd/lbhost"
-	"lb-experts/golbd/logger"
 	"log"
 	"math/rand"
 	"os"
@@ -16,7 +13,10 @@ import (
 	"sync"
 	"time"
 
+	"lb-experts/golbd/lbcluster"
 	"lb-experts/golbd/lbconfig"
+	"lb-experts/golbd/lbhost"
+	"lb-experts/golbd/logger"
 )
 
 var (
@@ -32,7 +32,7 @@ var (
 	startFlag      = flag.Bool("start", false, "start lbd")
 	stopFlag       = flag.Bool("stop", false, "stop lbd")
 	updateFlag     = flag.Bool("update", false, "update lbd config")
-	configFileFlag = flag.String("config", "./load-balancing.conf", "specify configuration file path")
+	configFileFlag = flag.String("config", "./load-balancing.[conf][yaml]", "specify configuration file path")
 	logFileFlag    = flag.String("log", "./lbd.log", "specify log file path")
 	stdoutFlag     = flag.Bool("stdout", false, "send log to stdtout")
 )

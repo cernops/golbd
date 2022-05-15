@@ -160,7 +160,7 @@ func TestLoadClusters(t *testing.T) {
 	config.SetTSIGKeyPrefix("abcd-")
 	config.SetTSIGInternalKey("xxx123==")
 	config.SetTSIGExternalKey("yyy123==")
-	config.SetDNSManager("111.111.0.111")
+	config.SetDNSManager("111.111.0.111:53")
 	config.SetSNMPPassword("zzz123")
 	config.SetClusters(map[string][]string{
 		"test01.cern.ch":      {"lxplus132.cern.ch", "lxplus041.cern.ch", "lxplus130.cern.ch", "lxplus133.subdo.cern.ch", "monit-kafkax-17be060b0d.cern.ch"},

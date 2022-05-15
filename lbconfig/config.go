@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	"gopkg.in/yaml.v3"
+
 	"lb-experts/golbd/lbcluster"
 	"lb-experts/golbd/logger"
 	"lb-experts/golbd/model"
@@ -194,10 +196,45 @@ func (c *LBConfig) WatchFileChange(controlChan <-chan bool, waitGroup sync.WaitG
 		}
 	}()
 	return fileWatcherChan
+
+}
+func (c *LBConfig) Load() ([]lbcluster.LBCluster, error) {
+	var configFunc func() ([]lbcluster.LBCluster, error)
+
+	if strings.HasSuffix(c.configFilePath, ".yaml") {
+		configFunc = c.loadConfigYaml
+	} else {
+		configFunc = c.loadConfigOriginal
+	}
+
+	return configFunc()
 }
 
-//Load reads a configuration file and returns a struct with the config
-func (c *LBConfig) Load() ([]lbcluster.LBCluster, error) {
+//LoadConfigYaml reads a YAML configuration file and returns a struct with the config
+func (c *LBConfig) loadConfigYaml() ([]lbcluster.LBCluster, error) {
+	var logger = c.lbLog
+	configBytes, err := os.ReadFile(c.configFilePath)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := yaml.Unmarshal(configBytes, &c); err != nil {
+		return nil, err
+	}
+
+	c.lbLog = logger
+	lbclusters, err := c.LoadClusters()
+	if err != nil {
+		fmt.Println("Error getting the clusters")
+		return nil, err
+	}
+	c.lbLog.Info("Clusters loaded")
+
+	return lbclusters, nil
+}
+
+//LoadConfig reads a configuration file and returns a struct with the config
+func (c *LBConfig) loadConfigOriginal() ([]lbcluster.LBCluster, error) {
 	var (
 		p  lbcluster.Params
 		mc = make(map[string][]string)
@@ -231,6 +268,9 @@ func (c *LBConfig) Load() ([]lbcluster.LBCluster, error) {
 				c.SnmpPassword = words[2]
 			case "dns_manager":
 				c.DNSManager = words[2]
+				if !strings.Contains(c.DNSManager, ":") {
+					c.DNSManager += ":53"
+				}
 			}
 		} else if words[2] == "=" {
 			jsonStream := "{"

@@ -14,45 +14,48 @@ import (
 
 func TestLoadConfig(t *testing.T) {
 
+	testFiles := []string{"testloadconfig.yaml", "testloadconfig"}
 	lg, _ := logger.NewLoggerFactory("sample.log")
 	lg.EnableWriteToSTd()
+	for _, testFile := range testFiles {
+		configFromFile := lbconfig.NewLoadBalancerConfig(testFile, lg)
+		_, err := configFromFile.Load()
+		if err != nil {
+			t.Fail()
+			t.Errorf("loadConfig Error: %v", err.Error())
+		}
+		expConfig := lbconfig.NewLoadBalancerConfig(testFile, lg)
+		expConfig.SetMasterHost("lbdxyz.cern.ch")
+		expConfig.SetHeartBeatFileName("heartbeat")
+		expConfig.SetHeartBeatDirPath("/work/go/src/github.com/cernops/golbd")
+		expConfig.SetTSIGKeyPrefix("abcd-")
+		expConfig.SetTSIGInternalKey("xxx123==")
+		expConfig.SetTSIGExternalKey("yyy123==")
+		expConfig.SetDNSManager("137.138.28.176:53")
+		expConfig.SetSNMPPassword("zzz123")
+		expConfig.SetClusters(map[string][]string{
+			"aiermis.cern.ch":     {"ermis19.cern.ch", "ermis20.cern.ch"},
+			"uermis.cern.ch":      {"ermis21.cern.ch", "ermis22.cern.ch"},
+			"permis.cern.ch":      {"ermis21.sub.cern.ch", "ermis22.test.cern.ch", "ermis42.cern.ch"},
+			"ermis.test.cern.ch":  {"ermis23.cern.ch", "ermis24.cern.ch"},
+			"ermis2.test.cern.ch": {"ermis23.toto.cern.ch", "ermis24.cern.ch", "ermis25.sub.cern.ch"},
+		})
+		expConfig.SetParameters(map[string]lbcluster.Params{
+			"aiermis.cern.ch":     {Behaviour: "mindless", Best_hosts: 1, External: false, Metric: "cmsfrontier", Polling_interval: 300, Statistics: "long", Ttl: 60},
+			"uermis.cern.ch":      {Behaviour: "mindless", Best_hosts: 1, External: false, Metric: "cmsfrontier", Polling_interval: 300, Statistics: "long", Ttl: 222},
+			"permis.cern.ch":      {Behaviour: "mindless", Best_hosts: 1, External: false, Metric: "cmsfrontier", Polling_interval: 300, Statistics: "long", Ttl: 222},
+			"ermis.test.cern.ch":  {Behaviour: "mindless", Best_hosts: 1, External: false, Metric: "cmsfrontier", Polling_interval: 300, Statistics: "long", Ttl: 222},
+			"ermis2.test.cern.ch": {Behaviour: "mindless", Best_hosts: 1, External: false, Metric: "cmsfrontier", Polling_interval: 300, Statistics: "long", Ttl: 222},
+		})
 
-	configFromFile := lbconfig.NewLoadBalancerConfig("testloadconfig", lg)
-	_, err := configFromFile.Load()
-	if err != nil {
-		t.Fail()
-		t.Errorf("loadConfig Error: %v", err.Error())
-	}
-	expConfig := lbconfig.NewLoadBalancerConfig("testloadconfig", lg)
-	expConfig.SetMasterHost("lbdxyz.cern.ch")
-	expConfig.SetHeartBeatFileName("heartbeat")
-	expConfig.SetHeartBeatDirPath("/work/go/src/github.com/cernops/golbd")
-	expConfig.SetTSIGKeyPrefix("abcd-")
-	expConfig.SetTSIGInternalKey("xxx123==")
-	expConfig.SetTSIGExternalKey("yyy123==")
-	expConfig.SetDNSManager("137.138.28.176")
-	expConfig.SetSNMPPassword("zzz123")
-	expConfig.SetClusters(map[string][]string{
-		"aiermis.cern.ch":     {"ermis19.cern.ch", "ermis20.cern.ch"},
-		"uermis.cern.ch":      {"ermis21.cern.ch", "ermis22.cern.ch"},
-		"permis.cern.ch":      {"ermis21.sub.cern.ch", "ermis22.test.cern.ch", "ermis42.cern.ch"},
-		"ermis.test.cern.ch":  {"ermis23.cern.ch", "ermis24.cern.ch"},
-		"ermis2.test.cern.ch": {"ermis23.toto.cern.ch", "ermis24.cern.ch", "ermis25.sub.cern.ch"},
-	})
-	expConfig.SetParameters(map[string]lbcluster.Params{
-		"aiermis.cern.ch":     {Behaviour: "mindless", Best_hosts: 1, External: false, Metric: "cmsfrontier", Polling_interval: 300, Statistics: "long", Ttl: 60},
-		"uermis.cern.ch":      {Behaviour: "mindless", Best_hosts: 1, External: false, Metric: "cmsfrontier", Polling_interval: 300, Statistics: "long", Ttl: 222},
-		"permis.cern.ch":      {Behaviour: "mindless", Best_hosts: 1, External: false, Metric: "cmsfrontier", Polling_interval: 300, Statistics: "long", Ttl: 222},
-		"ermis.test.cern.ch":  {Behaviour: "mindless", Best_hosts: 1, External: false, Metric: "cmsfrontier", Polling_interval: 300, Statistics: "long", Ttl: 222},
-		"ermis2.test.cern.ch": {Behaviour: "mindless", Best_hosts: 1, External: false, Metric: "cmsfrontier", Polling_interval: 300, Statistics: "long", Ttl: 222},
-	})
+		if !reflect.DeepEqual(configFromFile, expConfig) {
+			t.Errorf("loadConfig: got\n %v expected\n %v", configFromFile, expConfig)
+		}
 
-	if !reflect.DeepEqual(configFromFile, expConfig) {
-		t.Errorf("loadConfig: got\n %v expected\n %v", configFromFile, expConfig)
 	}
 	os.Remove("sample.log")
-}
 
+}
 func TestWatchConfigFileChanges(t *testing.T) {
 	lg, _ := logger.NewLoggerFactory("sample.log")
 	lg.EnableWriteToSTd()
