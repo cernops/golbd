@@ -295,13 +295,20 @@ func (lbc *LBCluster) EvaluateHosts(hostsToCheck map[string]lbhost.Host) {
 	var nodeChan = make(chan Node)
 	defer close(nodeChan)
 	var wg sync.WaitGroup
-	for currentHost := range lbc.Host_metric_table {
+	newHostMetricMap := make(map[string]Node)
+	for k, v := range lbc.Host_metric_table {
+		newHostMetricMap[k] = v
+	}
+	for currentHost := range newHostMetricMap {
 		wg.Add(1)
 		go func(selectedHost string) {
 			host := hostsToCheck[selectedHost]
 			ips, err := host.GetWorkingIPs()
 			if err != nil {
 				ips, err = host.GetIps()
+				if err != nil {
+					lbc.Slog.Error(fmt.Sprintf("error while fetching IPs. error: %v", err))
+				}
 			}
 			nodeChan <- Node{host.GetLoadForAlias(lbc.ClusterConfig.Cluster_name), ips, selectedHost}
 		}(currentHost)
