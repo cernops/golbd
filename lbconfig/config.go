@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"lb-experts/golbd/logger"
-	"lb-experts/golbd/model"
 	"net"
 	"os"
 	"strconv"
@@ -15,6 +13,8 @@ import (
 	"time"
 
 	"lb-experts/golbd/lbcluster"
+	"lb-experts/golbd/logger"
+	"lb-experts/golbd/model"
 )
 
 const (
@@ -35,6 +35,7 @@ type Config interface {
 	UnlockHeartBeatMutex()
 	WatchFileChange(controlChan <-chan bool, waitGroup sync.WaitGroup) <-chan ConfigFileChangeSignal
 	Load() ([]lbcluster.LBCluster, error)
+	LoadClusters() ([]lbcluster.LBCluster, error)
 
 	// testing only
 	SetMasterHost(masterHostName string)

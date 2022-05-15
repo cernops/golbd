@@ -214,15 +214,15 @@ func checkAliases(config lbconfig.Config, lg logger.Logger, lbclusters []lbclust
 	//var wg sync.WaitGroup
 	updateDNS := true
 	lg.Info("Checking if any of the " + strconv.Itoa(len(lbclusters)) + " clusters needs updating")
-	var hostsToCheck map[string]lbhost.Host
 	var clustersToUpdate []*lbcluster.LBCluster
+	hostsToCheck := make(map[string]lbhost.Host)
 	/* First, let's identify the hosts that have to be checked */
 	for i := range lbclusters {
 		currentCluster := &lbclusters[i]
 		lg.Debug("DO WE HAVE TO UPDATE?")
 		if currentCluster.Time_to_refresh() {
 			lg.Info("Time to refresh the cluster")
-			hostsToCheck = currentCluster.GetHostList()
+			currentCluster.GetHostList(hostsToCheck)
 			clustersToUpdate = append(clustersToUpdate, currentCluster)
 		}
 	}

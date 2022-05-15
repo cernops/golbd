@@ -170,11 +170,17 @@ func TestLoadClusters(t *testing.T) {
 		"test01.cern.ch":      lbcluster.Params{Behaviour: "mindless", Best_hosts: 2, External: true, Metric: "cmsfrontier", Polling_interval: 6, Statistics: "long"},
 		"test02.test.cern.ch": lbcluster.Params{Behaviour: "mindless", Best_hosts: 10, External: false, Metric: "cmsfrontier", Polling_interval: 6, Statistics: "long"},
 	})
+	testCluster1 := getTestCluster("test01.cern.ch")
+	testCluster1.Slog = lg
+	testCluster2 := getSecondTestCluster()
+	testCluster2.Slog = lg
+	expected := []lbcluster.LBCluster{testCluster1, testCluster2}
 
-	expected := []lbcluster.LBCluster{getTestCluster("test01.cern.ch"),
-		getSecondTestCluster()}
-
-	lbclusters, _ := config.Load()
+	lbclusters, err := config.LoadClusters()
+	if err != nil {
+		t.Errorf("error while loading clusters. error: %v", err)
+		return
+	}
 	// reflect.DeepEqual(lbclusters, expected) occassionally fails as the array order is not always the same
 	// so comparing element par element
 	i := 0
@@ -194,7 +200,7 @@ func TestLoadClusters(t *testing.T) {
 		t.Errorf("loadClusters: wrong number of clusters, got\n%v\nexpected\n%v (and %v", len(lbclusters), len(expected), i)
 
 	}
-	err := os.Remove("sample.log")
+	err = os.Remove("sample.log")
 	if err != nil {
 		t.Fail()
 		t.Errorf("error deleting file.error %v", err)

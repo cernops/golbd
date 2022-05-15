@@ -30,8 +30,8 @@ func TestGetListHostsOne(t *testing.T) {
 		"lxplus133.subdo.cern.ch":         host4,
 		"lxplus130.cern.ch":               host5,
 	}
-
-	hostsToCheck := c.GetHostList()
+	hostsToCheck := make(map[string]lbhost.Host)
+	c.GetHostList(hostsToCheck)
 	if len(hostsToCheck) != len(expected) {
 		t.Errorf("length mismatch. expected :%v, actual:%v", len(expected), len(hostsToCheck))
 	}
@@ -41,6 +41,7 @@ func TestGetListHostsOne(t *testing.T) {
 			t.Errorf("mismatch in cluster config. expected:%v,actual:%v", expHost.GetClusterConfig(), actualHost.GetClusterConfig())
 		}
 	}
+	os.Remove("sample.log")
 }
 
 func TestGetListHostsTwo(t *testing.T) {
@@ -104,12 +105,16 @@ func TestGetListHostsTwo(t *testing.T) {
 		"lxplus025.cern.ch": host4,
 	}
 
-	var hostsToCheck map[string]lbhost.Host
+	hostsToCheck := make(map[string]lbhost.Host)
 	for _, c := range clusters {
-		hostsToCheck = c.GetHostList()
+		c.GetHostList(hostsToCheck)
 	}
-	if !reflect.DeepEqual(hostsToCheck, expected) {
-		t.Errorf("e.GetHostList: got\n%v\nexpected\n%v", hostsToCheck, expected)
+
+	for hostName, actualHost := range hostsToCheck {
+		expHost := expected[hostName]
+		if !reflect.DeepEqual(expHost.GetClusterConfig(), actualHost.GetClusterConfig()) {
+			t.Errorf("mismatch in cluster config. expected:%v,actual:%v", expHost.GetClusterConfig(), actualHost.GetClusterConfig())
+		}
 	}
 	os.Remove("sample.log")
 }
