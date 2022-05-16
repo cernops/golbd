@@ -10,7 +10,7 @@ import (
 )
 
 func TestLoadConfig(t *testing.T) {
-	lg := lbcluster.Log{Stdout: true, Debugflag: false}
+	lg := lbcluster.NewLog(nil, true, false, "")
 
 	testFiles := []string{"testloadconfig.yaml", "testloadconfig"}
 

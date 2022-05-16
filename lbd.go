@@ -156,7 +156,6 @@ func sleep(seconds time.Duration, chanModified chan int) error {
 		chanModified <- 2
 		time.Sleep(seconds * time.Second)
 	}
-	return nil
 }
 
 func main() {
@@ -171,7 +170,7 @@ func main() {
 	if e != nil {
 		fmt.Printf("Error getting a syslog instance %v\nThe service will only write to the logfile %v\n\n", e, *logFileFlag)
 	}
-	lg := lbcluster.Log{SyslogWriter: log, Stdout: *stdoutFlag, Debugflag: *debugFlag, TofilePath: *logFileFlag}
+	lg := lbcluster.NewLog(log, *stdoutFlag, *debugFlag, *logFileFlag)
 
 	lg.Info("Starting lbd")
 
@@ -203,8 +202,6 @@ func main() {
 			lg.Error("Got an unexpected value")
 		}
 	}
-	lg.Error("The lbd is not supposed to stop")
-
 }
 func checkAliases(config *lbconfig.Config, lg lbcluster.Log, lbclusters []lbcluster.LBCluster) {
 	hostname, e := os.Hostname()

@@ -80,7 +80,7 @@ func TestRefreshDNS(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.cluster_name, func(t *testing.T) {
-			lg := lbcluster.Log{SyslogWriter: nil, Stdout: false, Debugflag: false}
+			lg := lbcluster.NewLog(nil, false, false, "")
 			cluster := lbcluster.LBCluster{
 				Cluster_name:          tc.cluster_name,
 				Current_best_ips:      tc.current_best_ips,

@@ -58,7 +58,7 @@ func TestGetListHostsOne(t *testing.T) {
 }
 
 func TestGetListHostsTwo(t *testing.T) {
-	lg := lbcluster.Log{Stdout: true, Debugflag: false}
+	lg := lbcluster.NewLog(nil, true, false, "")
 
 	clusters := []lbcluster.LBCluster{
 		{Cluster_name: "test01.cern.ch",

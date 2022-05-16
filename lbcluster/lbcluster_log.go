@@ -15,7 +15,18 @@ type Log struct {
 	Stdout       bool
 	Debugflag    bool
 	TofilePath   string
-	logMu        sync.Mutex
+	logMu        *sync.Mutex
+}
+
+//NewLog initializes Log struct
+func NewLog(syslogWriter *syslog.Writer, stdout, debugFlag bool, ToFilePath string) Log {
+	return Log{
+		SyslogWriter: syslogWriter,
+		Stdout:       stdout,
+		Debugflag:    debugFlag,
+		TofilePath:   ToFilePath,
+		logMu:        &sync.Mutex{},
+	}
 }
 
 //Logger struct for the Logger interface
