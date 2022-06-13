@@ -47,11 +47,6 @@ const (
 	DefaultReadTimeout       = 20 * time.Second
 )
 
-type ConfigFileChangeSignal struct {
-	readSignal bool
-	readError  error
-}
-
 func shouldUpdateDNS(config lbconfig.Config, hostname string, lg logger.Logger) bool {
 	if strings.EqualFold(hostname, config.GetMasterHost()) {
 		return true

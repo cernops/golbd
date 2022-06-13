@@ -353,7 +353,7 @@ func (c *LBConfig) LoadClusters() ([]lbcluster.LBCluster, error) {
 			continue
 		}
 		if par, ok := c.Parameters[k]; ok {
-			lbcConfig := model.CluserConfig{
+			lbcConfig := model.ClusterConfig{
 				Cluster_name:           k,
 				Loadbalancing_username: DefaultLoadBalancerConfig,
 				Loadbalancing_password: c.SnmpPassword,

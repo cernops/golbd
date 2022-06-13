@@ -35,7 +35,7 @@ func NewRetryModule(retryStartDuration time.Duration, logger logger.Logger) *Ret
 
 func (r *Retry) SetMaxDuration(maxDuration time.Duration) error {
 	if r.retryStarted {
-		return nil
+		return fmt.Errorf("retry routine has already started")
 	}
 	if maxDuration <= 0 {
 		return fmt.Errorf("duration has to be greater than 0")
@@ -46,7 +46,7 @@ func (r *Retry) SetMaxDuration(maxDuration time.Duration) error {
 
 func (r *Retry) SetMaxCount(maxCount int) error {
 	if r.retryStarted {
-		return nil
+		return fmt.Errorf("retry routine has already started")
 	}
 	if maxCount <= 0 {
 		return fmt.Errorf("max count has to be greater than 0")
@@ -85,6 +85,7 @@ func (r *Retry) run() {
 		ticker := time.NewTicker(1 * time.Minute)
 		defer close(r.done)
 		defer close(r.signal)
+		defer close(start)
 		defer ticker.Stop()
 
 		for {

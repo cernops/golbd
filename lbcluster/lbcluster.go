@@ -23,7 +23,7 @@ const WorstValue int = 99999
 
 //LBCluster struct of an lbcluster alias
 type LBCluster struct {
-	ClusterConfig           model.CluserConfig
+	ClusterConfig           model.ClusterConfig
 	Host_metric_table       map[string]Node
 	Parameters              Params
 	Time_of_last_evaluation time.Time

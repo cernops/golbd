@@ -49,7 +49,7 @@ func TestGetListHostsTwo(t *testing.T) {
 	logger.EnableWriteToSTd()
 
 	clusters := []lbcluster.LBCluster{
-		{ClusterConfig: model.CluserConfig{
+		{ClusterConfig: model.ClusterConfig{
 			Cluster_name:           "test01.cern.ch",
 			Loadbalancing_username: "loadbalancing",
 			Loadbalancing_password: "zzz123",
@@ -61,7 +61,7 @@ func TestGetListHostsTwo(t *testing.T) {
 			Previous_best_ips_dns: []net.IP{},
 			Slog:                  logger,
 			Current_index:         0},
-		lbcluster.LBCluster{ClusterConfig: model.CluserConfig{
+		lbcluster.LBCluster{ClusterConfig: model.ClusterConfig{
 			Cluster_name:           "test02.cern.ch",
 			Loadbalancing_username: "loadbalancing",
 			Loadbalancing_password: "zzz123",
@@ -74,25 +74,25 @@ func TestGetListHostsTwo(t *testing.T) {
 			Slog:                  logger,
 			Current_index:         0}}
 
-	host1 := lbhost.NewLBHost(model.CluserConfig{
+	host1 := lbhost.NewLBHost(model.ClusterConfig{
 		Cluster_name:           "test01.cern.ch",
 		Loadbalancing_username: "loadbalancing",
 		Loadbalancing_password: "zzz123",
 	}, logger)
 	host1.SetName("lxplus142.cern.ch")
-	host2 := lbhost.NewLBHost(model.CluserConfig{
+	host2 := lbhost.NewLBHost(model.ClusterConfig{
 		Cluster_name:           "test01.cern.ch,test02.cern.ch",
 		Loadbalancing_username: "loadbalancing",
 		Loadbalancing_password: "zzz123",
 	}, logger)
 	host2.SetName("lxplus177.cern.ch")
-	host3 := lbhost.NewLBHost(model.CluserConfig{
+	host3 := lbhost.NewLBHost(model.ClusterConfig{
 		Cluster_name:           "test02.cern.ch",
 		Loadbalancing_username: "loadbalancing",
 		Loadbalancing_password: "zzz123",
 	}, logger)
 	host3.SetName("lxplus013.cern.ch")
-	host4 := lbhost.NewLBHost(model.CluserConfig{
+	host4 := lbhost.NewLBHost(model.ClusterConfig{
 		Cluster_name:           "test02.cern.ch",
 		Loadbalancing_username: "loadbalancing",
 		Loadbalancing_password: "zzz123",

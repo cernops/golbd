@@ -36,7 +36,7 @@ func (m mockHost) SNMPDiscovery() {
 	panic("implement me")
 }
 
-func (m mockHost) GetClusterConfig() *model.CluserConfig {
+func (m mockHost) GetClusterConfig() *model.ClusterConfig {
 	panic("implement me")
 }
 

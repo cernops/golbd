@@ -84,7 +84,7 @@ func TestRefreshDNS(t *testing.T) {
 		t.Run(tc.cluster_name, func(t *testing.T) {
 			lg, _ := logger.NewLoggerFactory("sample.log")
 			cluster := lbcluster.LBCluster{
-				ClusterConfig: model.CluserConfig{
+				ClusterConfig: model.ClusterConfig{
 					Cluster_name: tc.cluster_name,
 				},
 				Current_best_ips:      tc.current_best_ips,

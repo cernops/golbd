@@ -16,7 +16,7 @@ func getTestCluster(name string) lbcluster.LBCluster {
 	lg, _ := logger.NewLoggerFactory("sample.log")
 
 	return lbcluster.LBCluster{
-		ClusterConfig: model.CluserConfig{
+		ClusterConfig: model.ClusterConfig{
 			Cluster_name:           name,
 			Loadbalancing_username: "loadbalancing",
 			Loadbalancing_password: "zzz123",
@@ -39,7 +39,7 @@ func getSecondTestCluster() lbcluster.LBCluster {
 	lg, _ := logger.NewLoggerFactory("sample.log")
 
 	return lbcluster.LBCluster{
-		ClusterConfig: model.CluserConfig{
+		ClusterConfig: model.ClusterConfig{
 			Cluster_name:           "test02.test.cern.ch",
 			Loadbalancing_username: "loadbalancing",
 			Loadbalancing_password: "zzz123",
@@ -136,7 +136,7 @@ func getBadHostsToCheck(c lbcluster.LBCluster) map[string]lbhost.Host {
 }
 func getHost(hostname string, responseInt int, responseString string) lbhost.Host {
 	lg, _ := logger.NewLoggerFactory("sample.log")
-	clusterConfig := model.CluserConfig{
+	clusterConfig := model.ClusterConfig{
 		Cluster_name:           "test01.cern.ch",
 		Loadbalancing_username: "loadbalancing",
 		Loadbalancing_password: "XXXX",

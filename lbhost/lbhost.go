@@ -27,7 +27,7 @@ type LBHostTransportResult struct {
 	Response_error  string
 }
 type LBHost struct {
-	ClusterConfig  model.CluserConfig
+	ClusterConfig  model.ClusterConfig
 	Host_name      string
 	HostTransports []LBHostTransportResult
 	Logger         logger.Logger
@@ -45,7 +45,7 @@ type DiscoveryAgent interface {
 	GetV3(oid snmplib.Oid) (interface{}, error)
 }
 
-func NewHostDiscoveryAgent(nodeIp string, clusterConfig model.CluserConfig) (DiscoveryAgent, error) {
+func NewHostDiscoveryAgent(nodeIp string, clusterConfig model.ClusterConfig) (DiscoveryAgent, error) {
 	return snmplib.NewSNMPv3(nodeIp, clusterConfig.Loadbalancing_username, "MD5",
 		clusterConfig.Loadbalancing_password, "NOPRIV", clusterConfig.Loadbalancing_password,
 		time.Duration(TIMEOUT)*time.Second, 2)
@@ -55,7 +55,7 @@ type Host interface {
 	GetName() string
 	SetName(name string)
 	SNMPDiscovery()
-	GetClusterConfig() *model.CluserConfig
+	GetClusterConfig() *model.ClusterConfig
 	GetLoadForAlias(clusterName string) int
 	GetWorkingIPs() ([]net.IP, error)
 	GetAllIPs() ([]net.IP, error)
@@ -64,7 +64,7 @@ type Host interface {
 	GetHostTransportPayloads() []LBHostTransportResult
 }
 
-func NewLBHost(clusterConfig model.CluserConfig, logger logger.Logger) Host {
+func NewLBHost(clusterConfig model.ClusterConfig, logger logger.Logger) Host {
 	return &LBHost{
 		ClusterConfig: clusterConfig,
 		Logger:        logger,
@@ -78,7 +78,7 @@ func (lh *LBHost) SetName(name string) {
 func (lh *LBHost) GetName() string {
 	return lh.Host_name
 }
-func (lh *LBHost) GetClusterConfig() *model.CluserConfig {
+func (lh *LBHost) GetClusterConfig() *model.ClusterConfig {
 	return &lh.ClusterConfig
 }
 
