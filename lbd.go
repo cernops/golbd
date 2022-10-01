@@ -131,8 +131,11 @@ func installSignalHandler(sighup, sigterm *bool, lg *lbcluster.Log) {
 	}()
 }
 
-/* Using this one (instead of fsnotify)
-to check also if the file has been moved*/
+/*
+	Using this one (instead of fsnotify)
+
+to check also if the file has been moved
+*/
 func watchFile(filePath string, chanModified chan int) error {
 	initialStat, err := os.Stat(filePath)
 	if err != nil {
@@ -232,14 +235,14 @@ func checkAliases(config *lbconfig.Config, lg lbcluster.Log, lbclusters []lbclus
 		/* Now, let's go through the hosts, issuing the snmp call */
 		for _, hostValue := range hostsToCheck {
 			go func(myHost lbhost.LBHost) {
-				myHost.Snmp_req()
+				myHost.SnmpReq()
 				myChannel <- myHost
 			}(hostValue)
 		}
 		lg.Debug("Let's start gathering the results")
 		for i := 0; i < len(hostsToCheck); i++ {
 			myNewHost := <-myChannel
-			hostsToCheck[myNewHost.Host_name] = myNewHost
+			hostsToCheck[myNewHost.HostName] = myNewHost
 		}
 
 		lg.Debug("All the hosts have been tested")

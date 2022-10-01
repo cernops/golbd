@@ -15,16 +15,16 @@ import (
 	"time"
 )
 
-//WorstValue worst possible load
+// WorstValue worst possible load
 const WorstValue int = 99999
 
-//TIMEOUT snmp timeout
+// TIMEOUT snmp timeout
 const TIMEOUT int = 10
 
-//OID snmp object to get
+// OID snmp object to get
 const OID string = ".1.3.6.1.4.1.96.255.1"
 
-//LBCluster struct of an lbcluster alias
+// LBCluster struct of an lbcluster alias
 type LBCluster struct {
 	Cluster_name            string
 	Loadbalancing_username  string
@@ -38,7 +38,7 @@ type LBCluster struct {
 	Slog                    *Log
 }
 
-//Params of the alias
+// Params of the alias
 type Params struct {
 	Behaviour        string
 	Best_hosts       int
@@ -74,39 +74,39 @@ func Shuffle(n int, swap func(i, j int)) {
 	}
 }
 
-//Node Struct to keep the ips and load of a node for an alias
+// Node Struct to keep the ips and load of a node for an alias
 type Node struct {
 	Load int
 	IPs  []net.IP
 }
 
-//NodeList struct for the list
+// NodeList struct for the list
 type NodeList []Node
 
 func (p NodeList) Len() int           { return len(p) }
 func (p NodeList) Less(i, j int) bool { return p[i].Load < p[j].Load }
 func (p NodeList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
-//Time_to_refresh Checks if the cluster needs refreshing
+// Time_to_refresh Checks if the cluster needs refreshing
 func (lbc *LBCluster) Time_to_refresh() bool {
 	return lbc.Time_of_last_evaluation.Add(time.Duration(lbc.Parameters.Polling_interval) * time.Second).Before(time.Now())
 }
 
-//Get_list_hosts Get the hosts for an alias
+// Get_list_hosts Get the hosts for an alias
 func (lbc *LBCluster) Get_list_hosts(current_list map[string]lbhost.LBHost) {
 	lbc.Write_to_log("DEBUG", "Getting the list of hosts for the alias")
 	for host := range lbc.Host_metric_table {
 		myHost, ok := current_list[host]
 		if ok {
-			myHost.Cluster_name = myHost.Cluster_name + "," + lbc.Cluster_name
+			myHost.ClusterName = myHost.ClusterName + "," + lbc.Cluster_name
 		} else {
 			myHost = lbhost.LBHost{
-				Cluster_name:           lbc.Cluster_name,
-				Host_name:              host,
-				Loadbalancing_username: lbc.Loadbalancing_username,
-				Loadbalancing_password: lbc.Loadbalancing_password,
-				LogFile:                lbc.Slog.TofilePath,
-				Debugflag:              lbc.Slog.Debugflag,
+				ClusterName: lbc.Cluster_name,
+				HostName:    host,
+				LBUsername:  lbc.Loadbalancing_username,
+				LBPassword:  lbc.Loadbalancing_password,
+				LogFile:     lbc.Slog.TofilePath,
+				DebugFlag:   lbc.Slog.Debugflag,
 			}
 		}
 		current_list[host] = myHost
@@ -132,7 +132,7 @@ func (lbc *LBCluster) concatenateIps(myIps []net.IP) string {
 	return strings.Join(ip_string, " ")
 }
 
-//Find_best_hosts Looks for the best hosts for a cluster
+// Find_best_hosts Looks for the best hosts for a cluster
 func (lbc *LBCluster) FindBestHosts(hosts_to_check map[string]lbhost.LBHost) bool {
 
 	lbc.EvaluateHosts(hosts_to_check)
@@ -287,30 +287,30 @@ func (lbc *LBCluster) checkRogerState(host string) string {
 
 }
 
-//EvaluateHosts gets the load from the all the nodes
+// EvaluateHosts gets the load from the all the nodes
 func (lbc *LBCluster) EvaluateHosts(hostsToCheck map[string]lbhost.LBHost) {
 
 	for currenthost := range lbc.Host_metric_table {
 		host := hostsToCheck[currenthost]
-		ips, err := host.Get_working_IPs()
+		ips, err := host.GetWorkingIPs()
 		if err != nil {
-			ips, err = host.Get_Ips()
+			ips, err = host.GetIps()
 		}
-		lbc.Host_metric_table[currenthost] = Node{host.Get_load_for_alias(lbc.Cluster_name), ips}
+		lbc.Host_metric_table[currenthost] = Node{host.GetLoadForAlias(lbc.Cluster_name), ips}
 		lbc.Write_to_log("DEBUG", fmt.Sprintf("node: %s It has a load of %d", currenthost, lbc.Host_metric_table[currenthost].Load))
 	}
 }
 
-//ReEvaluateHostsForMinimum gets the load from the all the nodes for Minimum metric policy
+// ReEvaluateHostsForMinimum gets the load from the all the nodes for Minimum metric policy
 func (lbc *LBCluster) ReEvaluateHostsForMinimum(hostsToCheck map[string]lbhost.LBHost) {
 
 	for currenthost := range lbc.Host_metric_table {
 		host := hostsToCheck[currenthost]
-		ips, err := host.Get_all_IPs()
+		ips, err := host.GetAllIPs()
 		if err != nil {
-			ips, err = host.Get_Ips()
+			ips, err = host.GetIps()
 		}
-		lbc.Host_metric_table[currenthost] = Node{host.Get_load_for_alias(lbc.Cluster_name), ips}
+		lbc.Host_metric_table[currenthost] = Node{host.GetLoadForAlias(lbc.Cluster_name), ips}
 		lbc.Write_to_log("DEBUG", fmt.Sprintf("node: %s It has a load of %d", currenthost, lbc.Host_metric_table[currenthost].Load))
 	}
 }
