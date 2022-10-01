@@ -17,3 +17,6 @@ rpm: srpm
 
 clean:
 	rm -rf build vendor
+
+test:
+	go test ./... --cover
