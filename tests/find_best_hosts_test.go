@@ -2,11 +2,12 @@ package main_test
 
 import (
 	"net"
+	"os"
 	"reflect"
 	"testing"
 	"time"
 
-	"gitlab.cern.ch/lb-experts/golbd/lbcluster"
+	"lb-experts/golbd/lbcluster"
 )
 
 func getExpectedHostMetric() map[string]lbcluster.Node {
@@ -27,8 +28,11 @@ func TestFindBestHosts(t *testing.T) {
 	expected_host_metric_table := getExpectedHostMetric()
 
 	expected_current_best_ips := []net.IP{net.ParseIP("2001:1458:d00:2c::100:a6"), net.ParseIP("188.184.108.98"), net.ParseIP("2001:1458:d00:32::100:51"), net.ParseIP("188.184.116.81")}
-
-	if !c.FindBestHosts(hosts_to_check) {
+	isDNSUpdateValid, err := c.FindBestHosts(hosts_to_check)
+	if err != nil {
+		t.Errorf("Error while finding best hosts. error:%v", err)
+	}
+	if !isDNSUpdateValid {
 		t.Errorf("e.Find_best_hosts: returned false, expected true")
 	}
 	if !reflect.DeepEqual(c.Host_metric_table, expected_host_metric_table) {
@@ -39,6 +43,11 @@ func TestFindBestHosts(t *testing.T) {
 	}
 	if c.Time_of_last_evaluation.Add(time.Duration(2) * time.Second).Before(time.Now()) {
 		t.Errorf("e.Find_best_hosts: c.Time_of_last_evaluation: got\n%v\ncurrent time\n%v", c.Time_of_last_evaluation, time.Now())
+	}
+	err = os.Remove("sample.log")
+	if err != nil {
+		t.Fail()
+		t.Errorf("error deleting file.error %v", err)
 	}
 }
 
@@ -53,8 +62,11 @@ func TestFindBestHostsNoValidHostCmsfrontier(t *testing.T) {
 	expected_current_best_ips := []net.IP{}
 
 	expected_time_of_last_evaluation := c.Time_of_last_evaluation
-
-	if c.FindBestHosts(bad_hosts_to_check) {
+	isDNSUpdateValid, err := c.FindBestHosts(bad_hosts_to_check)
+	if err != nil {
+		t.Errorf("Error while finding best hosts. error:%v", err)
+	}
+	if isDNSUpdateValid {
 		t.Errorf("e.Find_best_hosts: returned true, expected false")
 	}
 	if !reflect.DeepEqual(c.Current_best_ips, expected_current_best_ips) {
@@ -74,8 +86,11 @@ func TestFindBestHostsNoValidHostMinino(t *testing.T) {
 	bad_hosts_to_check := getBadHostsToCheck(c)
 
 	expected_current_best_ips := []net.IP{}
-
-	if !c.FindBestHosts(bad_hosts_to_check) {
+	isDNSUpdateValid, err := c.FindBestHosts(bad_hosts_to_check)
+	if err != nil {
+		t.Errorf("Error while finding best hosts. error:%v", err)
+	}
+	if !isDNSUpdateValid {
 		t.Errorf("e.Find_best_hosts: returned false, expected true")
 	}
 	if !reflect.DeepEqual(c.Current_best_ips, expected_current_best_ips) {
@@ -95,8 +110,11 @@ func TestFindBestHostsNoValidHostMinimum(t *testing.T) {
 	bad_hosts_to_check := getBadHostsToCheck(c)
 
 	not_expected_current_best_ips := []net.IP{}
-
-	if !c.FindBestHosts(bad_hosts_to_check) {
+	isDNSUpdateValid, err := c.FindBestHosts(bad_hosts_to_check)
+	if err != nil {
+		t.Errorf("Error while finding best hosts. error:%v", err)
+	}
+	if !isDNSUpdateValid {
 		t.Errorf("e.Find_best_hosts: returned false, expected true")
 	}
 	if reflect.DeepEqual(c.Current_best_ips, not_expected_current_best_ips) {

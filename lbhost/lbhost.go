@@ -1,27 +1,23 @@
 package lbhost
 
 import (
-	//	"encoding/json"
 	"fmt"
-	//"io/ioutil"
-	"github.com/reguero/go-snmplib"
-	//"math/rand"
+	"lb-experts/golbd/logger"
+	"lb-experts/golbd/model"
 	"net"
-	"os"
 	"regexp"
 	"strconv"
-	"strings"
 	"sync"
-
-	//	"net/http"
-
-	//	"sort"
-	//	"strings"
 	"time"
+
+	"github.com/reguero/go-snmplib"
 )
 
-const TIMEOUT int = 10
-const OID string = ".1.3.6.1.4.1.96.255.1"
+const (
+	TIMEOUT            int    = 10
+	OID                string = ".1.3.6.1.4.1.96.255.1"
+	DefaultResponseInt        = 100000
+)
 
 type LBHostTransportResult struct {
 	Transport       string
@@ -31,111 +27,153 @@ type LBHostTransportResult struct {
 	Response_error  string
 }
 type LBHost struct {
-	Cluster_name           string
-	Host_name              string
-	Host_transports        []LBHostTransportResult
-	Loadbalancing_username string
-	Loadbalancing_password string
-	LogFile                string
-	logMu                  sync.Mutex
-	Debugflag              bool
+	ClusterConfig  model.ClusterConfig
+	Host_name      string
+	HostTransports []LBHostTransportResult
+	Logger         logger.Logger
+	SnmpAgent      DiscoveryAgent
 }
 
-func (self *LBHost) Snmp_req() {
+type snmpDiscoveryResult struct {
+	hostIdx             int
+	hostTransportResult LBHostTransportResult
+}
 
-	self.find_transports()
+type DiscoveryAgent interface {
+	Close() error
+	Discover() error
+	GetV3(oid snmplib.Oid) (interface{}, error)
+}
 
-	for i, my_transport := range self.Host_transports {
-		my_transport.Response_int = 100000
-		transport := my_transport.Transport
-		node_ip := my_transport.IP.String()
-		/* There is no need to put square brackets around the ipv6 addresses*/
-		self.Write_to_log("DEBUG", "Checking the host "+node_ip+" with "+transport)
-		snmp, err := snmplib.NewSNMPv3(node_ip, self.Loadbalancing_username, "MD5", self.Loadbalancing_password, "NOPRIV", self.Loadbalancing_password,
-			time.Duration(TIMEOUT)*time.Second, 2)
-		if err != nil {
-			// Failed to create snmpgo.SNMP object
-			my_transport.Response_error = fmt.Sprintf("contacted node: error creating the snmp object: %v", err)
-		} else {
-			defer snmp.Close()
-			err = snmp.Discover()
+func NewHostDiscoveryAgent(nodeIp string, clusterConfig model.ClusterConfig) (DiscoveryAgent, error) {
+	return snmplib.NewSNMPv3(nodeIp, clusterConfig.Loadbalancing_username, "MD5",
+		clusterConfig.Loadbalancing_password, "NOPRIV", clusterConfig.Loadbalancing_password,
+		time.Duration(TIMEOUT)*time.Second, 2)
+}
 
-			if err != nil {
-				my_transport.Response_error = fmt.Sprintf("contacted node: error in the snmp discovery: %v", err)
+type Host interface {
+	GetName() string
+	SetName(name string)
+	SNMPDiscovery()
+	GetClusterConfig() *model.ClusterConfig
+	GetLoadForAlias(clusterName string) int
+	GetWorkingIPs() ([]net.IP, error)
+	GetAllIPs() ([]net.IP, error)
+	GetIps() ([]net.IP, error)
+	SetTransportPayload(transportPayloadList []LBHostTransportResult)
+	GetHostTransportPayloads() []LBHostTransportResult
+}
 
-			} else {
+func NewLBHost(clusterConfig model.ClusterConfig, logger logger.Logger) Host {
+	return &LBHost{
+		ClusterConfig: clusterConfig,
+		Logger:        logger,
+	}
+}
 
-				oid, err := snmplib.ParseOid(OID)
+func (lh *LBHost) SetName(name string) {
+	lh.Host_name = name
+}
 
-				if err != nil {
-					// Failed to parse Oids
-					my_transport.Response_error = fmt.Sprintf("contacted node: Error parsing the OID %v", err)
+func (lh *LBHost) GetName() string {
+	return lh.Host_name
+}
+func (lh *LBHost) GetClusterConfig() *model.ClusterConfig {
+	return &lh.ClusterConfig
+}
 
-				} else {
-					pdu, err := snmp.GetV3(oid)
+func (lh *LBHost) GetHostTransportPayloads() []LBHostTransportResult {
+	return lh.HostTransports
+}
 
-					if err != nil {
-						my_transport.Response_error = fmt.Sprintf("contacted node: The getv3 gave the following error: %v ", err)
+func (lh *LBHost) SetTransportPayload(transportPayloadList []LBHostTransportResult) {
+	lh.HostTransports = transportPayloadList
+}
 
-					} else {
-
-						self.Write_to_log("INFO", fmt.Sprintf("contacted node: transport: %v ip: %v - reply was %v", transport, node_ip, pdu))
-
-						//var pduInteger int
-						switch t := pdu.(type) {
-						case int:
-							my_transport.Response_int = pdu.(int)
-						case string:
-							my_transport.Response_string = pdu.(string)
-						default:
-							my_transport.Response_error = fmt.Sprintf("The node returned an unexpected type %s in %v", t, pdu)
-						}
-					}
-				}
-			}
+func (lh *LBHost) SNMPDiscovery() {
+	var wg sync.WaitGroup
+	lh.find_transports()
+	discoveryResultChan := make(chan snmpDiscoveryResult)
+	defer close(discoveryResultChan)
+	hostTransportResultList := make([]LBHostTransportResult, 0, len(lh.HostTransports))
+	hostTransportResultList = append(hostTransportResultList, lh.HostTransports...)
+	for i, hostTransport := range lh.HostTransports {
+		wg.Add(1)
+		go func(idx int, hostTransport LBHostTransportResult) {
+			defer wg.Done()
+			lh.discoverNode(idx, hostTransport, discoveryResultChan)
+		}(i, hostTransport)
+	}
+	go func(discoveryResultChan <-chan snmpDiscoveryResult) {
+		for discoveryResultData := range discoveryResultChan {
+			hostTransportResultList[discoveryResultData.hostIdx] = discoveryResultData.hostTransportResult
 		}
-		self.Host_transports[i] = my_transport
-
-	}
-
-	self.Write_to_log("DEBUG", "All the ips have been tested")
-	/*for _, my_transport := range self.Host_transports {
-		self.Write_to_log("INFO", fmt.Sprintf("%v", my_transport))
-	}*/
+	}(discoveryResultChan)
+	wg.Wait()
+	lh.HostTransports = hostTransportResultList
+	lh.Logger.Debug("All the ips have been tested")
 }
 
-func (self *LBHost) Write_to_log(level string, msg string) error {
+func (lh *LBHost) discoverNode(hostTransportIdx int, hostTransport LBHostTransportResult, resultChan chan<- snmpDiscoveryResult) {
+	var snmpAgent DiscoveryAgent
 	var err error
-	if level == "DEBUG" && !self.Debugflag {
-		//The debug messages should not appear
-		return nil
+	hostTransport.Response_int = DefaultResponseInt
+	nodeIp := hostTransport.IP.String()
+	lh.Logger.Debug("Checking the host " + nodeIp + " with " + hostTransport.Transport)
+	if lh.SnmpAgent == nil {
+		snmpAgent, err = NewHostDiscoveryAgent(nodeIp, lh.ClusterConfig)
+		if err != nil {
+			hostTransport.Response_error = fmt.Sprintf("contacted node: error creating the snmp object: %v", err)
+		}
+	} else {
+		snmpAgent = lh.SnmpAgent
 	}
-	if !strings.HasSuffix(msg, "\n") {
-		msg += "\n"
+	if err == nil {
+		defer snmpAgent.Close()
+		err = snmpAgent.Discover()
+		if err != nil {
+			hostTransport.Response_error = fmt.Sprintf("contacted node: error in the snmp discovery: %v", err)
+		} else {
+			lh.setTransportResponse(snmpAgent, &hostTransport)
+		}
 	}
-	timestamp := time.Now().Format(time.StampMilli)
-	msg = fmt.Sprintf("%s lbd[%d]: %s: cluster: %s node: %s %s", timestamp, os.Getpid(), level, self.Cluster_name, self.Host_name, msg)
 
-	self.logMu.Lock()
-	defer self.logMu.Unlock()
-
-	f, err := os.OpenFile(self.LogFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0640)
-	if err != nil {
-		return err
+	resultChan <- snmpDiscoveryResult{
+		hostIdx:             hostTransportIdx,
+		hostTransportResult: hostTransport,
 	}
-	defer f.Close()
-	_, err = fmt.Fprintf(f, msg)
-
-	return err
 }
 
-func (self *LBHost) Get_load_for_alias(cluster_name string) int {
+func (lh *LBHost) setTransportResponse(snmpClient DiscoveryAgent, lbHostTransportResultPayload *LBHostTransportResult) {
+	oid, err := snmplib.ParseOid(OID)
+	if err != nil {
+		lbHostTransportResultPayload.Response_error = fmt.Sprintf("contacted node: Error parsing the OID %v", err)
+		return
+	}
+	pdu, err := snmpClient.GetV3(oid)
+	if err != nil {
+		lbHostTransportResultPayload.Response_error = fmt.Sprintf("contacted node: The getv3 gave the following error: %v ", err)
+		return
+	}
+	lh.Logger.Info(fmt.Sprintf("contacted node: transport: %v ip: %v - reply was %v", lbHostTransportResultPayload.Transport, lbHostTransportResultPayload.IP.String(), pdu))
+	switch t := pdu.(type) {
+	case int:
+		lbHostTransportResultPayload.Response_int = pdu.(int)
+	case string:
+		lbHostTransportResultPayload.Response_string = pdu.(string)
+	default:
+		lbHostTransportResultPayload.Response_error = fmt.Sprintf("The node returned an unexpected type %s in %v", t, pdu)
+	}
+}
+
+// todo: instead of polling try adhoc webhook updates
+func (lh *LBHost) GetLoadForAlias(clusterName string) int {
 
 	my_load := -200
-	for _, my_transport := range self.Host_transports {
+	for _, my_transport := range lh.HostTransports {
 		pduInteger := my_transport.Response_int
 
-		re := regexp.MustCompile(cluster_name + "=([0-9]+)")
+		re := regexp.MustCompile(clusterName + "=([0-9]+)")
 		submatch := re.FindStringSubmatch(my_transport.Response_string)
 
 		if submatch != nil {
@@ -145,80 +183,75 @@ func (self *LBHost) Get_load_for_alias(cluster_name string) int {
 		if (pduInteger > 0 && pduInteger < my_load) || (my_load < 0) {
 			my_load = pduInteger
 		}
-		self.Write_to_log("DEBUG", fmt.Sprintf("Possible load is %v", pduInteger))
+		lh.Logger.Debug(fmt.Sprintf("Possible load is %v", pduInteger))
 
 	}
-	self.Write_to_log("DEBUG", fmt.Sprintf("THE LOAD IS %v, ", my_load))
+	lh.Logger.Debug(fmt.Sprintf("THE LOAD IS %v, ", my_load))
 
 	return my_load
 }
 
-func (self *LBHost) Get_working_IPs() ([]net.IP, error) {
+func (lh *LBHost) GetWorkingIPs() ([]net.IP, error) {
 	var my_ips []net.IP
-	for _, my_transport := range self.Host_transports {
+	for _, my_transport := range lh.HostTransports {
 		if (my_transport.Response_int > 0) && (my_transport.Response_error == "") {
 			my_ips = append(my_ips, my_transport.IP)
 		}
 
 	}
-	self.Write_to_log("INFO", fmt.Sprintf("The ips for this host are %v", my_ips))
+	lh.Logger.Info(fmt.Sprintf("The ips for this host are %v", my_ips))
 	return my_ips, nil
 }
 
-func (self *LBHost) Get_all_IPs() ([]net.IP, error) {
+func (lh *LBHost) GetAllIPs() ([]net.IP, error) {
 	var my_ips []net.IP
-	for _, my_transport := range self.Host_transports {
+	for _, my_transport := range lh.HostTransports {
 		my_ips = append(my_ips, my_transport.IP)
 	}
-	self.Write_to_log("INFO", fmt.Sprintf("All ips for this host are %v", my_ips))
+	lh.Logger.Info(fmt.Sprintf("All ips for this host are %v", my_ips))
 	return my_ips, nil
 }
 
-func (self *LBHost) Get_Ips() ([]net.IP, error) {
-
+func (lh *LBHost) GetIps() ([]net.IP, error) {
 	var ips []net.IP
-
 	var err error
-
 	re := regexp.MustCompile(".*no such host")
-
 	net.DefaultResolver.StrictErrors = true
-
 	for i := 0; i < 3; i++ {
-		self.Write_to_log("INFO", "Getting the ip addresses")
-		ips, err = net.LookupIP(self.Host_name)
+		lh.Logger.Info("Getting the ip addresses")
+		ips, err = net.LookupIP(lh.Host_name)
 		if err == nil {
 			return ips, nil
 		}
-		self.Write_to_log("WARNING", fmt.Sprintf("LookupIP: %v has incorrect or missing IP address (%v) ", self.Host_name, err))
+		lh.Logger.Info(fmt.Sprintf("LookupIP: %v has incorrect or missing IP address (%v) ", lh.Host_name, err))
 		submatch := re.FindStringSubmatch(err.Error())
 		if submatch != nil {
-			self.Write_to_log("INFO", "There is no need to retry this error")
+			lh.Logger.Info("There is no need to retry this error")
 			return nil, err
 		}
 	}
 
-	self.Write_to_log("ERROR", "After several retries, we couldn't get the ips!. Let's try with partial results")
+	lh.Logger.Error("After several retries, we couldn't get the ips!. Let's try with partial results")
 	net.DefaultResolver.StrictErrors = false
-	ips, err = net.LookupIP(self.Host_name)
+	ips, err = net.LookupIP(lh.Host_name)
 	if err != nil {
-		self.Write_to_log("ERROR", fmt.Sprintf("It didn't work :(. This node will be ignored during this evaluation: %v", err))
+		lh.Logger.Error(fmt.Sprintf("It didn't work :(. This node will be ignored during this evaluation: %v", err))
 	}
 	return ips, err
 }
 
-func (self *LBHost) find_transports() {
-	self.Write_to_log("DEBUG", "Let's find the ips behind this host")
+func (lh *LBHost) find_transports() {
+	lh.Logger.Debug("Let's find the ips behind this host")
 
-	ips, _ := self.Get_Ips()
+	ips, _ := lh.GetIps()
 	for _, ip := range ips {
 		transport := "udp"
 		// If there is an IPv6 address use udp6 transport
 		if ip.To4() == nil {
 			transport = "udp6"
 		}
-		self.Host_transports = append(self.Host_transports, LBHostTransportResult{Transport: transport,
-			Response_int: 100000, Response_string: "", IP: ip,
+		lh.HostTransports = append(lh.HostTransports, LBHostTransportResult{Transport: transport,
+			Response_int: DefaultResponseInt, Response_string: "", IP: ip,
 			Response_error: ""})
 	}
 
