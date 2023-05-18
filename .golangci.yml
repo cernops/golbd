@@ -1,0 +1,11 @@
+# Doc: https://golangci-lint.run/usage/configuration/
+
+linters:
+  disable:
+    # Too many false positive
+    - deadcode
+    - unused
+    - varcheck
+    - errcheck
+
+linters-settings:
