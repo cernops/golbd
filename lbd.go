@@ -4,19 +4,20 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"log/syslog"
+	"lb-experts/golbd/metric"
+	"log"
 	"math/rand"
 	"os"
-	"os/signal"
 	"regexp"
 	"strconv"
 	"strings"
-	"syscall"
+	"sync"
 	"time"
 
-	"gitlab.cern.ch/lb-experts/golbd/lbcluster"
-	"gitlab.cern.ch/lb-experts/golbd/lbconfig"
-	"gitlab.cern.ch/lb-experts/golbd/lbhost"
+	"lb-experts/golbd/lbcluster"
+	"lb-experts/golbd/lbconfig"
+	"lb-experts/golbd/lbhost"
+	"lb-experts/golbd/logger"
 )
 
 var (
@@ -37,19 +38,24 @@ var (
 	stdoutFlag     = flag.Bool("stdout", false, "send log to stdtout")
 )
 
-const itCSgroupDNSserver string = "cfmgr.cern.ch"
+const (
+	shouldStartMetricServer  = false // server disabled by default
+	itCSgroupDNSserver       = "cfmgr.cern.ch"
+	DefaultSleepDuration     = 10
+	DefaultLbdTag            = "lbd"
+	DefaultConnectionTimeout = 10 * time.Second
+	DefaultReadTimeout       = 20 * time.Second
+)
 
-func shouldUpdateDNS(config *lbconfig.Config, hostname string, lg *lbcluster.Log) bool {
-	if hostname == config.Master {
+func shouldUpdateDNS(config lbconfig.Config, hostname string, lg logger.Logger) bool {
+	if strings.EqualFold(hostname, config.GetMasterHost()) {
 		return true
 	}
 	masterHeartbeat := "I am sick"
-	connectTimeout := (10 * time.Second)
-	readWriteTimeout := (20 * time.Second)
-	httpClient := lbcluster.NewTimeoutClient(connectTimeout, readWriteTimeout)
-	response, err := httpClient.Get("http://" + config.Master + "/load-balancing/" + config.HeartbeatFile)
+	httpClient := lbcluster.NewTimeoutClient(DefaultConnectionTimeout, DefaultReadTimeout)
+	response, err := httpClient.Get("http://" + config.GetMasterHost() + "/load-balancing/" + config.GetHeartBeatFileName())
 	if err != nil {
-		lg.Warning(fmt.Sprintf("problem fetching heartbeat file from the primary master %v: %v", config.Master, err))
+		lg.Warning(fmt.Sprintf("problem fetching heartbeat file from the primary master %v: %v", config.GetMasterHost(), err))
 		return true
 	}
 	defer response.Body.Close()
@@ -60,7 +66,7 @@ func shouldUpdateDNS(config *lbconfig.Config, hostname string, lg *lbcluster.Log
 	lg.Debug(fmt.Sprintf("%s", contents))
 	masterHeartbeat = strings.TrimSpace(string(contents))
 	lg.Info("primary master heartbeat: " + masterHeartbeat)
-	r, _ := regexp.Compile(config.Master + ` : (\d+) : I am alive`)
+	r, _ := regexp.Compile(config.GetMasterHost() + ` : (\d+) : I am alive`)
 	if r.MatchString(masterHeartbeat) {
 		matches := r.FindStringSubmatch(masterHeartbeat)
 		lg.Debug(fmt.Sprintf(matches[1]))
@@ -82,131 +88,130 @@ func shouldUpdateDNS(config *lbconfig.Config, hostname string, lg *lbcluster.Log
 
 }
 
-func updateHeartbeat(config *lbconfig.Config, hostname string, lg *lbcluster.Log) error {
-	if hostname != config.Master {
+func updateHeartbeat(config lbconfig.Config, hostname string, lg logger.Logger) error {
+	if hostname != config.GetMasterHost() {
 		return nil
 	}
-	heartbeatFile := config.HeartbeatPath + "/" + config.HeartbeatFile + "temp"
-	heartbeatFileReal := config.HeartbeatPath + "/" + config.HeartbeatFile
+	heartbeatTempFilePath := config.GetHeartBeatDirPath() + "/" + config.GetHeartBeatFileName() + "temp"
+	heartbeatFileRealFilePath := config.GetHeartBeatDirPath() + "/" + config.GetHeartBeatFileName()
 
-	config.HeartbeatMu.Lock()
-	defer config.HeartbeatMu.Unlock()
+	//todo: read from channel
+	config.LockHeartBeatMutex()
+	defer config.UnlockHeartBeatMutex()
 
-	f, err := os.OpenFile(heartbeatFile, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+	err := updateHeartBeatToFile(heartbeatTempFilePath, hostname, lg)
 	if err != nil {
-		lg.Error(fmt.Sprintf("can not open %v for writing: %v", heartbeatFile, err))
 		return err
 	}
-	now := time.Now()
-	secs := now.Unix()
-	_, err = fmt.Fprintf(f, "%v : %v : I am alive\n", hostname, secs)
-	lg.Info("updating: heartbeat file " + heartbeatFile)
-	if err != nil {
-		lg.Info(fmt.Sprintf("can not write to %v: %v", heartbeatFile, err))
-	}
-	f.Close()
-	if err = os.Rename(heartbeatFile, heartbeatFileReal); err != nil {
-		lg.Error(fmt.Sprintf("can not rename %v to %v: %v", heartbeatFile, heartbeatFileReal, err))
+	// todo: could the file be reused for any other use cases?
+	if err = os.Rename(heartbeatTempFilePath, heartbeatFileRealFilePath); err != nil {
+		lg.Error(fmt.Sprintf("can not rename %v to %v: %v", heartbeatTempFilePath, heartbeatFileRealFilePath, err))
 		return err
 	}
 	return nil
 }
 
-func installSignalHandler(sighup, sigterm *bool, lg *lbcluster.Log) {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, syscall.SIGTERM, syscall.SIGHUP)
+func updateHeartBeatToFile(heartBeatFilePath string, hostname string, lg logger.Logger) error {
+	secs := time.Now().Unix()
+	f, err := os.OpenFile(heartBeatFilePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+	defer f.Close()
+	if err != nil {
+		lg.Error(fmt.Sprintf("can not open %v for writing: %v", heartBeatFilePath, err))
+		return err
+	}
+	_, err = fmt.Fprintf(f, "%v : %v : I am alive\n", hostname, secs)
+	lg.Info("updating: heartbeat file " + heartBeatFilePath)
+	if err != nil {
+		lg.Info(fmt.Sprintf("can not write to %v: %v", heartBeatFilePath, err))
+	}
+	return nil
+}
 
+func sleep(seconds time.Duration, controlChan <-chan bool, waitGroup sync.WaitGroup) <-chan bool {
+	sleepSignalChan := make(chan bool)
+	waitGroup.Add(1)
+	secondsTicker := time.NewTicker(seconds * time.Second)
 	go func() {
+		defer waitGroup.Done()
 		for {
-			// Block until a signal is received.
-			sig := <-c
-			lg.Info(fmt.Sprintf("\nGiven signal: %v\n", sig))
-			switch sig {
-			case syscall.SIGHUP:
-				*sighup = true
-			case syscall.SIGTERM:
-				*sigterm = true
+			select {
+			case <-secondsTicker.C:
+				sleepSignalChan <- true
+				break
+			case <-controlChan:
+				return
 			}
 		}
 	}()
-}
-
-/* Using this one (instead of fsnotify)
-to check also if the file has been moved*/
-func watchFile(filePath string, chanModified chan int) error {
-	initialStat, err := os.Stat(filePath)
-	if err != nil {
-		return err
-	}
-
-	for {
-		stat, err := os.Stat(filePath)
-		if err == nil {
-			if stat.Size() != initialStat.Size() || stat.ModTime() != initialStat.ModTime() {
-				chanModified <- 1
-				initialStat = stat
-			}
-		}
-		time.Sleep(1 * time.Second)
-	}
-}
-
-func sleep(seconds time.Duration, chanModified chan int) error {
-	for {
-		chanModified <- 2
-		time.Sleep(seconds * time.Second)
-	}
-	return nil
+	return sleepSignalChan
 }
 
 func main() {
+	wg := sync.WaitGroup{}
+	logger, err := logger.NewLoggerFactory(*logFileFlag)
+	if err != nil {
+		fmt.Printf("error during log initialization. error: %v", err)
+		os.Exit(1)
+	}
+
+	if *stdoutFlag {
+		logger.EnableWriteToSTd()
+	}
+	controlChan := make(chan bool)
+	defer close(controlChan)
+	defer wg.Done()
+	defer logger.Error("The lbd is not supposed to stop")
 	flag.Parse()
 	if *versionFlag {
 		fmt.Printf("This is a proof of concept golbd version: %s-%s \n", Version, Release)
 		os.Exit(0)
 	}
 	rand.Seed(time.Now().UTC().UnixNano())
-	log, e := syslog.New(syslog.LOG_NOTICE, "lbd")
-
-	if e != nil {
-		fmt.Printf("Error getting a syslog instance %v\nThe service will only write to the logfile %v\n\n", e, *logFileFlag)
-	}
-	lg := lbcluster.Log{SyslogWriter: log, Stdout: *stdoutFlag, Debugflag: *debugFlag, TofilePath: *logFileFlag}
-
-	lg.Info("Starting lbd")
-
-	//	var sig_hup, sig_term bool
-	// installSignalHandler(&sig_hup, &sig_term, &lg)
-	config, lbclusters, err := lbconfig.LoadConfig(*configFileFlag, &lg)
+	logger.Info("Starting lbd")
+	lbConfig := lbconfig.NewLoadBalancerConfig(*configFileFlag, logger)
+	lbclusters, err := lbConfig.Load()
 	if err != nil {
-		lg.Warning("loadConfig Error: ")
-		lg.Warning(err.Error())
+		logger.Warning("loadConfig Error: ")
+		logger.Warning(err.Error())
 		os.Exit(1)
 	}
-	lg.Info("Clusters loaded")
+	logger.Info("Clusters loaded")
 
-	doneChan := make(chan int)
-	go watchFile(*configFileFlag, doneChan)
-	go sleep(10, doneChan)
+	fileChangeSignal := lbConfig.WatchFileChange(controlChan, wg)
+	intervalTickerSignal := sleep(DefaultSleepDuration, controlChan, wg)
+	if shouldStartMetricServer {
+		go func() {
+			err := metric.NewMetricServer(lbconfig.DefaultMetricsDirectoryPath)
+			if err != nil {
+				logger.Error(fmt.Sprintf("error while starting metric server . error: %v", err))
+			}
+		}()
+	}
 
 	for {
-		myValue := <-doneChan
-		if myValue == 1 {
-			lg.Info("Config Changed")
-			config, lbclusters, err = lbconfig.LoadConfig(*configFileFlag, &lg)
-			if err != nil {
-				lg.Error(fmt.Sprintf("Error getting the clusters (something wrong in %v", configFileFlag))
+		select {
+		case fileWatcherData := <-fileChangeSignal:
+			if fileWatcherData.IsErrorPresent() {
+				// stop all operations
+				controlChan <- true
+				return
 			}
-		} else if myValue == 2 {
-			checkAliases(config, lg, lbclusters)
-		} else {
-			lg.Error("Got an unexpected value")
+			logger.Info("ClusterConfig Changed")
+			lbclusters, err = lbConfig.Load()
+			if err != nil {
+				logger.Error(fmt.Sprintf("Error getting the clusters (something wrong in %v", configFileFlag))
+			}
+		case <-intervalTickerSignal:
+			checkAliases(lbConfig, logger, lbclusters)
+			break
 		}
 	}
-	lg.Error("The lbd is not supposed to stop")
-
 }
-func checkAliases(config *lbconfig.Config, lg lbcluster.Log, lbclusters []lbcluster.LBCluster) {
+
+func checkAliases(config lbconfig.Config, lg logger.Logger, lbclusters []lbcluster.LBCluster) {
+	hostCheckChannel := make(chan lbhost.Host)
+	defer close(hostCheckChannel)
+
 	hostname, e := os.Hostname()
 	if e == nil {
 		lg.Info("Hostname: " + hostname)
@@ -215,55 +220,58 @@ func checkAliases(config *lbconfig.Config, lg lbcluster.Log, lbclusters []lbclus
 	//var wg sync.WaitGroup
 	updateDNS := true
 	lg.Info("Checking if any of the " + strconv.Itoa(len(lbclusters)) + " clusters needs updating")
-	hostsToCheck := make(map[string]lbhost.LBHost)
 	var clustersToUpdate []*lbcluster.LBCluster
+	hostsToCheck := make(map[string]lbhost.Host)
 	/* First, let's identify the hosts that have to be checked */
 	for i := range lbclusters {
-		pc := &lbclusters[i]
-		pc.Write_to_log("DEBUG", "DO WE HAVE TO UPDATE?")
-		if pc.Time_to_refresh() {
-			pc.Write_to_log("INFO", "Time to refresh the cluster")
-			pc.Get_list_hosts(hostsToCheck)
-			clustersToUpdate = append(clustersToUpdate, pc)
+		currentCluster := &lbclusters[i]
+		lg.Debug("DO WE HAVE TO UPDATE?")
+		if currentCluster.Time_to_refresh() {
+			lg.Info("Time to refresh the cluster")
+			currentCluster.GetHostList(hostsToCheck)
+			clustersToUpdate = append(clustersToUpdate, currentCluster)
 		}
 	}
-	if len(hostsToCheck) != 0 {
-		myChannel := make(chan lbhost.LBHost)
+	if len(hostsToCheck) > 0 {
 		/* Now, let's go through the hosts, issuing the snmp call */
 		for _, hostValue := range hostsToCheck {
-			go func(myHost lbhost.LBHost) {
-				myHost.Snmp_req()
-				myChannel <- myHost
+			go func(myHost lbhost.Host) {
+				myHost.SNMPDiscovery()
+				hostCheckChannel <- myHost
 			}(hostValue)
 		}
-		lg.Debug("Let's start gathering the results")
-		for i := 0; i < len(hostsToCheck); i++ {
-			myNewHost := <-myChannel
-			hostsToCheck[myNewHost.Host_name] = myNewHost
+		lg.Debug("start gathering the results")
+		for hostChanData := range hostCheckChannel {
+			hostsToCheck[hostChanData.GetName()] = hostChanData
 		}
 
 		lg.Debug("All the hosts have been tested")
 
-		updateDNS = shouldUpdateDNS(config, hostname, &lg)
+		updateDNS = shouldUpdateDNS(config, hostname, lg)
 
 		/* Finally, let's go through the aliases, selecting the best hosts*/
 		for _, pc := range clustersToUpdate {
-			pc.Write_to_log("DEBUG", "READY TO UPDATE THE CLUSTER")
-			if pc.FindBestHosts(hostsToCheck) {
+			lg.Debug("READY TO UPDATE THE CLUSTER")
+			isDNSUpdateValid, err := pc.FindBestHosts(hostsToCheck)
+			if err != nil {
+				log.Fatalf("Error while finding best hosts. error:%v", err)
+			}
+			if isDNSUpdateValid {
 				if updateDNS {
-					pc.Write_to_log("DEBUG", "Should update dns is true")
-					pc.RefreshDNS(config.DNSManager, config.TsigKeyPrefix, config.TsigInternalKey, config.TsigExternalKey)
+					lg.Debug("Should update dns is true")
+					// todo: try to implement retry mechanismlbcluster/lbcluster_dns.go
+					pc.RefreshDNS(config.GetDNSManager(), config.GetTSIGKeyPrefix(), config.GetTSIGInternalKey(), config.GetTSIGExternalKey())
 				} else {
-					pc.Write_to_log("DEBUG", "should_update_dns false")
+					lg.Debug("should_update_dns false")
 				}
 			} else {
-				pc.Write_to_log("DEBUG", "FindBestHosts false")
+				lg.Debug("FindBestHosts false")
 			}
 		}
 	}
 
 	if updateDNS {
-		updateHeartbeat(config, hostname, &lg)
+		updateHeartbeat(config, hostname, lg)
 	}
 
 	lg.Debug("iteration done!")

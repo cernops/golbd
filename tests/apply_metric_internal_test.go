@@ -3,6 +3,7 @@ package main_test
 import (
 	"fmt"
 	"net"
+	"os"
 	"reflect"
 	"testing"
 )
@@ -48,5 +49,10 @@ func TestEvaluateMetric(t *testing.T) {
 	}
 	if !reflect.DeepEqual(c.Time_of_last_evaluation, expected_time_of_last_evaluation) {
 		t.Errorf("e.apply_metric: c.Time_of_last_evaluation: got\n%v\nexpected\n%v", c.Time_of_last_evaluation, expected_time_of_last_evaluation)
+	}
+	err := os.Remove("sample.log")
+	if err != nil {
+		t.Fail()
+		t.Errorf("error deleting file.error %v", err)
 	}
 }

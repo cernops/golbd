@@ -1,11 +1,13 @@
 package main_test
 
 import (
+	"lb-experts/golbd/lbcluster"
+	"lb-experts/golbd/logger"
+	"lb-experts/golbd/model"
 	"net"
+	"os"
 	"reflect"
 	"testing"
-
-	"gitlab.cern.ch/lb-experts/golbd/lbcluster"
 )
 
 //TestGetStateDNS tests the function GetStateDNS
@@ -45,13 +47,13 @@ func TestGetStateDNS(t *testing.T) {
 			iprecString = append(iprecString, ip.String())
 		}
 		//Casting to string. The DeepEqual of  IP is a bit  tricky, since it can
-		received[c.Cluster_name] = []interface{}{iprecString, err}
+		received[c.ClusterConfig.Cluster_name] = []interface{}{iprecString, err}
 	}
 	//DeepEqual comparison between the map with expected values and the one with the outputs
 	for _, c := range Clusters {
-		if !reflect.DeepEqual(received[c.Cluster_name], expected[c.Cluster_name]) {
-			t.Errorf("\ngot ips\n%T type and value %v\nexpected\n%T type and value %v", received[c.Cluster_name][0], received[c.Cluster_name][0], expected[c.Cluster_name][0], expected[c.Cluster_name][0])
-			t.Errorf("\ngot error\n%T type and value %v\nexpected\n%T type and value %v", received[c.Cluster_name][1], received[c.Cluster_name][1], expected[c.Cluster_name][1], expected[c.Cluster_name][1])
+		if !reflect.DeepEqual(received[c.ClusterConfig.Cluster_name], expected[c.ClusterConfig.Cluster_name]) {
+			t.Errorf("\ngot ips\n%T type and value %v\nexpected\n%T type and value %v", received[c.ClusterConfig.Cluster_name][0], received[c.ClusterConfig.Cluster_name][0], expected[c.ClusterConfig.Cluster_name][0], expected[c.ClusterConfig.Cluster_name][0])
+			t.Errorf("\ngot error\n%T type and value %v\nexpected\n%T type and value %v", received[c.ClusterConfig.Cluster_name][1], received[c.ClusterConfig.Cluster_name][1], expected[c.ClusterConfig.Cluster_name][1], expected[c.ClusterConfig.Cluster_name][1])
 		}
 	}
 }
@@ -80,12 +82,14 @@ func TestRefreshDNS(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.cluster_name, func(t *testing.T) {
-			lg := lbcluster.Log{SyslogWriter: nil, Stdout: false, Debugflag: false}
+			lg, _ := logger.NewLoggerFactory("sample.log")
 			cluster := lbcluster.LBCluster{
-				Cluster_name:          tc.cluster_name,
+				ClusterConfig: model.ClusterConfig{
+					Cluster_name: tc.cluster_name,
+				},
 				Current_best_ips:      tc.current_best_ips,
 				Previous_best_ips_dns: []net.IP{},
-				Slog:                  &lg,
+				Slog:                  lg,
 			}
 
 			cluster.RefreshDNS(dnsManager, "test-", "aW50ZXJuYWxzZWNyZXQ=", "ZXh0ZXJuYWxzZWNyZXQ=")
@@ -106,4 +110,5 @@ func TestRefreshDNS(t *testing.T) {
 			}
 		})
 	}
+	os.Remove("sample.log")
 }
